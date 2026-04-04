@@ -1,5 +1,4 @@
 const ClauseService = require('../services/ClauseService');
-const ChunkingService = require('../services/ChunkingService');
 const { logger } = require('../utils');
 
 /**
@@ -69,37 +68,8 @@ class ClauseController {
    */
   static async createClauses(req, res) {
     try {
-      const { documentId } = req.params;
-      const { text, documentType = 'general' } = req.body;
-      const { userId } = req.user;
-
-      if (!text) {
-        return res.status(400).json({ error: 'Text is required' });
-      }
-
-      logger.info(`Creating clauses for document ${documentId}`, { userId, documentType });
-
-      // Extract clauses
-      const rawClauses = await ChunkingService.extractClauses(text, documentType);
-
-      // Enrich clauses with NLP
-      const enrichedClauses = await ChunkingService.enrichClauses(rawClauses);
-
-      // Save clauses to database
-      const savedClauses = [];
-      for (const clauseData of enrichedClauses) {
-        const clause = await ClauseService.createClause({
-          ...clauseData,
-          documentId,
-          userId,
-        });
-        savedClauses.push(clause);
-      }
-
-      return res.status(201).json({
-        success: true,
-        clauses: savedClauses,
-        count: savedClauses.length,
+      return res.status(410).json({
+        error: 'Clause generation is disabled. The NLP pipeline has been removed from the backend.',
       });
     } catch (error) {
       logger.error('Create clauses error', error);

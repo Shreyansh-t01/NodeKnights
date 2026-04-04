@@ -1,9 +1,5 @@
 const DocumentService = require('../services/DocumentService');
-const ContentExtractionService = require('../services/ContentExtractionService');
-const NLPService = require('../services/NLPService');
-const ChunkingService = require('../services/ChunkingService');
-const ChunkService = require('../services/ChunkService');
-const ClauseService = require('../services/ClauseService');
+const FileStorageService = require('../services/FileStorageService');
 const { logger } = require('../utils');
 
 /**
@@ -16,6 +12,9 @@ class DocumentController {
    * Upload and process a new document
    */
   static async uploadDocument(req, res) {
+    let documentId = null;
+    let uploadStage = 'validating upload request';
+
     try {
       const userId = req.user?.userId;
       const { title, description, contentType } = req.body || {};
@@ -40,6 +39,7 @@ class DocumentController {
         file: {
           name: file.originalname,
           size: file.size,
+          mimeType: file.mimetype,
           format: file.mimetype.split('/')[1],
           extension: file.originalname.split('.').pop(),
         },
@@ -49,109 +49,58 @@ class DocumentController {
         },
       };
 
+      uploadStage = 'creating document record';
       const document = await DocumentService.createDocument(documentData);
+      documentId = document.id;
 
-      // Extract content asynchronously
-      DocumentController.processDocumentAsync(
-        document.id,
-        file.buffer,
-        file.mimetype,
-        file.originalname,
-      ).catch(processingError => {
-        logger.error(`Unhandled document processing failure for ${document.id}`, processingError);
+      uploadStage = 'storing file chunks';
+      const storage = await FileStorageService.storeFile(document.id, file);
+
+      uploadStage = 'updating document metadata';
+      await DocumentService.updateDocument(document.id, {
+        file: documentData.file,
+        storage,
+        status: {
+          uploadProgress: 100,
+        },
       });
+
+      uploadStage = 'marking upload complete';
+      await DocumentService.updateProcessingStatus(document.id, 'completed', 100);
 
       return res.status(201).json({
         success: true,
         documentId: document.id,
-        message: 'Document uploaded and is being processed',
+        message: 'Document uploaded successfully',
       });
     } catch (error) {
-      logger.error('Upload error', error);
-      return res.status(500).json({ error: error.message });
-    }
-  }
+      const errorMessage = `${uploadStage} failed: ${error.message}`;
 
-  /**
-   * Process document asynchronously
-   */
-  static async processDocumentAsync(docId, fileBuffer, mimeType, fileName) {
-    try {
-      // Update extraction
-      const extraction = await ContentExtractionService.extractContent(fileBuffer, mimeType, fileName);
-      
-      // Analyze NLP
-      const sentiment = await NLPService.analyzeSentiment(extraction.text);
-      const keywords = NLPService.extractKeywords(extraction.text);
-      const entities = await NLPService.extractEntities(extraction.text);
-      const summary = NLPService.summarizeText(extraction.text);
-      const language = NLPService.detectLanguage(extraction.text);
-
-      // Get document to get userId
-      const document = await DocumentService.getDocumentById(docId);
-
-      // Update document with processed data
-      await DocumentService.updateDocument(docId, {
-        extraction: {
-          extractedText: extraction.text,
-        },
-        processing: {
-          summary,
-          sentiment,
-          entities,
-          topics: keywords.map(k => ({ name: k.keyword, score: k.frequency })),
-        },
-        metadata: {
-          language,
-          keywords: keywords.map(k => k.keyword),
-          wordCount: extraction.text.split(/\s+/).length,
-          pageCount: extraction.metadata?.pageCount,
-        },
+      logger.error('Upload error', {
+        stage: uploadStage,
+        documentId,
+        error: error.message,
+        stack: error.stack,
       });
 
-      // Create chunks
-      try {
-        const rawChunks = ChunkingService.chunkText(extraction.text, { method: 'fixed_size' });
-        const enrichedChunks = await ChunkingService.enrichChunks(rawChunks);
-
-        for (const chunkData of enrichedChunks) {
-          await ChunkService.createChunk({
-            ...chunkData,
-            documentId: docId,
-            userId: document.userId,
+      if (documentId) {
+        try {
+          await DocumentService.updateProcessingStatus(documentId, 'failed', 0, errorMessage);
+          await FileStorageService.deleteFile(documentId);
+        } catch (cleanupError) {
+          logger.error(`Upload cleanup failed for ${documentId}`, {
+            stage: 'cleanup',
+            error: cleanupError.message,
+            stack: cleanupError.stack,
           });
         }
-        logger.info(`Created ${enrichedChunks.length} chunks for document ${docId}`);
-      } catch (chunkError) {
-        logger.error(`Chunk creation failed for document ${docId}`, chunkError);
       }
 
-      // Create clauses
-      try {
-        const rawClauses = await ChunkingService.extractClauses(extraction.text, 'general');
-        const enrichedClauses = await ChunkingService.enrichClauses(rawClauses);
-
-        for (const clauseData of enrichedClauses) {
-          await ClauseService.createClause({
-            ...clauseData,
-            documentId: docId,
-            userId: document.userId,
-          });
-        }
-        logger.info(`Created ${enrichedClauses.length} clauses for document ${docId}`);
-      } catch (clauseError) {
-        logger.error(`Clause creation failed for document ${docId}`, clauseError);
-      }
-
-      await DocumentService.updateProcessingStatus(docId, 'completed', 100);
-      logger.info(`Document ${docId} processed successfully`);
-    } catch (error) {
-      logger.error(`Document processing failed for ${docId}`, error);
-      try {
-        await DocumentService.updateProcessingStatus(docId, 'failed', 0, error.message);
-      } catch (statusError) {
-        logger.error(`Failed to mark document ${docId} as failed`, statusError);
-      }
+      return res.status(500).json({
+        error: errorMessage,
+        stage: uploadStage,
+        documentId,
+      });
     }
   }
 

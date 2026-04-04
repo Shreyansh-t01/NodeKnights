@@ -31,6 +31,24 @@ backend/.env.*
 
 firebase-service-account.json
 backend/firebase-service-account.json
+*-firebase-adminsdk-*.json
+backend/*-firebase-adminsdk-*.json
+*service-account*.json
+backend/*service-account*.json
+*credentials*.json
+backend/*credentials*.json
+secrets/
+backend/secrets/
+credentials/
+backend/credentials/
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+*.jks
 
 # =========================
 

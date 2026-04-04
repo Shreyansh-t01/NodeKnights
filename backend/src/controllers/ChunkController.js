@@ -1,5 +1,4 @@
 const ChunkService = require('../services/ChunkService');
-const ChunkingService = require('../services/ChunkingService');
 const { logger } = require('../utils');
 
 /**
@@ -64,37 +63,8 @@ class ChunkController {
    */
   static async createChunks(req, res) {
     try {
-      const { documentId } = req.params;
-      const { text, options = {} } = req.body;
-      const { userId } = req.user;
-
-      if (!text) {
-        return res.status(400).json({ error: 'Text is required' });
-      }
-
-      logger.info(`Creating chunks for document ${documentId}`, { userId });
-
-      // Generate chunks
-      const rawChunks = ChunkingService.chunkText(text, options);
-
-      // Enrich chunks with NLP
-      const enrichedChunks = await ChunkingService.enrichChunks(rawChunks);
-
-      // Save chunks to database
-      const savedChunks = [];
-      for (const chunkData of enrichedChunks) {
-        const chunk = await ChunkService.createChunk({
-          ...chunkData,
-          documentId,
-          userId,
-        });
-        savedChunks.push(chunk);
-      }
-
-      return res.status(201).json({
-        success: true,
-        chunks: savedChunks,
-        count: savedChunks.length,
+      return res.status(410).json({
+        error: 'Chunk generation is disabled. The NLP pipeline has been removed from the backend.',
       });
     } catch (error) {
       logger.error('Create chunks error', error);

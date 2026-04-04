@@ -33,9 +33,6 @@ test('express', () => require('express'));
 test('multer', () => require('multer'));
 test('compression', () => require('compression'));
 test('uuid', () => require('uuid'));
-test('pdf-parse', () => require('pdf-parse'));
-test('mammoth', () => require('mammoth'));
-test('natural', () => require('natural'));
 test('firebase-admin', () => require('firebase-admin'));
 test('axios', () => require('axios'));
 
@@ -45,8 +42,10 @@ console.log('\n📂 Testing Internal Modules...\n');
 test('Database (firebase)', () => {
   const { db, admin, COLLECTIONS } = require('./src/database/firebase');
   if (!COLLECTIONS) throw new Error('COLLECTIONS not exported');
-  if (db === undefined) throw new Error('db not initialized');
   if (admin === undefined) throw new Error('admin not initialized');
+  if (db !== undefined && typeof db.collection !== 'function') {
+    throw new Error('db export is invalid');
+  }
 });
 
 test('Models (DocumentSchema)', () => {
@@ -64,14 +63,9 @@ test('Services (DocumentService)', () => {
   if (!DocumentService.createDocument) throw new Error('Methods not found');
 });
 
-test('Services (ContentExtractionService)', () => {
-  const ContentExtractionService = require('./src/services/ContentExtractionService');
-  if (!ContentExtractionService.extractContent) throw new Error('Methods not found');
-});
-
-test('Services (NLPService)', () => {
-  const NLPService = require('./src/services/NLPService');
-  if (!NLPService.analyzeSentiment) throw new Error('Methods not found');
+test('Services (FileStorageService)', () => {
+  const FileStorageService = require('./src/services/FileStorageService');
+  if (!FileStorageService.storeFile) throw new Error('Methods not found');
 });
 
 test('Integrations (GmailService)', () => {

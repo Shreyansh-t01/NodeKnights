@@ -4,9 +4,10 @@ const chunkRoutes = require('./chunkRoutes');
 const clauseRoutes = require('./clauseRoutes');
 
 const router = express.Router();
+const uploadDocumentHandlers = documentRoutes.uploadDocumentHandlers || [];
 
 // Mount routes
-router.post('/upload', ...documentRoutes.uploadDocumentHandlers);
+router.post('/upload', ...uploadDocumentHandlers);
 router.use('/documents', documentRoutes);
 router.use('/chunks', chunkRoutes);
 router.use('/clauses', clauseRoutes);

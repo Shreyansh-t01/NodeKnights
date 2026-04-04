@@ -1,2 +1,26 @@
-node_modules
+node_modules/
+
+# Environment files
 .env
+.env.*
+!.env.example
+
+# Firebase / Google service account secrets
+firebase-service-account.json
+*-firebase-adminsdk-*.json
+*service-account*.json
+*credentials*.json
+
+# Common private key / certificate files
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+*.jks
+
+# Secret folders
+secrets/
+credentials/

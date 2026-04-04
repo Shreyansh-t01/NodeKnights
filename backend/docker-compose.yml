@@ -9,14 +9,13 @@ services:
       PORT: 5000
       NODE_ENV: development
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
-      FIREBASE_SERVICE_ACCOUNT_PATH: /app/firebase-service-account.json
+      FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_CALLBACK_URL: http://localhost:5000/api/auth/google/callback
     volumes:
       - .:/app
       - /app/node_modules
-      - ./firebase-service-account.json:/app/firebase-service-account.json:ro
     command: npm run dev
     networks:
       - nodeknights

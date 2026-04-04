@@ -26,6 +26,7 @@ const DocumentSchema = {
   file: {
     name: String,
     size: Number, // in bytes
+    mimeType: String,
     path: String, // Cloud Storage path
     url: String, // Accessible URL
     format: String, // jpg, pdf, docx, xlsx, etc.
@@ -125,8 +126,17 @@ const DocumentSchema = {
   
   // Storage & Access
   storage: {
+    provider: String, // 'firestore', 'cloud_storage', etc.
+    collection: String, // Firestore collection for chunked file storage
     bucket: String, // Cloud Storage bucket
     storagePath: String, // Full path in storage
+    fileName: String,
+    mimeType: String,
+    totalBytes: Number,
+    chunkCount: Number,
+    chunkSizeBytes: Number,
+    encoding: String,
+    storedAt: String,
     isPublic: Boolean,
     accessControl: {
       owner: String,

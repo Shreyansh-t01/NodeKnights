@@ -1,5 +1,39 @@
-const { db, FieldValue, COLLECTIONS } = require('../database');
+const { db, FieldValue, COLLECTIONS, formatFirestoreError } = require('../database');
 const { v4: uuidv4 } = require('uuid');
+const FileStorageService = require('./FileStorageService');
+const ChunkService = require('./ChunkService');
+const ClauseService = require('./ClauseService');
+
+const isPlainObject = value => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  if (value instanceof Date || Array.isArray(value) || Buffer.isBuffer(value)) {
+    return false;
+  }
+
+  return Object.getPrototypeOf(value) === Object.prototype;
+};
+
+const flattenForFirestore = (value, prefix = '', output = {}) => {
+  Object.entries(value).forEach(([key, nestedValue]) => {
+    if (typeof nestedValue === 'undefined') {
+      return;
+    }
+
+    const path = prefix ? `${prefix}.${key}` : key;
+
+    if (isPlainObject(nestedValue)) {
+      flattenForFirestore(nestedValue, path, output);
+      return;
+    }
+
+    output[path] = nestedValue;
+  });
+
+  return output;
+};
 
 /**
  * Base Document Service
@@ -9,7 +43,7 @@ const { v4: uuidv4 } = require('uuid');
 class DocumentService {
   static getDb() {
     if (!db) {
-      throw new Error('Firestore is not initialized. Add a valid firebase-service-account.json file.');
+      throw new Error('Firestore is not initialized. Add a valid Firebase service account JSON file or verify FIREBASE_SERVICE_ACCOUNT_PATH.');
     }
 
     return db;
@@ -47,7 +81,7 @@ class DocumentService {
       await this.getDocumentsCollection().doc(docId).set(documentPayload);
       return { id: docId, ...documentPayload };
     } catch (error) {
-      throw new Error(`Failed to create document: ${error.message}`);
+      throw new Error(`Failed to create document: ${formatFirestoreError(error, 'Creating document')}`);
     }
   }
 
@@ -62,7 +96,7 @@ class DocumentService {
       }
       return doc.data();
     } catch (error) {
-      throw new Error(`Failed to fetch document: ${error.message}`);
+      throw new Error(`Failed to fetch document: ${formatFirestoreError(error, 'Fetching document')}`);
     }
   }
 
@@ -99,7 +133,7 @@ class DocumentService {
         limit,
       };
     } catch (error) {
-      throw new Error(`Failed to fetch documents: ${error.message}`);
+      throw new Error(`Failed to fetch documents: ${formatFirestoreError(error, 'Listing documents')}`);
     }
   }
 
@@ -108,18 +142,18 @@ class DocumentService {
    */
   static async updateDocument(docId, updateData) {
     try {
-      const payload = {
+      const payload = flattenForFirestore({
         ...updateData,
         timestamps: {
           ...(updateData.timestamps || {}),
           updatedAt: new Date(),
         },
-      };
+      });
 
       await this.getDocumentsCollection().doc(docId).update(payload);
       return await this.getDocumentById(docId);
     } catch (error) {
-      throw new Error(`Failed to update document: ${error.message}`);
+      throw new Error(`Failed to update document: ${formatFirestoreError(error, 'Updating document')}`);
     }
   }
 
@@ -147,7 +181,7 @@ class DocumentService {
       
       await this.getDocumentsCollection().doc(docId).update(update);
     } catch (error) {
-      throw new Error(`Failed to update processing status: ${error.message}`);
+      throw new Error(`Failed to update processing status: ${formatFirestoreError(error, 'Updating processing status')}`);
     }
   }
 
@@ -156,10 +190,16 @@ class DocumentService {
    */
   static async deleteDocument(docId) {
     try {
+      await Promise.allSettled([
+        FileStorageService.deleteFile(docId),
+        ChunkService.deleteChunksByDocumentId(docId),
+        ClauseService.deleteClausesByDocumentId(docId),
+      ]);
+
       await this.getDocumentsCollection().doc(docId).delete();
       return { success: true, message: 'Document deleted' };
     } catch (error) {
-      throw new Error(`Failed to delete document: ${error.message}`);
+      throw new Error(`Failed to delete document: ${formatFirestoreError(error, 'Deleting document')}`);
     }
   }
 
@@ -181,19 +221,22 @@ class DocumentService {
       const results = snapshot.docs
         .map(doc => doc.data())
         .filter(doc => {
-          const matchTitle = doc.title?.toLowerCase().includes(searchQuery.toLowerCase());
-          const matchDescription = doc.description?.toLowerCase().includes(searchQuery.toLowerCase());
-          const matchContent = doc.extraction?.extractedText?.toLowerCase().includes(searchQuery.toLowerCase());
-          const matchKeywords =
-            doc.metadata?.keywords?.some(k => k.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            doc.processing?.topics?.some(topic => topic.name?.toLowerCase().includes(searchQuery.toLowerCase()));
-          
-          return matchTitle || matchDescription || matchContent || matchKeywords;
+          const normalizedQuery = searchQuery.toLowerCase();
+          const matchTitle = doc.title?.toLowerCase().includes(normalizedQuery);
+          const matchDescription = doc.description?.toLowerCase().includes(normalizedQuery);
+          const matchFileName = doc.file?.name?.toLowerCase().includes(normalizedQuery);
+          const matchExtension = doc.file?.extension?.toLowerCase().includes(normalizedQuery);
+          const matchTags =
+            doc.metadata?.tags?.some(tag => tag.toLowerCase().includes(normalizedQuery)) ||
+            doc.metadata?.categories?.some(category => category.toLowerCase().includes(normalizedQuery)) ||
+            doc.metadata?.keywords?.some(keyword => keyword.toLowerCase().includes(normalizedQuery));
+
+          return matchTitle || matchDescription || matchFileName || matchExtension || matchTags;
         });
       
       return results;
     } catch (error) {
-      throw new Error(`Search failed: ${error.message}`);
+      throw new Error(`Search failed: ${formatFirestoreError(error, 'Searching documents')}`);
     }
   }
 
@@ -204,13 +247,13 @@ class DocumentService {
     try {
       const firestore = this.getDb();
       const batch = firestore.batch();
-      const payload = {
+      const payload = flattenForFirestore({
         ...updateData,
         timestamps: {
           ...(updateData.timestamps || {}),
           updatedAt: new Date(),
         },
-      };
+      });
       
       docIds.forEach(docId => {
         const docRef = this.getDocumentsCollection().doc(docId);
@@ -220,7 +263,7 @@ class DocumentService {
       await batch.commit();
       return { success: true, updatedCount: docIds.length };
     } catch (error) {
-      throw new Error(`Bulk update failed: ${error.message}`);
+      throw new Error(`Bulk update failed: ${formatFirestoreError(error, 'Bulk updating documents')}`);
     }
   }
 
@@ -262,7 +305,7 @@ class DocumentService {
       
       return stats;
     } catch (error) {
-      throw new Error(`Failed to get stats: ${error.message}`);
+      throw new Error(`Failed to get stats: ${formatFirestoreError(error, 'Fetching document stats')}`);
     }
   }
 }
