@@ -1,4 +1,4 @@
-const { db, COLLECTIONS } = require('../database');
+const { db, FieldValue, COLLECTIONS } = require('../database');
 const { v4: uuidv4 } = require('uuid');
 
 /**
@@ -7,6 +7,18 @@ const { v4: uuidv4 } = require('uuid');
  */
 
 class DocumentService {
+  static getDb() {
+    if (!db) {
+      throw new Error('Firestore is not initialized. Add a valid firebase-service-account.json file.');
+    }
+
+    return db;
+  }
+
+  static getDocumentsCollection() {
+    return this.getDb().collection(COLLECTIONS.DOCUMENTS);
+  }
+
   /**
    * Create a new document
    */
@@ -32,7 +44,7 @@ class DocumentService {
         },
       };
       
-      await db.collection(COLLECTIONS.DOCUMENTS).doc(docId).set(documentPayload);
+      await this.getDocumentsCollection().doc(docId).set(documentPayload);
       return { id: docId, ...documentPayload };
     } catch (error) {
       throw new Error(`Failed to create document: ${error.message}`);
@@ -44,7 +56,7 @@ class DocumentService {
    */
   static async getDocumentById(docId) {
     try {
-      const doc = await db.collection(COLLECTIONS.DOCUMENTS).doc(docId).get();
+      const doc = await this.getDocumentsCollection().doc(docId).get();
       if (!doc.exists) {
         throw new Error('Document not found');
       }
@@ -59,7 +71,7 @@ class DocumentService {
    */
   static async getDocumentsByUserId(userId, page = 1, limit = 20, filters = {}) {
     try {
-      let query = db.collection(COLLECTIONS.DOCUMENTS).where('userId', '==', userId);
+      let query = this.getDocumentsCollection().where('userId', '==', userId);
       
       // Apply filters
       if (filters.contentType) {
@@ -96,8 +108,15 @@ class DocumentService {
    */
   static async updateDocument(docId, updateData) {
     try {
-      updateData.timestamps.updatedAt = new Date();
-      await db.collection(COLLECTIONS.DOCUMENTS).doc(docId).update(updateData);
+      const payload = {
+        ...updateData,
+        timestamps: {
+          ...(updateData.timestamps || {}),
+          updatedAt: new Date(),
+        },
+      };
+
+      await this.getDocumentsCollection().doc(docId).update(payload);
       return await this.getDocumentById(docId);
     } catch (error) {
       throw new Error(`Failed to update document: ${error.message}`);
@@ -109,6 +128,8 @@ class DocumentService {
    */
   static async updateProcessingStatus(docId, status, progress = 0, error = null) {
     try {
+      this.getDb();
+
       const update = {
         'status.state': status,
         'status.processingProgress': progress,
@@ -117,14 +138,14 @@ class DocumentService {
       
       if (error) {
         update['status.error'] = error;
-        update['status.retries'] = db.FieldValue.increment(1);
+        update['status.retries'] = FieldValue.increment(1);
       }
       
       if (status === 'completed') {
         update['timestamps.processedAt'] = new Date();
       }
       
-      await db.collection(COLLECTIONS.DOCUMENTS).doc(docId).update(update);
+      await this.getDocumentsCollection().doc(docId).update(update);
     } catch (error) {
       throw new Error(`Failed to update processing status: ${error.message}`);
     }
@@ -135,7 +156,7 @@ class DocumentService {
    */
   static async deleteDocument(docId) {
     try {
-      await db.collection(COLLECTIONS.DOCUMENTS).doc(docId).delete();
+      await this.getDocumentsCollection().doc(docId).delete();
       return { success: true, message: 'Document deleted' };
     } catch (error) {
       throw new Error(`Failed to delete document: ${error.message}`);
@@ -147,7 +168,7 @@ class DocumentService {
    */
   static async searchDocuments(userId, searchQuery, contentType = null) {
     try {
-      let query = db.collection(COLLECTIONS.DOCUMENTS)
+      let query = this.getDocumentsCollection()
         .where('userId', '==', userId);
       
       if (contentType) {
@@ -162,10 +183,10 @@ class DocumentService {
         .filter(doc => {
           const matchTitle = doc.title?.toLowerCase().includes(searchQuery.toLowerCase());
           const matchDescription = doc.description?.toLowerCase().includes(searchQuery.toLowerCase());
-          const matchContent = doc.content?.toLowerCase().includes(searchQuery.toLowerCase());
-          const matchKeywords = doc.metadata?.keywords?.some(k => 
-            k.toLowerCase().includes(searchQuery.toLowerCase())
-          );
+          const matchContent = doc.extraction?.extractedText?.toLowerCase().includes(searchQuery.toLowerCase());
+          const matchKeywords =
+            doc.metadata?.keywords?.some(k => k.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            doc.processing?.topics?.some(topic => topic.name?.toLowerCase().includes(searchQuery.toLowerCase()));
           
           return matchTitle || matchDescription || matchContent || matchKeywords;
         });
@@ -181,13 +202,19 @@ class DocumentService {
    */
   static async bulkUpdateDocuments(docIds, updateData) {
     try {
-      const batch = db.batch();
-      
-      updateData.timestamps.updatedAt = new Date();
+      const firestore = this.getDb();
+      const batch = firestore.batch();
+      const payload = {
+        ...updateData,
+        timestamps: {
+          ...(updateData.timestamps || {}),
+          updatedAt: new Date(),
+        },
+      };
       
       docIds.forEach(docId => {
-        const docRef = db.collection(COLLECTIONS.DOCUMENTS).doc(docId);
-        batch.update(docRef, updateData);
+        const docRef = this.getDocumentsCollection().doc(docId);
+        batch.update(docRef, payload);
       });
       
       await batch.commit();
@@ -202,7 +229,7 @@ class DocumentService {
    */
   static async getUserDocumentStats(userId) {
     try {
-      const snapshot = await db.collection(COLLECTIONS.DOCUMENTS)
+      const snapshot = await this.getDocumentsCollection()
         .where('userId', '==', userId)
         .get();
       

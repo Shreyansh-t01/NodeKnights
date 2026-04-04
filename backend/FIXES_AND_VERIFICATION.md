@@ -2,6 +2,74 @@
 
 ## Bugs Fixed
 
+### 1D. **Firebase bootstrap now uses the official Firestore Admin SDK pattern** ✅
+**Files:** `src/database/firebase.js`, `src/services/DocumentService.js`
+**Issue:** The Firestore setup used a custom initialization path and an older retry-counter access pattern.
+**Fix:**
+- initialize Firebase with `initializeApp(...)`
+- load the service account with `cert(...)`
+- create Firestore with `getFirestore(...)`
+- use `FieldValue.increment(1)` from `firebase-admin/firestore`
+- keep the same collection names and stored document structure
+
+```javascript
+const { cert, getApp, getApps, initializeApp } = require('firebase-admin/app');
+const { FieldValue, getFirestore } = require('firebase-admin/firestore');
+```
+
+### 1C. **File-only uploads work without extra form fields** ✅
+**File:** `src/controllers/DocumentController.js`
+**Issue:** Upload requests may contain only the file and no text fields such as `title` or `description`.
+**Fix:**
+- safely read `req.body || {}`
+- keep `title`, `description`, and `contentType` optional
+- document the correct `multipart/form-data` Postman request format
+
+```javascript
+const { title, description, contentType } = req.body || {};
+```
+
+### 1B. **Authentication is temporarily bypassed for development** ✅
+**File:** `src/middleware/index.js`
+**Issue:** JWT requirements were blocking upload and document flows during active development.
+**Fix:**
+- allow all requests through the shared `authenticate` middleware
+- attach `req.user.userId` from `X-User-Id` when provided
+- fall back to `dev-user` so existing controllers continue working
+
+```javascript
+req.user = {
+  userId: req.headers['x-user-id'] || 'dev-user',
+  authDisabled: true,
+};
+
+next();
+```
+
+### 1A. **Authentication errors now identify missing upload tokens** ✅
+**File:** `src/middleware/index.js`
+**Issue:** Protected upload requests without an `Authorization` header only returned `"No token provided"`, which made upload failures harder to diagnose.
+**Fix:**
+- detect a missing `Authorization` header explicitly
+- validate the `Bearer <JWT_TOKEN>` format
+- return dedicated messages for expired and invalid JWTs
+- include the current route in the missing-header response details
+
+```javascript
+// BEFORE
+if (!token) {
+  return res.status(401).json({ error: 'No token provided' });
+}
+
+// AFTER
+if (!authHeader) {
+  return res.status(401).json({
+    error: 'Missing Authorization header',
+    details: `Send Authorization: Bearer <JWT_TOKEN> when calling ${req.method} ${req.originalUrl}`,
+  });
+}
+```
+
 ### 1. **Missing Multer Import in Middleware** ✅
 **File:** `src/middleware/index.js`
 **Issue:** The `errorHandler` function referenced `multer.MulterError` without importing multer

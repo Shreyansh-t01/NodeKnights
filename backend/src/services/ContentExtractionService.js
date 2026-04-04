@@ -1,6 +1,9 @@
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 const Tesseract = require('tesseract.js');
+const fs = require('fs/promises');
+const os = require('os');
+const path = require('path');
 
 /**
  * Content Extraction Service
@@ -63,6 +66,22 @@ class ContentExtractionService {
   }
 
   /**
+   * Extract text from image buffer using a temporary file
+   */
+  static async extractFromImageBuffer(fileBuffer, fileName) {
+    const safeFileName = path.basename(fileName || 'upload-image').replace(/[^\w.-]/g, '_');
+    const tempPath = path.join(os.tmpdir(), `${Date.now()}_${safeFileName}`);
+
+    await fs.writeFile(tempPath, fileBuffer);
+
+    try {
+      return await this.extractFromImage(tempPath);
+    } finally {
+      await fs.unlink(tempPath).catch(() => {});
+    }
+  }
+
+  /**
    * Extract from plain text file
    */
   static async extractFromText(fileBuffer) {
@@ -88,10 +107,7 @@ class ContentExtractionService {
     } else if (lowerMimeType.includes('word') || fileName.endsWith('.docx')) {
       return await this.extractFromDocx(fileBuffer);
     } else if (lowerMimeType.startsWith('image/')) {
-      // Save to temp and process
-      const tempPath = `/tmp/${Date.now()}_${fileName}`;
-      // Write buffer to temp file (implement as needed)
-      return await this.extractFromImage(tempPath);
+      return await this.extractFromImageBuffer(fileBuffer, fileName);
     } else if (lowerMimeType === 'text/plain') {
       return await this.extractFromText(fileBuffer);
     } else {

@@ -8,11 +8,11 @@ http://localhost:5000/api
 
 ## Authentication
 
-All endpoints (except `/health`) require authentication via:
+Authentication is temporarily disabled for development.
+All endpoints (except `/health`) can be called without a JWT.
 
 ```
-Authorization: Bearer <JWT_TOKEN>
-X-User-Id: <USER_ID>
+X-User-Id: <optional-user-id>
 ```
 
 ## Error Responses
@@ -65,10 +65,13 @@ Check API health status.
 
 Upload and process a new document.
 
+This endpoint works with a file-only upload. `title`, `description`, and `contentType` are optional.
+If you omit `title`, the backend uses the uploaded filename.
+If you omit `description`, the backend stores an empty string.
+
 **Headers:**
 ```
-Authorization: Bearer <token>
-X-User-Id: <userId>
+X-User-Id: <optional-user-id>
 Content-Type: multipart/form-data
 ```
 
@@ -78,11 +81,24 @@ Content-Type: multipart/form-data
 - `description` (optional): Document description
 - `contentType` (optional): Content type hint
 
+**Postman setup:**
+- Method: `POST`
+- URL: `http://localhost:5000/api/documents/upload`
+- Body tab: `form-data`
+- Key: `file`
+- Key type: `File`
+- Value: choose your file from disk
+- Optional extra keys: `title`, `description`, `contentType` as Text
+
+**Minimal working example:**
+```bash
+curl -X POST http://localhost:5000/api/documents/upload \
+  -F "file=@document.pdf"
+```
+
 **Example:**
 ```bash
 curl -X POST http://localhost:5000/api/documents/upload \
-  -H "Authorization: Bearer token123" \
-  -H "X-User-Id: user456" \
   -F "file=@document.pdf" \
   -F "title=My Document" \
   -F "description=Important doc"
@@ -100,7 +116,6 @@ curl -X POST http://localhost:5000/api/documents/upload \
 **Errors:**
 - `400` - No file provided or invalid file type
 - `413` - File too large
-- `401` - Unauthorized
 
 ---
 
@@ -118,8 +133,7 @@ List user documents with filtering and pagination.
 **Example:**
 ```bash
 curl http://localhost:5000/api/documents?page=1&limit=20&contentType=pdf \
-  -H "Authorization: Bearer token123" \
-  -H "X-User-Id: user456"
+  -H "X-User-Id: dev-user"
 ```
 
 **Response (200):**
@@ -154,8 +168,7 @@ Search documents by keyword with full-text capabilities.
 **Example:**
 ```bash
 curl "http://localhost:5000/api/documents/search?q=invoice&contentType=pdf" \
-  -H "Authorization: Bearer token123" \
-  -H "X-User-Id: user456"
+  -H "X-User-Id: dev-user"
 ```
 
 **Response (200):**
@@ -184,8 +197,7 @@ Retrieve specific document details.
 **Example:**
 ```bash
 curl http://localhost:5000/api/documents/550e8400-e29b-41d4-a716-446655440000 \
-  -H "Authorization: Bearer token123" \
-  -H "X-User-Id: user456"
+  -H "X-User-Id: dev-user"
 ```
 
 **Response (200):**
@@ -298,8 +310,7 @@ Delete a document.
 **Example:**
 ```bash
 curl -X DELETE http://localhost:5000/api/documents/550e8400-e29b-41d4-a716-446655440000 \
-  -H "Authorization: Bearer token123" \
-  -H "X-User-Id: user456"
+  -H "X-User-Id: dev-user"
 ```
 
 **Response (200):**
@@ -323,8 +334,7 @@ Get document statistics for the user.
 **Example:**
 ```bash
 curl http://localhost:5000/api/documents/stats \
-  -H "Authorization: Bearer token123" \
-  -H "X-User-Id: user456"
+  -H "X-User-Id: dev-user"
 ```
 
 **Response (200):**
@@ -407,8 +417,7 @@ form.append('title', 'My Document');
 const response = await fetch('http://localhost:5000/api/documents/upload', {
   method: 'POST',
   headers: {
-    'Authorization': 'Bearer token123',
-    'X-User-Id': 'user456'
+    'X-User-Id': 'dev-user'
   },
   body: form
 });
@@ -426,8 +435,7 @@ import requests
 files = {'file': open('document.pdf', 'rb')}
 data = {'title': 'My Document'}
 headers = {
-    'Authorization': 'Bearer token123',
-    'X-User-Id': 'user456'
+    'X-User-Id': 'dev-user'
 }
 
 response = requests.post(
@@ -445,20 +453,17 @@ print(response.json())
 ```bash
 # Upload
 curl -X POST http://localhost:5000/api/documents/upload \
-  -H "Authorization: Bearer token123" \
-  -H "X-User-Id: user456" \
+  -H "X-User-Id: dev-user" \
   -F "file=@document.pdf" \
   -F "title=My Document"
 
 # List
 curl http://localhost:5000/api/documents \
-  -H "Authorization: Bearer token123" \
-  -H "X-User-Id: user456"
+  -H "X-User-Id: dev-user"
 
 # Get
 curl http://localhost:5000/api/documents/doc123 \
-  -H "Authorization: Bearer token123" \
-  -H "X-User-Id: user456"
+  -H "X-User-Id: dev-user"
 ```
 
 ---

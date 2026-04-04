@@ -17,15 +17,19 @@ class DocumentController {
    */
   static async uploadDocument(req, res) {
     try {
-      const { userId } = req.user;
-      const { title, description, contentType } = req.body;
+      const userId = req.user?.userId;
+      const { title, description, contentType } = req.body || {};
       const file = req.file;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
 
       if (!file) {
         return res.status(400).json({ error: 'No file provided' });
       }
 
-      logger.log(`Processing upload for user ${userId}`, { fileName: file.originalname });
+      logger.info(`Processing upload for user ${userId}`, { fileName: file.originalname });
 
       // Create document record
       const documentData = {
@@ -48,7 +52,14 @@ class DocumentController {
       const document = await DocumentService.createDocument(documentData);
 
       // Extract content asynchronously
-      this.processDocumentAsync(document.id, file.buffer, file.mimetype, file.originalname);
+      DocumentController.processDocumentAsync(
+        document.id,
+        file.buffer,
+        file.mimetype,
+        file.originalname,
+      ).catch(processingError => {
+        logger.error(`Unhandled document processing failure for ${document.id}`, processingError);
+      });
 
       return res.status(201).json({
         success: true,
@@ -92,6 +103,7 @@ class DocumentController {
         },
         metadata: {
           language,
+          keywords: keywords.map(k => k.keyword),
           wordCount: extraction.text.split(/\s+/).length,
           pageCount: extraction.metadata?.pageCount,
         },
@@ -109,7 +121,7 @@ class DocumentController {
             userId: document.userId,
           });
         }
-        logger.log(`Created ${enrichedChunks.length} chunks for document ${docId}`);
+        logger.info(`Created ${enrichedChunks.length} chunks for document ${docId}`);
       } catch (chunkError) {
         logger.error(`Chunk creation failed for document ${docId}`, chunkError);
       }
@@ -126,16 +138,20 @@ class DocumentController {
             userId: document.userId,
           });
         }
-        logger.log(`Created ${enrichedClauses.length} clauses for document ${docId}`);
+        logger.info(`Created ${enrichedClauses.length} clauses for document ${docId}`);
       } catch (clauseError) {
         logger.error(`Clause creation failed for document ${docId}`, clauseError);
       }
 
       await DocumentService.updateProcessingStatus(docId, 'completed', 100);
-      logger.log(`Document ${docId} processed successfully`);
+      logger.info(`Document ${docId} processed successfully`);
     } catch (error) {
       logger.error(`Document processing failed for ${docId}`, error);
-      await DocumentService.updateProcessingStatus(docId, 'failed', 0, error.message);
+      try {
+        await DocumentService.updateProcessingStatus(docId, 'failed', 0, error.message);
+      } catch (statusError) {
+        logger.error(`Failed to mark document ${docId} as failed`, statusError);
+      }
     }
   }
 

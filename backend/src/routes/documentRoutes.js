@@ -13,7 +13,6 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     const allowedMimes = [
       'application/pdf',
-      'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'image/jpeg',
       'image/png',
@@ -29,13 +28,22 @@ const upload = multer({
   },
 });
 
+const uploadDocumentHandlers = [
+  authenticate,
+  upload.single('file'),
+  validateFileUpload,
+  DocumentController.uploadDocument,
+];
+
 // Document routes
-router.post('/upload', authenticate, upload.single('file'), validateFileUpload, DocumentController.uploadDocument);
+router.post('/upload', ...uploadDocumentHandlers);
 router.get('/', authenticate, DocumentController.listDocuments);
 router.get('/search', authenticate, DocumentController.searchDocuments);
 router.get('/stats', authenticate, DocumentController.getStats);
 router.get('/:docId', authenticate, DocumentController.getDocument);
 router.put('/:docId', authenticate, DocumentController.updateDocument);
 router.delete('/:docId', authenticate, DocumentController.deleteDocument);
+
+router.uploadDocumentHandlers = uploadDocumentHandlers;
 
 module.exports = router;

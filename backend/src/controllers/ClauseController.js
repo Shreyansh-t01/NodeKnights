@@ -77,7 +77,7 @@ class ClauseController {
         return res.status(400).json({ error: 'Text is required' });
       }
 
-      logger.log(`Creating clauses for document ${documentId}`, { userId, documentType });
+      logger.info(`Creating clauses for document ${documentId}`, { userId, documentType });
 
       // Extract clauses
       const rawClauses = await ChunkingService.extractClauses(text, documentType);

@@ -1,38 +1,52 @@
-const admin = require('firebase-admin');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
+const admin = require('firebase-admin');
+const { cert, getApp, getApps, initializeApp } = require('firebase-admin/app');
+const { FieldValue, getFirestore } = require('firebase-admin/firestore');
 
-// Initialize Firebase Admin SDK
-const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || 
-  path.join(__dirname, '../../firebase-service-account.json');
+const backendRoot = path.resolve(__dirname, '../../');
 
+const resolveServiceAccountPath = configuredPath => {
+  if (!configuredPath) {
+    return path.join(backendRoot, 'firebase-service-account.json');
+  }
+
+  return path.isAbsolute(configuredPath)
+    ? configuredPath
+    : path.resolve(backendRoot, configuredPath);
+};
+
+const serviceAccountPath = resolveServiceAccountPath(process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
+
+let app;
 let db;
 
 try {
-  // Check if service account file exists
   if (!fs.existsSync(serviceAccountPath)) {
-    console.warn(`⚠️  Firebase service account not found at ${serviceAccountPath}`);
-    console.warn('⚠️  Firebase features will be disabled until proper credentials are provided');
+    console.warn(`Firebase service account not found at ${serviceAccountPath}`);
+    console.warn('Firebase features will be disabled until proper credentials are provided');
   } else {
-    if (!admin.apps.length) {
-      // Read and parse service account key safely
-      const serviceAccountContent = fs.readFileSync(serviceAccountPath, 'utf8');
-      const serviceAccountKey = JSON.parse(serviceAccountContent);
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccountKey),
-        projectId: process.env.FIREBASE_PROJECT_ID,
-      });
+    const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+    const projectId = process.env.FIREBASE_PROJECT_ID || serviceAccount.project_id;
+
+    const appOptions = {
+      credential: cert(serviceAccount),
+    };
+
+    if (projectId) {
+      appOptions.projectId = projectId;
     }
-    db = admin.firestore();
-    
-    console.log('✅ Firebase initialized successfully');
+
+    app = getApps().length ? getApp() : initializeApp(appOptions);
+    db = getFirestore(app);
+
+    console.log(`Firebase initialized successfully for project ${projectId || 'unknown-project'}`);
   }
 } catch (error) {
-  console.error('⚠️  Firebase initialization error:', error.message);
-  console.error('    Please add a valid firebase-service-account.json file');
+  console.error(`Firebase initialization error: ${error.message}`);
+  console.error('Please add a valid firebase-service-account.json file');
 }
 
-// Collections constants
 const COLLECTIONS = {
   DOCUMENTS: 'documents',
   USERS: 'users',
@@ -44,7 +58,9 @@ const COLLECTIONS = {
 };
 
 module.exports = {
+  app,
   db,
   admin,
+  FieldValue,
   COLLECTIONS,
 };

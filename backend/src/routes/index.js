@@ -6,6 +6,7 @@ const clauseRoutes = require('./clauseRoutes');
 const router = express.Router();
 
 // Mount routes
+router.post('/upload', ...documentRoutes.uploadDocumentHandlers);
 router.use('/documents', documentRoutes);
 router.use('/chunks', chunkRoutes);
 router.use('/clauses', clauseRoutes);

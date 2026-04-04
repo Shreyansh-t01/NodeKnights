@@ -72,7 +72,7 @@ class ChunkController {
         return res.status(400).json({ error: 'Text is required' });
       }
 
-      logger.log(`Creating chunks for document ${documentId}`, { userId });
+      logger.info(`Creating chunks for document ${documentId}`, { userId });
 
       // Generate chunks
       const rawChunks = ChunkingService.chunkText(text, options);

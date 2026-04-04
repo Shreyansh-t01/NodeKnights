@@ -76,7 +76,7 @@ class NLPService {
 
       // Remove common stop words
       const stopWords = new natural.StopWordsEn();
-      const filtered = tokens.filter(token => !stopWords.words.includes(token) && token.length > 3);
+      const filtered = tokens.filter(token => !stopWords.words.includes(token) && token.length > 3);   // stop words remove karne ke liye likha hai
 
       // Calculate frequency
       const frequency = {};

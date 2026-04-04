@@ -155,8 +155,7 @@ The core document model supports all data sources with a unified structure:
 ```http
 POST /api/documents/upload
 Content-Type: multipart/form-data
-Authorization: Bearer <token>
-X-User-Id: <userId>
+X-User-Id: <optional-user-id>
 
 Body:
 - file: <binary>
@@ -176,8 +175,7 @@ Body:
 #### List Documents
 ```http
 GET /api/documents?page=1&limit=20&contentType=pdf&source=upload
-Authorization: Bearer <token>
-X-User-Id: <userId>
+X-User-Id: <optional-user-id>
 ```
 
 **Response:**
@@ -193,22 +191,19 @@ X-User-Id: <userId>
 #### Search Documents
 ```http
 GET /api/documents/search?q=keyword&contentType=email
-Authorization: Bearer <token>
-X-User-Id: <userId>
+X-User-Id: <optional-user-id>
 ```
 
 #### Get Document
 ```http
 GET /api/documents/{docId}
-Authorization: Bearer <token>
-X-User-Id: <userId>
+X-User-Id: <optional-user-id>
 ```
 
 #### Update Document
 ```http
 PUT /api/documents/{docId}
-Authorization: Bearer <token>
-X-User-Id: <userId>
+X-User-Id: <optional-user-id>
 
 Body:
 {
@@ -221,15 +216,13 @@ Body:
 #### Delete Document
 ```http
 DELETE /api/documents/{docId}
-Authorization: Bearer <token>
-X-User-Id: <userId>
+X-User-Id: <optional-user-id>
 ```
 
 #### Get Statistics
 ```http
 GET /api/documents/stats
-Authorization: Bearer <token>
-X-User-Id: <userId>
+X-User-Id: <optional-user-id>
 ```
 
 ## 🔧 Services Overview
@@ -274,8 +267,8 @@ Google Drive integration:
 
 ## 🔐 Security Features
 
-- **Authentication**: JWT token-based authentication
-- **Authorization**: User-level access control
+- **Authentication**: Temporarily disabled for development
+- **Authorization**: Temporarily disabled; requests use `X-User-Id` or fall back to `dev-user`
 - **Validation**: Input validation on all endpoints
 - **Rate Limiting**: (Implement with express-rate-limit)
 - **CORS**: Configurable cross-origin requests

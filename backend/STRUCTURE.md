@@ -158,7 +158,6 @@ npm run dev
 ```bash
 curl -X POST http://localhost:5000/api/documents/upload \
   -H "Authorization: Bearer test-token" \
-  -H "X-User-Id: test-user" \
   -F "file=@test-file.pdf" \
   -F "title=Test Document"
 ```

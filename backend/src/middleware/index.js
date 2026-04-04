@@ -2,36 +2,22 @@ const multer = require('multer');
 
 /**
  * Authentication Middleware
- * Verifies user identity and JWT tokens
+ * Temporarily bypasses authentication during development
  */
 
 const authenticate = (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
+  req.user = {
+    userId: req.headers['x-user-id'] || 'dev-user',
+    authDisabled: true,
+  };
 
-    if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
-    }
-
-    // TODO: Verify JWT token
-    // For now, extract userId from token (implement proper JWT verification)
-    const userId = req.headers['x-user-id'];
-
-    if (!userId) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-
-    req.user = { userId };
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Authentication failed' });
-  }
+  next();
 };
 
 /**
  * Error handling middleware
  */
-const errorHandler = (err, req, res) => {
+const errorHandler = (err, req, res, next) => {
   console.error('Error:', err.message);
 
   if (err instanceof multer.MulterError) {
