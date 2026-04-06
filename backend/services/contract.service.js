@@ -51,6 +51,7 @@ async function ingestManualContract(file, options = {}) {
   console.log("we got raw document")
   const extracted = await extractTextFromDocument(file);
   const extractedTextAsset = await uploadExtractedText({
+    
     contractId,
     text: extracted.text,
     source,
@@ -131,7 +132,7 @@ async function ingestManualContract(file, options = {}) {
     },
   );
 
-  const insights = generateContractOverview({
+  const insights = await generateContractOverview({
     contract,
     clauses,
     risks,
@@ -163,7 +164,7 @@ async function buildContractInsights(contractId, clauseId) {
   const contractBundle = await getContractById(contractId);
 
   if (!clauseId) {
-    return generateContractOverview(contractBundle);
+    return await generateContractOverview(contractBundle);
   }
 
   const clause = contractBundle.clauses.find((item) => item.id === clauseId);
@@ -180,7 +181,7 @@ async function buildContractInsights(contractId, clauseId) {
     queryText: clause.clauseText,
   });
 
-  return generateClauseInsight(clause, matches);
+  return await generateClauseInsight(clause, matches);
 }
 
 module.exports = {

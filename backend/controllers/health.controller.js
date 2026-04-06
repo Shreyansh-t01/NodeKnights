@@ -48,8 +48,11 @@ async function getHealth(req, res) {
         mode: featureFlags.googleConnectors ? 'oauth-refresh-token' : 'disabled',
       },
       reasoning: {
-        enabled: true,
+        enabled: featureFlags.externalGenAi,
         provider: featureFlags.externalGenAi ? env.genAiProvider : 'template',
+        configuredProvider: env.genAiProvider,
+        model: featureFlags.externalGenAi ? env.genAiModel : null,
+        mode: featureFlags.externalGenAi ? 'external-genai' : 'template-fallback',
       },
     },
   });

@@ -181,3 +181,35 @@ export function buildMockSearchResult(query, contract = sampleContracts[0]) {
     },
   };
 }
+
+export function buildMockContractInsights(contract = sampleContracts[0]) {
+  const highRiskClauses = (contract.clauses || []).filter((clause) => clause.riskLabel === 'high').slice(0, 5);
+
+  return {
+    headline: highRiskClauses.length
+      ? 'Immediate legal review is recommended before approval.'
+      : 'No automatic high-risk clause insights were generated for this contract.',
+    summary: highRiskClauses.length
+      ? `Automatic insight generation is focused on ${highRiskClauses.length} high-risk clause${highRiskClauses.length > 1 ? 's' : ''}.`
+      : 'This contract currently has no high-risk clauses, so the automatic insight list is empty.',
+    topRiskItems: highRiskClauses.map((clause) => `${clause.clauseType.replace(/_/g, ' ')} clause requires review`),
+    nextSteps: highRiskClauses.length
+      ? [
+        'Review the highlighted high-risk clauses before approval.',
+        'Compare the risky language with stronger precedent clauses.',
+        'Redraft one-sided terms before sending the contract forward.',
+      ]
+      : [
+        'Review medium-risk clauses manually if you want a broader pass.',
+        'Run semantic search for drafting guidance on sensitive clauses.',
+      ],
+    clauseInsights: highRiskClauses.map((clause) => ({
+      clauseId: clause.id,
+      clauseType: clause.clauseType,
+      riskLabel: clause.riskLabel,
+      whyItIsRisky: `${clause.clauseType.replace(/_/g, ' ')} language is creating concentrated legal exposure.`,
+      comparison: `This clause is marked high risk because the wording is aggressive and leaves limited procedural protection.`,
+      recommendedChange: 'Add balanced notice, cure, approval, and dispute-handling language before finalizing.',
+    })),
+  };
+}

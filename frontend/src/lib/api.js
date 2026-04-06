@@ -26,6 +26,11 @@ export const api = {
   getHealth: () => request('/health'),
   getContracts: () => request('/contracts'),
   getContractById: (contractId) => request(`/contracts/${contractId}`),
+  getContractInsights: (contractId, clauseId) => request(
+    clauseId
+      ? `/contracts/${contractId}/insights?clauseId=${encodeURIComponent(clauseId)}`
+      : `/contracts/${contractId}/insights`
+  ),
   semanticSearch: (payload) => request('/search/semantic', {
     method: 'POST',
     body: JSON.stringify(payload),

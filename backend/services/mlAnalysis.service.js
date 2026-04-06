@@ -193,7 +193,9 @@ async function analyzeWithMlService(text) {
 async function analyzeContractText(text) {
   try {
     return await analyzeWithMlService(text);
+    console.log("ml model is being used")
   } catch (error) {
+    console.log("model use nahi kar rha yeh")
     if (env.requirePythonMlService) {
       throw new AppError(
         503,

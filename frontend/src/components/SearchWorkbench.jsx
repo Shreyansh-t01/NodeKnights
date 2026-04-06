@@ -7,6 +7,9 @@ function SearchWorkbench({
   onSubmit,
   modeLabel,
 }) {
+  const recommendations = result?.reasoning?.recommendations || [];
+  const supportingMatches = result?.reasoning?.supportingMatches || [];
+
   return (
     <section className="panel search-panel">
       <div className="panel-header">
@@ -37,14 +40,14 @@ function SearchWorkbench({
 
       <div className="search-answer">
         <h4>Answer</h4>
-        <p>{result.reasoning.answer}</p>
+        <p>{result?.reasoning?.answer}</p>
       </div>
 
       <div className="search-grid">
         <div>
           <h4>Recommendations</h4>
           <ul>
-            {result.reasoning.recommendations.map((item) => (
+            {recommendations.map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>
@@ -52,9 +55,9 @@ function SearchWorkbench({
         <div>
           <h4>Supporting matches</h4>
           <ul>
-            {result.reasoning.supportingMatches.map((match) => (
+            {supportingMatches.map((match) => (
               <li key={match.id}>
-                <strong>{match.clauseType.replace(/_/g, ' ')}</strong> · {match.riskLabel} risk
+                <strong>{match.clauseType.replace(/_/g, ' ')}</strong> - {match.riskLabel} risk
               </li>
             ))}
           </ul>

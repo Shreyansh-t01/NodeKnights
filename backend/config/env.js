@@ -52,6 +52,19 @@ function resolveIfPresent(value, fallback = '') {
   return path.isAbsolute(value) ? value : path.resolve(projectRoot, value);
 }
 
+const configuredGenAiProvider = (process.env.GENAI_PROVIDER || (process.env.GEMINI_API_KEY ? 'gemini' : 'template'))
+  .trim()
+  .toLowerCase();
+
+const configuredGenAiBaseUrl = process.env.GEMINI_BASE_URL
+  || process.env.GENAI_BASE_URL
+  || (configuredGenAiProvider === 'gemini' ? 'https://generativelanguage.googleapis.com/v1beta' : '');
+
+const configuredGenAiApiKey = process.env.GEMINI_API_KEY || process.env.GENAI_API_KEY || '';
+const configuredGenAiModel = process.env.GEMINI_MODEL
+  || process.env.GENAI_MODEL
+  || (configuredGenAiProvider === 'gemini' ? 'gemini-2.5-flash' : '');
+
 const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: asNumber(process.env.PORT, 3000),
@@ -77,10 +90,14 @@ const env = {
   pineconeIndexHost: process.env.PINECONE_INDEX_HOST || '',
   pineconeNamespace: process.env.PINECONE_NAMESPACE || 'contracts',
   embeddingDimension: asNumber(process.env.EMBEDDING_DIMENSION, 128),
-  genAiProvider: process.env.GENAI_PROVIDER || 'template',
-  genAiBaseUrl: process.env.GENAI_BASE_URL || '',
-  genAiApiKey: process.env.GENAI_API_KEY || '',
-  genAiModel: process.env.GENAI_MODEL || '',
+  genAiProvider: configuredGenAiProvider,
+  genAiBaseUrl: configuredGenAiBaseUrl,
+  genAiApiKey: configuredGenAiApiKey,
+  genAiModel: configuredGenAiModel,
+  genAiTimeoutMs: asNumber(process.env.GENAI_TIMEOUT_MS, 30000),
+  genAiTemperature: asNumber(process.env.GENAI_TEMPERATURE, 0.2),
+  genAiMaxOutputTokens: asNumber(process.env.GENAI_MAX_OUTPUT_TOKENS, 1400),
+  genAiThinkingBudget: asNumber(process.env.GENAI_THINKING_BUDGET, 0),
   rulebookPath: resolveIfPresent(
     process.env.RULEBOOK_PATH,
     path.resolve(projectRoot, 'data', 'rulebook.json'),
@@ -103,7 +120,12 @@ const featureFlags = {
       && env.googleRefreshToken,
   ),
   pinecone: Boolean(env.pineconeApiKey && env.pineconeIndexHost),
-  externalGenAi: Boolean(env.genAiBaseUrl && env.genAiApiKey && env.genAiModel),
+  externalGenAi: Boolean(
+    env.genAiProvider !== 'template'
+      && env.genAiBaseUrl
+      && env.genAiApiKey
+      && env.genAiModel
+  ),
 };
 
 module.exports = {

@@ -31,7 +31,7 @@ async function runSemanticSearch({ query, contractId, topK = 5 }) {
   return {
     query,
     matches,
-    reasoning: buildSemanticAnswer({
+    reasoning: await buildSemanticAnswer({
       query,
       matches,
       contract,

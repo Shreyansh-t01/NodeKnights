@@ -70,6 +70,7 @@ async function uploadExtractedText({ contractId, text, source }) {
 
   try {
     if (firebaseStatus.enabled) {
+      console.log("firebase is able to store")
       return await uploadToFirebase(storagePath, text, 'text/plain', {
         contractId,
         source,

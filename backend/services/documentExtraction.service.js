@@ -15,6 +15,7 @@ function normalizeText(text = '') {
 }
 
 async function extractFromPdf(buffer) {
+  console.log("pdf extractor called")
   try {
     if (legacyPdfParse) {
       const result = await legacyPdfParse(buffer);
@@ -55,6 +56,7 @@ async function extractFromPdf(buffer) {
 }
 
 async function extractFromImage(buffer) {
+  console.log("image extraction called ")
   const result = await Tesseract.recognize(buffer, 'eng');
 
   return {
@@ -69,7 +71,8 @@ async function extractTextFromDocument(file) {
     throw new AppError(400, 'The uploaded file could not be read. Please upload it again.');
   }
 
-  const mimetype = file.mimetype || '';
+  const mimetype = file.mimetype || ''; 
+  console.log("text extraction started")
   let result;
 
   if (mimetype === 'application/pdf') {
@@ -82,6 +85,7 @@ async function extractTextFromDocument(file) {
       method: 'plain-text',
     };
   }
+  console.log(result)
 
   if (!result.text || result.text.length < 20) {
     throw new AppError(422, 'The uploaded document did not contain enough readable text for analysis.');

@@ -1,19 +1,29 @@
-import { startTransition, useDeferredValue, useEffect, useState } from 'react';
+import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
 
-import MetricCard from './components/MetricCard';
-import ConnectorCard from './components/ConnectorCard';
-import ContractCard from './components/ContractCard';
-import RiskBoard from './components/RiskBoard';
-import SearchWorkbench from './components/SearchWorkbench';
-import UploadPanel from './components/UploadPanel';
-import StatusPill from './components/StatusPill';
+import AppNav from './components/AppNav';
 import { api } from './lib/api';
 import {
   dashboardMetrics,
   connectorCards,
   sampleContracts,
   buildMockSearchResult,
+  buildMockContractInsights,
 } from './data/mockData';
+import OverviewPage from './pages/OverviewPage';
+import IntakePage from './pages/IntakePage';
+import ContractsPage from './pages/ContractsPage';
+import InsightsPage from './pages/InsightsPage';
+import SearchPage from './pages/SearchPage';
+
+const KNOWN_ROUTES = new Set(['/', '/intake', '/contracts', '/insights', '/search']);
+
+function normalizePath(pathname) {
+  if (!pathname || pathname === '/') {
+    return '/';
+  }
+
+  return pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+}
 
 function normalizeContractSummary(contract) {
   return {
@@ -27,6 +37,7 @@ function normalizeContractSummary(contract) {
     riskCounts: contract.metadata?.riskCounts || contract.riskCounts || { low: 0, medium: 0, high: 0 },
     pipeline: contract.pipeline || [],
     clauses: contract.clauses || [],
+    risks: contract.risks || [],
     textPreview: contract.textPreview || '',
   };
 }
@@ -59,11 +70,37 @@ function buildConnectorState(health) {
   });
 }
 
+function buildLiveMetrics(contracts) {
+  const highRiskCount = contracts.reduce((sum, contract) => sum + (contract.riskCounts?.high || 0), 0);
+  const clauseCount = contracts.reduce((sum, contract) => sum + ((contract.clauses || []).length || 0), 0);
+
+  return dashboardMetrics.map((metric) => {
+    if (metric.label === 'Review Priority') {
+      return {
+        ...metric,
+        value: `${highRiskCount} High Risks`,
+      };
+    }
+
+    if (metric.label === 'Search Context') {
+      return {
+        ...metric,
+        value: `${clauseCount || 0} Clauses`,
+      };
+    }
+
+    return metric;
+  });
+}
+
 function App() {
+  const [currentPath, setCurrentPath] = useState(normalizePath(window.location.pathname));
   const [health, setHealth] = useState(null);
   const [contracts, setContracts] = useState(sampleContracts);
   const [selectedContractId, setSelectedContractId] = useState(sampleContracts[0].id);
   const [selectedContract, setSelectedContract] = useState(sampleContracts[0]);
+  const [contractInsights, setContractInsights] = useState(buildMockContractInsights(sampleContracts[0]));
+  const [insightsPending, setInsightsPending] = useState(false);
   const [bootMode, setBootMode] = useState('loading');
   const [query, setQuery] = useState('What makes the termination clause risky, and what should we change?');
   const [searchResult, setSearchResult] = useState(
@@ -73,6 +110,26 @@ function App() {
   const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const deferredQuery = useDeferredValue(query);
+
+  const safePath = KNOWN_ROUTES.has(currentPath) ? currentPath : '/';
+  const connectors = buildConnectorState(health);
+  const metrics = useMemo(() => buildLiveMetrics(contracts), [contracts]);
+  const modeLabel = bootMode === 'live' ? 'Live backend mode' : bootMode === 'mock' ? 'Mock preview mode' : 'Connecting';
+
+  function navigate(path) {
+    const normalized = normalizePath(path);
+    window.history.pushState({}, '', normalized);
+    setCurrentPath(normalized);
+  }
+
+  useEffect(() => {
+    function handlePopState() {
+      setCurrentPath(normalizePath(window.location.pathname));
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -149,6 +206,54 @@ function App() {
     };
   }, [contracts, selectedContractId]);
 
+  useEffect(() => {
+    let ignore = false;
+
+    async function hydrateInsights() {
+      setInsightsPending(true);
+
+      try {
+        const response = await api.getContractInsights(selectedContractId);
+
+        if (!ignore) {
+          startTransition(() => {
+            setContractInsights(response.data);
+          });
+        }
+      } catch (error) {
+        const fallbackContract = contracts.find((contract) => contract.id === selectedContractId) || selectedContract;
+
+        if (!ignore) {
+          startTransition(() => {
+            setContractInsights(buildMockContractInsights(fallbackContract));
+          });
+        }
+      } finally {
+        if (!ignore) {
+          setInsightsPending(false);
+        }
+      }
+    }
+
+    hydrateInsights();
+
+    return () => {
+      ignore = true;
+    };
+  }, [contracts, selectedContract, selectedContractId]);
+
+  useEffect(() => {
+    const titles = {
+      '/': 'Overview',
+      '/intake': 'Intake',
+      '/contracts': 'Contracts',
+      '/insights': 'Insights',
+      '/search': 'Search',
+    };
+
+    document.title = `Legal Intelligence | ${titles[safePath] || 'Overview'}`;
+  }, [safePath]);
+
   async function handleSemanticSearch(event) {
     event.preventDefault();
     setSearchPending(true);
@@ -194,9 +299,12 @@ function App() {
         setContracts((current) => [uploadedContract, ...current.filter((item) => item.id !== uploadedContract.id)]);
         setSelectedContractId(uploadedContract.id);
         setSelectedContract(uploadedContract);
+        setContractInsights(response.data.insights || buildMockContractInsights(uploadedContract));
         setBootMode('live');
         setUploadFile(null);
       });
+
+      navigate('/insights');
     } catch (error) {
       console.error(error);
     } finally {
@@ -204,120 +312,66 @@ function App() {
     }
   }
 
-  const connectors = buildConnectorState(health);
-  const modeLabel = bootMode === 'live' ? 'Live backend mode' : bootMode === 'mock' ? 'Mock preview mode' : 'Connecting';
+  const pageProps = {
+    contracts,
+    selectedContractId,
+    selectedContract,
+    onSelectContract: setSelectedContractId,
+  };
 
-  return (
-    <main className="app-shell">
-      <section className="hero panel">
-        <div className="hero-copy">
-          <p className="eyebrow">Legal Intelligence System</p>
-          <h1>Contracts flow through one readable pipeline instead of scattered tools.</h1>
-          <p className="hero-text">
-            This dashboard separates raw storage, intelligence, semantic search, and reasoning so your team can inspect
-            contract risk at the clause level and move from extraction to action quickly.
-          </p>
-          <div className="hero-pills">
-            <StatusPill status={bootMode === 'live' ? 'ready' : 'fallback'}>{modeLabel}</StatusPill>
-            <StatusPill status={health?.firebase?.enabled ? 'ready' : 'fallback'}>
-              {health?.firebase?.enabled ? 'Firebase configured' : 'Local fallback storage'}
-            </StatusPill>
-            <StatusPill status={health?.pinecone?.enabled ? 'ready' : 'fallback'}>
-              {health?.pinecone?.enabled ? 'Pinecone live' : 'Local vector fallback'}
-            </StatusPill>
-          </div>
-        </div>
+  let page = null;
 
-        <div className="hero-art">
-          <img src="/legal-intelligence-workflow.svg" alt="Legal intelligence workflow diagram" />
-        </div>
-      </section>
-
-      <section className="metrics-grid">
-        {dashboardMetrics.map((metric) => (
-          <MetricCard key={metric.label} metric={metric} />
-        ))}
-      </section>
-
-      <section className="two-column">
-        <UploadPanel
-          selectedFileName={uploadFile?.name}
-          uploading={uploading}
-          onFileChange={(event) => setUploadFile(event.target.files?.[0] || null)}
-          onUpload={handleUpload}
-        />
-
-        <section className="panel">
-          <div className="panel-header">
-            <div>
-              <p className="eyebrow">Sources</p>
-              <h3>Ingestion connectors</h3>
-            </div>
-          </div>
-          <div className="connector-grid">
-            {connectors.map((connector) => (
-              <ConnectorCard key={connector.key} connector={connector} />
-            ))}
-          </div>
-        </section>
-      </section>
-
-      <section className="workspace-grid">
-        <section className="panel">
-          <div className="panel-header">
-            <div>
-              <p className="eyebrow">Contracts</p>
-              <h3>Tracked agreements</h3>
-            </div>
-          </div>
-
-          <div className="contract-list">
-            {contracts.map((contract) => (
-              <ContractCard
-                key={contract.id}
-                contract={contract}
-                isActive={contract.id === selectedContractId}
-                onSelect={setSelectedContractId}
-              />
-            ))}
-          </div>
-        </section>
-
-        <div className="workspace-stack">
-          <section className="panel">
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">Workflow</p>
-                <h3>{selectedContract.title}</h3>
-              </div>
-            </div>
-
-            <div className="timeline">
-              {(selectedContract.pipeline || []).map((step) => (
-                <div key={step.key} className="timeline-item">
-                  <span className="timeline-dot" />
-                  <div>
-                    <h4>{step.label}</h4>
-                    <p>{step.detail}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <RiskBoard contract={selectedContract} />
-        </div>
-      </section>
-
-      <SearchWorkbench
+  if (safePath === '/intake') {
+    page = (
+      <IntakePage
+        connectors={connectors}
+        uploadFile={uploadFile}
+        uploading={uploading}
+        onFileChange={(event) => setUploadFile(event.target.files?.[0] || null)}
+        onUpload={handleUpload}
+      />
+    );
+  } else if (safePath === '/contracts') {
+    page = <ContractsPage {...pageProps} />;
+  } else if (safePath === '/insights') {
+    page = (
+      <InsightsPage
+        {...pageProps}
+        insights={contractInsights}
+        insightsPending={insightsPending}
+      />
+    );
+  } else if (safePath === '/search') {
+    page = (
+      <SearchPage
+        {...pageProps}
         query={query}
         deferredQuery={deferredQuery}
-        pending={searchPending}
-        result={searchResult}
+        searchPending={searchPending}
+        searchResult={searchResult}
         onQueryChange={setQuery}
         onSubmit={handleSemanticSearch}
         modeLabel={modeLabel}
       />
+    );
+  } else {
+    page = (
+      <OverviewPage
+        bootMode={bootMode}
+        health={health}
+        metrics={metrics}
+        contracts={contracts}
+        selectedContractId={selectedContractId}
+        onSelectContract={setSelectedContractId}
+        onNavigate={navigate}
+      />
+    );
+  }
+
+  return (
+    <main className="app-shell">
+      <AppNav currentPath={safePath} onNavigate={navigate} modeLabel={modeLabel} />
+      {page}
     </main>
   );
 }
