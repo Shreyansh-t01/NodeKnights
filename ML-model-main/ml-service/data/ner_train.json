@@ -1,0 +1,159 @@
+[
+  {
+    "text": "ABC Sports Pvt Ltd shall pay Rs 500000 to Rahul Verma for 12 months in Mumbai.",
+    "entities": [
+      [0, 18, "ORG"],
+      [30, 39, "MONEY"],
+      [43, 54, "PARTY"],
+      [59, 68, "DURATION"],
+      [72, 78, "LOCATION"]
+    ]
+  },
+  {
+    "text": "XYZ Brands Private Limited agrees to pay Rs 200000 to Ankit Sharma for 6 months in Delhi.",
+    "entities": [
+      [0, 26, "ORG"],
+      [45, 54, "MONEY"],
+      [58, 70, "PARTY"],
+      [75, 83, "DURATION"],
+      [87, 92, "LOCATION"]
+    ]
+  },
+  {
+    "text": "The agreement starts on 12/03/2026 and ends on 12/03/2027.",
+    "entities": [
+      [24, 34, "DATE"],
+      [47, 57, "DATE"]
+    ]
+  },
+  {
+    "text": "The sponsor shall provide a bonus of Rs 100000 to Rohan Mehta.",
+    "entities": [
+      [37, 46, "MONEY"],
+      [50, 61, "PARTY"]
+    ]
+  },
+  {
+    "text": "Puma India shall compensate Arjun Singh with Rs 300000.",
+    "entities": [
+      [0, 10, "ORG"],
+      [29, 40, "PARTY"],
+      [46, 55, "MONEY"]
+    ]
+  },
+  {
+    "text": "This agreement shall remain valid for 24 months.",
+    "entities": [
+      [38, 47, "DURATION"]
+    ]
+  },
+  {
+    "text": "Any dispute shall be resolved in New Delhi.",
+    "entities": [
+      [33, 42, "LOCATION"]
+    ]
+  },
+  {
+    "text": "Nike India Private Limited shall pay Rs 700000 to Virat Kohli.",
+    "entities": [
+      [0, 26, "ORG"],
+      [38, 47, "MONEY"],
+      [51, 63, "PARTY"]
+    ]
+  },
+  {
+    "text": "Adidas India agrees to pay Rs 250000 to Neha Kapoor for 18 months.",
+    "entities": [
+      [0, 13, "ORG"],
+      [29, 38, "MONEY"],
+      [42, 53, "PARTY"],
+      [58, 67, "DURATION"]
+    ]
+  },
+  {
+    "text": "The event shall take place in Bengaluru on 01/05/2026.",
+    "entities": [
+      [30, 39, "LOCATION"],
+      [43, 53, "DATE"]
+    ]
+  },
+  {
+    "text": "Sony Sports Network agrees to pay Rs 900000 to Aman Verma in Chennai.",
+    "entities": [
+      [0, 19, "ORG"],
+      [36, 45, "MONEY"],
+      [49, 59, "PARTY"],
+      [63, 70, "LOCATION"]
+    ]
+  },
+  {
+    "text": "The contract duration shall be 36 months.",
+    "entities": [
+      [30, 39, "DURATION"]
+    ]
+  },
+  {
+    "text": "Star Sports shall pay a fee of Rs 150000 to Karan Malhotra.",
+    "entities": [
+      [0, 11, "ORG"],
+      [30, 39, "MONEY"],
+      [43, 57, "PARTY"]
+    ]
+  },
+  {
+    "text": "The agreement was signed on 15/08/2025 in Hyderabad.",
+    "entities": [
+      [28, 38, "DATE"],
+      [42, 51, "LOCATION"]
+    ]
+  },
+  {
+    "text": "Red Bull India will pay Rs 400000 to Sanya Mehra for 10 months.",
+    "entities": [
+      [0, 14, "ORG"],
+      [24, 33, "MONEY"],
+      [37, 48, "PARTY"],
+      [53, 62, "DURATION"]
+    ]
+  },
+  {
+    "text": "Infosys Limited agrees to sponsor Rajat Sharma in Pune.",
+    "entities": [
+      [0, 16, "ORG"],
+      [34, 46, "PARTY"],
+      [50, 54, "LOCATION"]
+    ]
+  },
+  {
+    "text": "The final payment of Rs 600000 shall be released on 30/06/2026.",
+    "entities": [
+      [21, 30, "MONEY"],
+      [57, 67, "DATE"]
+    ]
+  },
+  {
+    "text": "Amazon India shall pay Rs 850000 to Priya Nair for 8 months in Kochi.",
+    "entities": [
+      [0, 12, "ORG"],
+      [23, 32, "MONEY"],
+      [36, 46, "PARTY"],
+      [51, 59, "DURATION"],
+      [63, 68, "LOCATION"]
+    ]
+  },
+  {
+    "text": "The sponsorship term begins on 01/01/2026 and lasts 12 months.",
+    "entities": [
+      [31, 41, "DATE"],
+      [52, 61, "DURATION"]
+    ]
+  },
+  {
+    "text": "Reliance Brands Limited shall pay Rs 1000000 to Deepak Yadav.",
+    "entities": [
+      [0, 24, "ORG"],
+      [36, 46, "MONEY"],
+      [50, 62, "PARTY"]
+    ]
+  }
+]

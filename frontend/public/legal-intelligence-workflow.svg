@@ -1,0 +1,126 @@
+<svg width="1600" height="980" viewBox="0 0 1600 980" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Legal intelligence workflow</title>
+  <desc id="desc">A structured workflow from contract sources to storage, OCR, Python ML analysis, Firestore, Pinecone, reasoning, and a React dashboard.</desc>
+  <defs>
+    <linearGradient id="bg" x1="120" y1="60" x2="1480" y2="920" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF7EB"/>
+      <stop offset="1" stop-color="#F4F7FB"/>
+    </linearGradient>
+    <linearGradient id="navy" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#233B68"/>
+      <stop offset="1" stop-color="#4167A8"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#0F8C82"/>
+      <stop offset="1" stop-color="#39B8AE"/>
+    </linearGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#C87617"/>
+      <stop offset="1" stop-color="#E9A64D"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="1600" height="980" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#172033" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10V0Z" fill="#30496F"/>
+    </marker>
+  </defs>
+
+  <rect x="24" y="24" width="1552" height="932" rx="38" fill="url(#bg)"/>
+
+  <text x="86" y="100" fill="#182133" font-family="Space Grotesk, Arial, sans-serif" font-size="24" letter-spacing="6">LEGAL INTELLIGENCE SYSTEM</text>
+  <text x="86" y="154" fill="#172033" font-family="Fraunces, Georgia, serif" font-size="48" font-weight="700">Structured workflow from raw contracts to clause-level decisions</text>
+  <text x="86" y="196" fill="#516076" font-family="Space Grotesk, Arial, sans-serif" font-size="23">
+    <tspan x="86" dy="0">Storage, intelligence, search, and reasoning are separated into clean layers so the platform stays scalable and reviewable.</tspan>
+  </text>
+
+  <g opacity="0.95">
+    <rect x="86" y="248" width="250" height="540" rx="30" fill="#FFFDF8" stroke="#E3D8C8"/>
+    <text x="116" y="290" fill="#233B68" font-family="Space Grotesk, Arial, sans-serif" font-size="22" font-weight="700">1. Ingestion Sources</text>
+
+    <rect x="116" y="322" width="190" height="92" rx="22" fill="#FDF2E0" stroke="#E7C184"/>
+    <text x="140" y="358" fill="#7A4D0A" font-family="Space Grotesk, Arial, sans-serif" font-size="18" font-weight="700">Gmail Attachments</text>
+    <text x="140" y="387" fill="#8A6733" font-family="Space Grotesk, Arial, sans-serif" font-size="15">Inbox query, PDF/image intake</text>
+
+    <rect x="116" y="438" width="190" height="92" rx="22" fill="#E8F7F5" stroke="#8BD6CE"/>
+    <text x="140" y="474" fill="#0F6C65" font-family="Space Grotesk, Arial, sans-serif" font-size="18" font-weight="700">Google Drive</text>
+    <text x="140" y="503" fill="#467E79" font-family="Space Grotesk, Arial, sans-serif" font-size="15">Folder sync or file-by-file import</text>
+
+    <rect x="116" y="554" width="190" height="92" rx="22" fill="#EAF0FB" stroke="#ADC4EC"/>
+    <text x="140" y="590" fill="#233B68" font-family="Space Grotesk, Arial, sans-serif" font-size="18" font-weight="700">Manual Upload</text>
+    <text x="140" y="619" fill="#5C6C85" font-family="Space Grotesk, Arial, sans-serif" font-size="15">Dashboard upload for PDF or image</text>
+
+    <rect x="116" y="670" width="190" height="92" rx="22" fill="#FFF8EE" stroke="#E9D4AD"/>
+    <text x="140" y="706" fill="#7A4D0A" font-family="Space Grotesk, Arial, sans-serif" font-size="18" font-weight="700">Accepted Inputs</text>
+    <text x="140" y="735" fill="#8A6733" font-family="Space Grotesk, Arial, sans-serif" font-size="15">PDF, plain text, image scans</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="404" y="308" width="272" height="144" rx="28" fill="url(#navy)"/>
+    <text x="434" y="354" fill="white" font-family="Space Grotesk, Arial, sans-serif" font-size="24" font-weight="700">2. Firebase Storage</text>
+    <text x="434" y="392" fill="#DCE7FF" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Raw contracts are stored as immutable source files.</text>
+    <text x="434" y="420" fill="#DCE7FF" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Optional derived text artifacts can be stored too.</text>
+
+    <rect x="732" y="308" width="272" height="144" rx="28" fill="url(#teal)"/>
+    <text x="762" y="354" fill="white" font-family="Space Grotesk, Arial, sans-serif" font-size="24" font-weight="700">3. OCR + Parser</text>
+    <text x="762" y="392" fill="#E3FFFC" font-family="Space Grotesk, Arial, sans-serif" font-size="18">PDF parser extracts text.</text>
+    <text x="762" y="420" fill="#E3FFFC" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Image OCR normalizes scans into clean contract text.</text>
+
+    <rect x="1060" y="308" width="300" height="170" rx="28" fill="url(#amber)"/>
+    <text x="1090" y="354" fill="white" font-family="Space Grotesk, Arial, sans-serif" font-size="24" font-weight="700">4. Python Multi-layer Model</text>
+    <text x="1090" y="392" fill="#FFF0D5" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Entity extraction: parties, dates, amounts</text>
+    <text x="1090" y="420" fill="#FFF0D5" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Clause segmentation + clause classification</text>
+    <text x="1090" y="448" fill="#FFF0D5" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Risk labels for important clauses</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="760" y="566" width="290" height="156" rx="28" fill="#F9FBFF" stroke="#AFC4EA"/>
+    <text x="790" y="610" fill="#233B68" font-family="Space Grotesk, Arial, sans-serif" font-size="24" font-weight="700">5. Firestore Main DB</text>
+    <text x="790" y="646" fill="#56657B" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Contracts</text>
+    <text x="790" y="674" fill="#56657B" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Clauses</text>
+    <text x="790" y="702" fill="#56657B" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Risks and review status</text>
+
+    <rect x="1096" y="566" width="290" height="156" rx="28" fill="#EEFCFA" stroke="#92DAD1"/>
+    <text x="1126" y="610" fill="#0F6C65" font-family="Space Grotesk, Arial, sans-serif" font-size="24" font-weight="700">6. Pinecone Vector DB</text>
+    <text x="1126" y="646" fill="#417B75" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Embeddings per clause</text>
+    <text x="1126" y="674" fill="#417B75" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Text + tags + risk metadata</text>
+    <text x="1126" y="702" fill="#417B75" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Semantic retrieval for similar language</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="286" y="586" width="378" height="136" rx="28" fill="#FFF8EE" stroke="#E8CE9B"/>
+    <text x="316" y="626" fill="#8A5408" font-family="Space Grotesk, Arial, sans-serif" font-size="24" font-weight="700">Rulebook and precedent context</text>
+    <text x="316" y="662" fill="#8E6B39" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Internal playbooks, policy rules, and benchmark language</text>
+    <text x="316" y="690" fill="#8E6B39" font-family="Space Grotesk, Arial, sans-serif" font-size="18">used only when focused context is assembled.</text>
+
+    <rect x="706" y="798" width="316" height="116" rx="28" fill="#F7FAFF" stroke="#B6C8EA"/>
+    <text x="736" y="838" fill="#233B68" font-family="Space Grotesk, Arial, sans-serif" font-size="24" font-weight="700">7. Focused Context Builder</text>
+    <text x="736" y="874" fill="#5D6D83" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Original clause + metadata + retrieved matches + rulebook</text>
+
+    <rect x="1062" y="798" width="260" height="116" rx="28" fill="#FFF4E6" stroke="#E6BB77"/>
+    <text x="1092" y="838" fill="#A15D0D" font-family="Space Grotesk, Arial, sans-serif" font-size="24" font-weight="700">8. GenAI Reasoning</text>
+    <text x="1092" y="874" fill="#946631" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Why risky, how it compares, what to change</text>
+
+    <rect x="1368" y="742" width="170" height="172" rx="30" fill="#233B68"/>
+    <text x="1396" y="796" fill="white" font-family="Space Grotesk, Arial, sans-serif" font-size="24" font-weight="700">9. React</text>
+    <text x="1396" y="828" fill="white" font-family="Space Grotesk, Arial, sans-serif" font-size="24" font-weight="700">Dashboard</text>
+    <text x="1396" y="868" fill="#DCE7FF" font-family="Space Grotesk, Arial, sans-serif" font-size="16">Full contract review</text>
+    <text x="1396" y="894" fill="#DCE7FF" font-family="Space Grotesk, Arial, sans-serif" font-size="16">Clause risks</text>
+    <text x="1396" y="920" fill="#DCE7FF" font-family="Space Grotesk, Arial, sans-serif" font-size="16">Precedent comparison</text>
+  </g>
+
+  <path d="M336 520H404" stroke="#30496F" stroke-width="6" marker-end="url(#arrow)"/>
+  <path d="M676 380H732" stroke="#30496F" stroke-width="6" marker-end="url(#arrow)"/>
+  <path d="M1004 380H1060" stroke="#30496F" stroke-width="6" marker-end="url(#arrow)"/>
+  <path d="M1210 478V536" stroke="#30496F" stroke-width="6" marker-end="url(#arrow)"/>
+  <path d="M1178 478V536" stroke="#30496F" stroke-width="6" marker-end="url(#arrow)"/>
+  <path d="M905 722V780" stroke="#30496F" stroke-width="6" marker-end="url(#arrow)"/>
+  <path d="M1241 722V780" stroke="#30496F" stroke-width="6" marker-end="url(#arrow)"/>
+  <path d="M664 654H734" stroke="#30496F" stroke-width="6" marker-end="url(#arrow)"/>
+  <path d="M1050 856H1062" stroke="#30496F" stroke-width="6" marker-end="url(#arrow)"/>
+  <path d="M1322 856H1368" stroke="#30496F" stroke-width="6" marker-end="url(#arrow)"/>
+
+  <text x="1368" y="280" fill="#6A7890" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Operational pipeline</text>
+  <text x="286" y="552" fill="#6A7890" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Policy and benchmark context</text>
+  <text x="706" y="770" fill="#6A7890" font-family="Space Grotesk, Arial, sans-serif" font-size="18">Focused reasoning path</text>
+</svg>

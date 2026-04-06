@@ -1,97 +1,55 @@
 require('dotenv').config();
+const http = require('node:http');
 const express = require('express');
-const compression = require('compression');
-const { requestLogger, errorHandler } = require('./src/middleware');
-const apiRoutes = require('./src/routes');
-const { logger } = require('./src/utils');
+const cors = require('cors');
+const helmet = require('helmet');
+
+const { env } = require('./config/env');
+const healthRoutes = require('./routes/health.routes');
+const contractRoutes = require('./routes/contract.routes');
+const connectorRoutes = require('./routes/connector.routes');
+const searchRoutes = require('./routes/search.routes');
+const notFound = require('./middlewares/notFound');
+const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const corsOrigin = env.corsOrigin === '*'
+  ? true
+  : env.corsOrigin.split(',').map((value) => value.trim()).filter(Boolean);
 
-// ============================================
-// Middleware Configuration
-// ============================================
-
-// Compression middleware
-app.use(compression());
-
-// Body parsers
+app.use(helmet());
+app.use(cors({ origin: corsOrigin, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(express.urlencoded({ extended: true }));
 
-// Logging
-app.use(requestLogger);
-
-// CORS (configure as needed)
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
-
-// ============================================
-// API Routes
-// ============================================
-
-app.use('/api', apiRoutes);
-
-// ============================================
-// Health Check
-// ============================================
-
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
+app.get('/', (req, res) => {
+  res.json({
+    service: 'legal-intelligence-backend',
+    status: 'running',
+    docs: {
+      health: `${env.apiPrefix}/health`,
+      contracts: `${env.apiPrefix}/contracts`,
+      connectors: `${env.apiPrefix}/connectors`,
+      search: `${env.apiPrefix}/search`,
+    },
   });
 });
 
-// ============================================
-// 404 Handler
-// ============================================
+app.use(`${env.apiPrefix}/health`, healthRoutes);
+app.use(`${env.apiPrefix}/contracts`, contractRoutes);
+app.use(`${env.apiPrefix}/connectors`, connectorRoutes);
+app.use(`${env.apiPrefix}/search`, searchRoutes);
 
-app.use((req, res) => {
-  res.status(404).json({
-    error: 'Route not found',
-    path: req.path,
-    method: req.method,
-  });
-});
-
-// ============================================
-// Error Handler (Last middleware)
-// ============================================
-
+app.use(notFound);
 app.use(errorHandler);
 
-// ============================================
-// Server Startup
-// ============================================
+const server = http.createServer(app);
 
-app.listen(PORT, () => {
-  logger.info(`Server started on port ${PORT}`);
-  logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  logger.info(`API available at http://localhost:${PORT}/api`);
+server.listen(env.port, () => {
+  console.log(`Legal intelligence backend listening on port ${env.port}`);
 });
 
-// ============================================
-// Graceful Shutdown
-// ============================================
-
-process.on('SIGTERM', () => {
-  logger.warn('SIGTERM signal received: closing HTTP server');
-  process.exit(0);
+server.on('error', (error) => {
+  console.error('Server startup error:', error);
+  process.exit(1);
 });
-
-process.on('SIGINT', () => {
-  logger.warn('SIGINT signal received: closing HTTP server');
-  process.exit(0);
-});
-
-module.exports = app;

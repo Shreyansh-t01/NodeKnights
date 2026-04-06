@@ -1,0 +1,44 @@
+[
+  {
+    "clauseType": "payment",
+    "primaryConcern": "Payment obligations should define exact amounts, due dates, and remedies for delay.",
+    "benchmark": "Commercial contracts usually specify the invoice cycle, tax treatment, and a defined cure period before escalation.",
+    "recommendedAction": "Confirm the amount, due date, invoice workflow, and late-payment consequences in plain language."
+  },
+  {
+    "clauseType": "termination",
+    "primaryConcern": "Unilateral termination without notice creates operational and commercial exposure.",
+    "benchmark": "Balanced agreements usually include notice windows, cure periods, and survival terms.",
+    "recommendedAction": "Add a notice period, a documented cure window, and clear post-termination obligations."
+  },
+  {
+    "clauseType": "penalty",
+    "primaryConcern": "Penalty clauses should be proportional, measurable, and tied to specific breaches.",
+    "benchmark": "Best practice uses capped liability or pre-agreed liquidated damages with objective triggers.",
+    "recommendedAction": "Cap the exposure, define the triggering event, and separate penalties from discretionary sanctions."
+  },
+  {
+    "clauseType": "confidentiality",
+    "primaryConcern": "Confidentiality obligations should define protected information, duration, and permitted disclosures.",
+    "benchmark": "Standard clauses include exceptions for public information, legal disclosures, and prior knowledge.",
+    "recommendedAction": "Clarify what is confidential, include carve-outs, and define how long obligations survive."
+  },
+  {
+    "clauseType": "dispute_resolution",
+    "primaryConcern": "Dispute mechanisms should identify forum, governing rules, seat, and language.",
+    "benchmark": "Well-drafted clauses specify negotiation, mediation or arbitration sequence, and jurisdiction.",
+    "recommendedAction": "Add the seat, process timeline, and applicable procedural rules."
+  },
+  {
+    "clauseType": "governing_law",
+    "primaryConcern": "Governing-law clauses should align with the dispute forum and operating geography.",
+    "benchmark": "Strong clauses pair the governing law with venue and enforcement practicality.",
+    "recommendedAction": "Verify the law-jurisdiction pairing and keep it consistent with the dispute clause."
+  },
+  {
+    "clauseType": "other",
+    "primaryConcern": "General clauses still need commercial clarity and enforceable drafting.",
+    "benchmark": "Ambiguous obligations are usually tightened with objective triggers, dates, and ownership language.",
+    "recommendedAction": "Rewrite vague obligations into measurable commitments with named parties and timelines."
+  }
+]
