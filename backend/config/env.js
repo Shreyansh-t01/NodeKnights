@@ -44,6 +44,15 @@ function asList(value) {
     .filter(Boolean);
 }
 
+function asChoice(value, allowedValues, fallback) {
+  if (value === undefined || value === null || value === '') {
+    return fallback;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  return allowedValues.includes(normalized) ? normalized : fallback;
+}
+
 function resolveIfPresent(value, fallback = '') {
   if (!value) {
     return fallback;
@@ -77,8 +86,7 @@ const env = {
   firebaseProjectId: process.env.FIREBASE_PROJECT_ID || '',
   firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
   firebasePrivateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-  firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET || '',
-  firebaseServiceAccountPath: resolveIfPresent(process.env.FIREBASE_SERVICE_ACCOUNT_PATH),
+  artifactStorageMode: asChoice(process.env.ARTIFACT_STORAGE_MODE, ['disabled', 'local'], 'disabled'),
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
   googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || '',
@@ -106,12 +114,9 @@ const env = {
 
 const featureFlags = {
   firebase: Boolean(
-    env.firebaseStorageBucket
-      && (
-        env.firebaseServiceAccountPath
-        || (env.firebaseProjectId && env.firebaseClientEmail && env.firebasePrivateKey)
-        || process.env.GOOGLE_APPLICATION_CREDENTIALS
-      ),
+    env.firebaseProjectId
+      && env.firebaseClientEmail
+      && env.firebasePrivateKey,
   ),
   googleConnectors: Boolean(
     env.googleClientId

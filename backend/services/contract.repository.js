@@ -1,6 +1,6 @@
 const path = require('node:path');
 
-const { firestore, firebaseStatus } = require('../config/firebase');
+const { firestore, firestoreStatus } = require('../config/firebase');
 const { env } = require('../config/env');
 const AppError = require('../errors/AppError');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
@@ -42,7 +42,7 @@ async function saveContractBundleFirebase(bundle) {
 }
 
 async function saveContractBundle(bundle) {
-  if (firebaseStatus.enabled && firestore) {
+  if (firestoreStatus.enabled && firestore) {
     try {
       return await saveContractBundleFirebase(bundle);
     } catch (error) {
@@ -70,7 +70,7 @@ async function listContractsFirebase() {
 }
 
 async function listContracts() {
-  if (firebaseStatus.enabled && firestore) {
+  if (firestoreStatus.enabled && firestore) {
     try {
       return await listContractsFirebase();
     } catch (error) {
@@ -117,7 +117,7 @@ async function getContractByIdFirebase(contractId) {
 }
 
 async function getContractById(contractId) {
-  if (firebaseStatus.enabled && firestore) {
+  if (firestoreStatus.enabled && firestore) {
     try {
       return await getContractByIdFirebase(contractId);
     } catch (error) {

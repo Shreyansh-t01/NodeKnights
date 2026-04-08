@@ -1,4 +1,4 @@
-const { firebaseStatus } = require('../config/firebase');
+const { firestoreStatus, firebaseStatus } = require('../config/firebase');
 const { env, featureFlags } = require('../config/env');
 
 async function getMlServiceStatus() {
@@ -37,7 +37,12 @@ async function getHealth(req, res) {
     service: 'legal-intelligence-backend',
     environment: env.nodeEnv,
     services: {
+      firestore: firestoreStatus,
       firebase: firebaseStatus,
+      artifactStorage: {
+        enabled: env.artifactStorageMode !== 'disabled',
+        mode: env.artifactStorageMode,
+      },
       mlService: mlServiceStatus,
       pinecone: {
         enabled: featureFlags.pinecone,
