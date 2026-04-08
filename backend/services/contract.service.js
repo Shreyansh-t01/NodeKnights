@@ -37,21 +37,25 @@ async function createVectorRecords(contract, clauses) {
   );
 }
 
+function describeArtifactStorage(artifact, label) {
+  if (artifact.mode === 'disabled') {
+    return `${label} storage disabled.`;
+  }
+
+  return `Stored via ${artifact.mode}.`;
+}
+
 async function ingestManualContract(file, options = {}) {
   if (!file) {
     throw new AppError(400, 'A contract file is required.');
   }
 
-  const contractId = `contract_${uuidv4()}`; 
-  console.log("contract id generated")
+  const contractId = `contract_${uuidv4()}`;
   const source = options.source || 'manual-upload';
-  console.log(source);
 
   const rawDocument = await uploadRawDocument({ contractId, file, source });
-  console.log("we got raw document")
   const extracted = await extractTextFromDocument(file);
   const extractedTextAsset = await uploadExtractedText({
-    
     contractId,
     text: extracted.text,
     source,
@@ -81,7 +85,7 @@ async function ingestManualContract(file, options = {}) {
       key: 'storage',
       label: 'Raw document storage',
       status: 'completed',
-      detail: `Stored via ${rawDocument.mode}.`,
+      detail: describeArtifactStorage(rawDocument, 'Raw document'),
     },
     {
       key: 'extraction',
