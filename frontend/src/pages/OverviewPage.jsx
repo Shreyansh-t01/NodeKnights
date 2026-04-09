@@ -65,17 +65,23 @@ function OverviewPage({
         </div>
 
         <div className="contract-grid-preview">
-          {contracts.slice(0, 3).map((contract) => (
-            <ContractCard
-              key={contract.id}
-              contract={contract}
-              isActive={contract.id === selectedContractId}
-              onSelect={(contractId) => {
-                onSelectContract(contractId);
-                onNavigate('/contracts');
-              }}
-            />
-          ))}
+          {contracts.length ? (
+            contracts.slice(0, 3).map((contract) => (
+              <ContractCard
+                key={contract.id}
+                contract={contract}
+                isActive={contract.id === selectedContractId}
+                onSelect={(contractId) => {
+                  onSelectContract(contractId);
+                  onNavigate('/contracts');
+                }}
+              />
+            ))
+          ) : (
+            <p className="empty-state">
+              No live contracts are available yet. Go to Intake to upload one and populate the review workspace.
+            </p>
+          )}
         </div>
       </section>
     </>

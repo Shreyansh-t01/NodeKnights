@@ -25,14 +25,20 @@ function SearchPage({
         </div>
 
         <div className="contract-list">
-          {contracts.map((contract) => (
-            <ContractCard
-              key={contract.id}
-              contract={contract}
-              isActive={contract.id === selectedContractId}
-              onSelect={onSelectContract}
-            />
-          ))}
+          {contracts.length ? (
+            contracts.map((contract) => (
+              <ContractCard
+                key={contract.id}
+                contract={contract}
+                isActive={contract.id === selectedContractId}
+                onSelect={onSelectContract}
+              />
+            ))
+          ) : (
+            <p className="empty-state">
+              No indexed contracts are available yet. Upload one to enable semantic search.
+            </p>
+          )}
         </div>
       </section>
 
@@ -41,18 +47,26 @@ function SearchPage({
           <div className="panel-header">
             <div>
               <p className="eyebrow">Selected Contract</p>
-              <h3>{selectedContract.title}</h3>
+              <h3>{selectedContract?.title || 'No contract selected'}</h3>
             </div>
           </div>
-          <p className="contract-meta">
-            Type: {selectedContract.contractType}
-          </p>
-          <p className="contract-meta">
-            Parties: {selectedContract.parties.length ? selectedContract.parties.join(', ') : 'Not extracted yet'}
-          </p>
-          <p className="contract-meta">
-            Preview: {selectedContract.textPreview || 'No preview available yet.'}
-          </p>
+          {selectedContract ? (
+            <>
+              <p className="contract-meta">
+                Type: {selectedContract.contractType}
+              </p>
+              <p className="contract-meta">
+                Parties: {selectedContract.parties.length ? selectedContract.parties.join(', ') : 'Not extracted yet'}
+              </p>
+              <p className="contract-meta">
+                Preview: {selectedContract.textPreview || 'No preview available yet.'}
+              </p>
+            </>
+          ) : (
+            <p className="empty-state">
+              Upload a contract from Intake to scope semantic search to a live document.
+            </p>
+          )}
         </section>
 
         <SearchWorkbench
@@ -60,6 +74,7 @@ function SearchPage({
           deferredQuery={deferredQuery}
           pending={searchPending}
           result={searchResult}
+          disabled={!contracts.length}
           onQueryChange={onQueryChange}
           onSubmit={onSubmit}
           modeLabel={modeLabel}

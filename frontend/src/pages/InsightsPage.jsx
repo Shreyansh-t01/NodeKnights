@@ -20,14 +20,20 @@ function InsightsPage({
         </div>
 
         <div className="contract-list">
-          {contracts.map((contract) => (
-            <ContractCard
-              key={contract.id}
-              contract={contract}
-              isActive={contract.id === selectedContractId}
-              onSelect={onSelectContract}
-            />
-          ))}
+          {contracts.length ? (
+            contracts.map((contract) => (
+              <ContractCard
+                key={contract.id}
+                contract={contract}
+                isActive={contract.id === selectedContractId}
+                onSelect={onSelectContract}
+              />
+            ))
+          ) : (
+            <p className="empty-state">
+              No contracts are ready for insight review yet. Upload a contract first.
+            </p>
+          )}
         </div>
       </section>
 

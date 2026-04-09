@@ -1,6 +1,19 @@
 function ContractInsightsPanel({ contract, insights, pending }) {
   if (!contract) {
-    return null;
+    return (
+      <section className="panel">
+        <div className="panel-header">
+          <div>
+            <p className="eyebrow">AI Insights</p>
+            <h3>No contract selected</h3>
+          </div>
+        </div>
+
+        <p className="empty-state">
+          Upload a contract and select it from the list to generate live AI insights.
+        </p>
+      </section>
+    );
   }
 
   return (

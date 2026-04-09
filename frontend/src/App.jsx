@@ -53,6 +53,43 @@ function normalizeContractDetail(bundle) {
   };
 }
 
+function buildEmptyInsights(contract = null) {
+  if (!contract) {
+    return {
+      headline: 'Upload a contract to generate AI insights.',
+      summary: 'The insights workspace will populate after a live contract is processed by the backend.',
+      topRiskItems: [],
+      nextSteps: ['Open Intake and upload a contract to start the analysis pipeline.'],
+      clauseInsights: [],
+    };
+  }
+
+  return {
+    headline: `${contract.title} is ready for review.`,
+    summary: 'No live insight response is available yet for this contract.',
+    topRiskItems: [],
+    nextSteps: [
+      'Refresh this view after processing completes.',
+      'Run semantic search to inspect clause language manually.',
+    ],
+    clauseInsights: [],
+  };
+}
+
+function buildEmptySearchResult(query = '') {
+  return {
+    query,
+    matches: [],
+    reasoning: {
+      answer: query
+        ? 'No live search results are available yet. Upload at least one contract and try again.'
+        : 'Search results will appear here once the backend has indexed contract clauses.',
+      recommendations: ['Upload a contract from Intake to seed the search index.'],
+      supportingMatches: [],
+    },
+  };
+}
+
 function buildConnectorState(health) {
   return connectorCards.map((connector) => {
     if (!health) {
@@ -96,16 +133,14 @@ function buildLiveMetrics(contracts) {
 function App() {
   const [currentPath, setCurrentPath] = useState(normalizePath(window.location.pathname));
   const [health, setHealth] = useState(null);
-  const [contracts, setContracts] = useState(sampleContracts);
-  const [selectedContractId, setSelectedContractId] = useState(sampleContracts[0].id);
-  const [selectedContract, setSelectedContract] = useState(sampleContracts[0]);
-  const [contractInsights, setContractInsights] = useState(buildMockContractInsights(sampleContracts[0]));
+  const [contracts, setContracts] = useState([]);
+  const [selectedContractId, setSelectedContractId] = useState(null);
+  const [selectedContract, setSelectedContract] = useState(null);
+  const [contractInsights, setContractInsights] = useState(() => buildEmptyInsights());
   const [insightsPending, setInsightsPending] = useState(false);
   const [bootMode, setBootMode] = useState('loading');
   const [query, setQuery] = useState('What makes the termination clause risky, and what should we change?');
-  const [searchResult, setSearchResult] = useState(
-    buildMockSearchResult('What makes the termination clause risky, and what should we change?', sampleContracts[0]),
-  );
+  const [searchResult, setSearchResult] = useState(null);
   const [searchPending, setSearchPending] = useState(false);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -145,23 +180,54 @@ function App() {
       }
 
       startTransition(() => {
-        const isLive = healthResult.status === 'fulfilled' || contractsResult.status === 'fulfilled';
-
-        if (healthResult.status === 'fulfilled') {
-          setHealth(healthResult.value.services);
-        }
-
-        if (
+        const healthConnected = healthResult.status === 'fulfilled';
+        const contractsConnected = (
           contractsResult.status === 'fulfilled'
           && Array.isArray(contractsResult.value.data)
-          && contractsResult.value.data.length
-        ) {
-          const normalizedContracts = contractsResult.value.data.map(normalizeContractSummary);
-          setContracts(normalizedContracts);
-          setSelectedContractId(normalizedContracts[0].id);
+        );
+
+        if (!healthConnected && !contractsConnected) {
+          setHealth(null);
+          setContracts(sampleContracts);
+          setSelectedContractId(sampleContracts[0].id);
+          setSelectedContract(sampleContracts[0]);
+          setContractInsights(buildMockContractInsights(sampleContracts[0]));
+          setSearchResult(buildMockSearchResult(query, sampleContracts[0]));
+          setBootMode('mock');
+          return;
         }
 
-        setBootMode(isLive ? 'live' : 'mock');
+        if (healthConnected) {
+          setHealth(healthResult.value.services);
+        } else {
+          setHealth(null);
+        }
+
+        if (contractsConnected) {
+          const normalizedContracts = contractsResult.value.data.map(normalizeContractSummary);
+          setContracts(normalizedContracts);
+
+          if (normalizedContracts.length) {
+            setSelectedContractId((currentId) => (
+              normalizedContracts.some((contract) => contract.id === currentId)
+                ? currentId
+                : normalizedContracts[0].id
+            ));
+          } else {
+            setSelectedContractId(null);
+            setSelectedContract(null);
+            setContractInsights(buildEmptyInsights());
+            setSearchResult(buildEmptySearchResult(query));
+          }
+        } else {
+          setContracts([]);
+          setSelectedContractId(null);
+          setSelectedContract(null);
+          setContractInsights(buildEmptyInsights());
+          setSearchResult(buildEmptySearchResult(query));
+        }
+
+        setBootMode('live');
       });
     }
 
@@ -174,7 +240,12 @@ function App() {
 
   useEffect(() => {
     let ignore = false;
-    const summary = contracts.find((contract) => contract.id === selectedContractId) || sampleContracts[0];
+    const summary = contracts.find((contract) => contract.id === selectedContractId) || null;
+
+    if (!selectedContractId || !summary) {
+      setSelectedContract(null);
+      return undefined;
+    }
 
     if (summary.clauses?.length) {
       setSelectedContract(summary);
@@ -209,6 +280,12 @@ function App() {
   useEffect(() => {
     let ignore = false;
 
+    if (!selectedContractId) {
+      setInsightsPending(false);
+      setContractInsights(buildEmptyInsights());
+      return undefined;
+    }
+
     async function hydrateInsights() {
       setInsightsPending(true);
 
@@ -225,7 +302,12 @@ function App() {
 
         if (!ignore) {
           startTransition(() => {
-            setContractInsights(buildMockContractInsights(fallbackContract));
+            if (bootMode === 'mock' && fallbackContract) {
+              setContractInsights(buildMockContractInsights(fallbackContract));
+              return;
+            }
+
+            setContractInsights(buildEmptyInsights(fallbackContract));
           });
         }
       } finally {
@@ -240,7 +322,7 @@ function App() {
     return () => {
       ignore = true;
     };
-  }, [contracts, selectedContract, selectedContractId]);
+  }, [bootMode, contracts, selectedContract, selectedContractId]);
 
   useEffect(() => {
     const titles = {
@@ -257,6 +339,7 @@ function App() {
   async function handleSemanticSearch(event) {
     event.preventDefault();
     setSearchPending(true);
+    const activeContract = selectedContract || contracts.find((contract) => contract.id === selectedContractId) || null;
 
     try {
       const response = await api.semanticSearch({
@@ -270,7 +353,12 @@ function App() {
       });
     } catch (error) {
       startTransition(() => {
-        setSearchResult(buildMockSearchResult(deferredQuery || query, selectedContract));
+        if (bootMode === 'mock' && activeContract) {
+          setSearchResult(buildMockSearchResult(deferredQuery || query, activeContract));
+          return;
+        }
+
+        setSearchResult(buildEmptySearchResult(deferredQuery || query));
       });
     } finally {
       setSearchPending(false);
@@ -299,7 +387,8 @@ function App() {
         setContracts((current) => [uploadedContract, ...current.filter((item) => item.id !== uploadedContract.id)]);
         setSelectedContractId(uploadedContract.id);
         setSelectedContract(uploadedContract);
-        setContractInsights(response.data.insights || buildMockContractInsights(uploadedContract));
+        setContractInsights(response.data.insights || buildEmptyInsights(uploadedContract));
+        setSearchResult(buildEmptySearchResult(query));
         setBootMode('live');
         setUploadFile(null);
       });

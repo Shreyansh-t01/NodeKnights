@@ -136,6 +136,12 @@ async function ingestManualContract(file, options = {}) {
     },
   );
 
+  await saveContractBundle({
+    contract,
+    clauses,
+    risks,
+  });
+
   const insights = await generateContractOverview({
     contract,
     clauses,

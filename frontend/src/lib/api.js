@@ -1,4 +1,20 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
+
+async function readErrorMessage(response) {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    try {
+      const payload = await response.json();
+      return payload.message || JSON.stringify(payload);
+    } catch (error) {
+      return `Request failed with status ${response.status}`;
+    }
+  }
+
+  const message = await response.text();
+  return message || `Request failed with status ${response.status}`;
+}
 
 async function request(path, options = {}) {
   const headers = new Headers(options.headers || {});
@@ -14,8 +30,7 @@ async function request(path, options = {}) {
   });
 
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Request failed with status ${response.status}`);
+    throw new Error(await readErrorMessage(response));
   }
 
   return response.json();

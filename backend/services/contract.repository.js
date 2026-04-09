@@ -7,6 +7,15 @@ const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 
 const localStorePath = path.join(env.tempStorageDir, 'local-store', 'contracts.json');
 
+function buildFirestoreRequiredError(operation, error) {
+  return new AppError(503, `Firestore ${operation} failed and local fallback is disabled.`, {
+    service: 'firestore',
+    operation,
+    fallbackDisabled: true,
+    originalError: error?.message || null,
+  });
+}
+
 async function saveContractBundleLocal(bundle) {
   const current = await readJsonFile(localStorePath, []);
   const next = current.filter((item) => item.contract.id !== bundle.contract.id);
@@ -42,10 +51,18 @@ async function saveContractBundleFirebase(bundle) {
 }
 
 async function saveContractBundle(bundle) {
+  if (env.strictRemoteServices && (!firestoreStatus.enabled || !firestore)) {
+    throw buildFirestoreRequiredError('persistence', new Error('Firestore is not configured.'));
+  }
+
   if (firestoreStatus.enabled && firestore) {
     try {
       return await saveContractBundleFirebase(bundle);
     } catch (error) {
+      if (env.strictRemoteServices) {
+        throw buildFirestoreRequiredError('persistence', error);
+      }
+
       console.warn('Falling back to local contract store:', error.message);
     }
   }
@@ -70,10 +87,18 @@ async function listContractsFirebase() {
 }
 
 async function listContracts() {
+  if (env.strictRemoteServices && (!firestoreStatus.enabled || !firestore)) {
+    throw buildFirestoreRequiredError('list', new Error('Firestore is not configured.'));
+  }
+
   if (firestoreStatus.enabled && firestore) {
     try {
       return await listContractsFirebase();
     } catch (error) {
+      if (env.strictRemoteServices) {
+        throw buildFirestoreRequiredError('list', error);
+      }
+
       console.warn('Falling back to local contract list:', error.message);
     }
   }
@@ -117,12 +142,20 @@ async function getContractByIdFirebase(contractId) {
 }
 
 async function getContractById(contractId) {
+  if (env.strictRemoteServices && (!firestoreStatus.enabled || !firestore)) {
+    throw buildFirestoreRequiredError('read', new Error('Firestore is not configured.'));
+  }
+
   if (firestoreStatus.enabled && firestore) {
     try {
       return await getContractByIdFirebase(contractId);
     } catch (error) {
       if (error.isOperational) {
         throw error;
+      }
+
+      if (env.strictRemoteServices) {
+        throw buildFirestoreRequiredError('read', error);
       }
 
       console.warn('Falling back to local contract details:', error.message);

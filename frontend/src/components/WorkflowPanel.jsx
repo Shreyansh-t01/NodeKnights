@@ -1,4 +1,21 @@
 function WorkflowPanel({ contract }) {
+  if (!contract) {
+    return (
+      <section className="panel">
+        <div className="panel-header">
+          <div>
+            <p className="eyebrow">Workflow</p>
+            <h3>No contract selected</h3>
+          </div>
+        </div>
+
+        <p className="empty-state">
+          Select a live contract to inspect its processing pipeline.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section className="panel">
       <div className="panel-header">

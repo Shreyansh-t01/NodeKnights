@@ -19,6 +19,12 @@ IMPORTANT_TYPES = [
     "dispute_resolution"
 ]
 
+RISK_LEVELS = {
+    "low": 0,
+    "medium": 1,
+    "high": 2,
+}
+
 
 def log_status(level: str, message: str):
     print(f"[{level}] {message}")
@@ -140,19 +146,33 @@ def predict_clause_type(clause_text: str):
 
 
 def predict_risk(clause_text: str):
-    if risk_model:
-        return risk_model.predict([clause_text])[0]
-
     lower = clause_text.lower()
 
-    if "without notice" in lower or "without prior notice" in lower or "immediately" in lower:
-        return "high"
-    if "penalty" in lower and ("immediate" in lower or "sole discretion" in lower):
-        return "high"
-    if "may terminate" in lower:
-        return "medium"
+    heuristic_risk = "low"
 
-    return "low"
+    if "without notice" in lower or "without prior notice" in lower or "immediately" in lower:
+        heuristic_risk = "high"
+    elif "penalty" in lower and ("immediate" in lower or "sole discretion" in lower):
+        heuristic_risk = "high"
+    elif "may terminate" in lower or "material breach" in lower or "automatic renewal" in lower:
+        heuristic_risk = "medium"
+
+    if not risk_model:
+        return heuristic_risk
+
+    try:
+        predicted_risk = str(risk_model.predict([clause_text])[0]).strip().lower()
+    except Exception as e:
+        log_status("WARN", f"Risk model inference failed: {e}")
+        return heuristic_risk
+
+    if predicted_risk not in RISK_LEVELS:
+        return heuristic_risk
+
+    if RISK_LEVELS[heuristic_risk] > RISK_LEVELS[predicted_risk]:
+        return heuristic_risk
+
+    return predicted_risk
 
 
 def analyze_text(text: str):

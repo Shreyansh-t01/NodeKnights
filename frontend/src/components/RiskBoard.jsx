@@ -1,6 +1,23 @@
 import StatusPill from './StatusPill';
 
 function RiskBoard({ contract }) {
+  if (!contract) {
+    return (
+      <section className="panel">
+        <div className="panel-header">
+          <div>
+            <p className="eyebrow">Clause Review</p>
+            <h3>Clause-level risk board</h3>
+          </div>
+        </div>
+
+        <p className="empty-state">
+          Upload and select a contract to inspect clause-level risk results.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section className="panel">
       <div className="panel-header">

@@ -19,14 +19,20 @@ function ContractsPage({
         </div>
 
         <div className="contract-list">
-          {contracts.map((contract) => (
-            <ContractCard
-              key={contract.id}
-              contract={contract}
-              isActive={contract.id === selectedContractId}
-              onSelect={onSelectContract}
-            />
-          ))}
+          {contracts.length ? (
+            contracts.map((contract) => (
+              <ContractCard
+                key={contract.id}
+                contract={contract}
+                isActive={contract.id === selectedContractId}
+                onSelect={onSelectContract}
+              />
+            ))
+          ) : (
+            <p className="empty-state">
+              No contracts are available yet. Upload one from the Intake page to start the workflow.
+            </p>
+          )}
         </div>
       </section>
 

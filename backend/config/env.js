@@ -88,6 +88,7 @@ const env = {
   tempStorageDir: resolveIfPresent(process.env.TEMP_STORAGE_DIR, path.resolve(projectRoot, 'tmp')),
   mlServiceUrl: process.env.ML_SERVICE_URL || 'http://127.0.0.1:8001',
   requirePythonMlService: asBoolean(process.env.REQUIRE_PYTHON_ML_SERVICE, false),
+  strictRemoteServices: asBoolean(process.env.STRICT_REMOTE_SERVICES, false),
   firebaseProjectId: process.env.FIREBASE_PROJECT_ID || '',
   firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
   firebasePrivateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),

@@ -10,7 +10,6 @@ const uploadContract = asyncHandler(async (req, res) => {
   const payload = await ingestManualContract(req.file, {
     source: 'manual-upload',
   });
-  console.log("request went to controller");
 
   res.status(201).json({
     success: true,

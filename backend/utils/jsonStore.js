@@ -2,9 +2,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 
 async function ensureDirectory(filePath) {
-  console.log('went into jsonstore utils')
   await fs.mkdir(path.dirname(filePath), { recursive: true });
-  console.log("made directory for local storage")
 }
 
 async function readJsonFile(filePath, fallback) {

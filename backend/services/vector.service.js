@@ -1,6 +1,7 @@
 const path = require('node:path');
 
 const { env, featureFlags } = require('../config/env');
+const AppError = require('../errors/AppError');
 const { cosineSimilarity } = require('../utils/vectorMath');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 
@@ -10,6 +11,15 @@ function pineconeBaseUrl() {
   return env.pineconeIndexHost.startsWith('http')
     ? env.pineconeIndexHost
     : `https://${env.pineconeIndexHost}`;
+}
+
+function buildPineconeRequiredError(operation, error) {
+  return new AppError(503, `Pinecone ${operation} failed and local fallback is disabled.`, {
+    service: 'pinecone',
+    operation,
+    fallbackDisabled: true,
+    originalError: error?.message || null,
+  });
 }
 
 async function upsertLocalVectors(records) {
@@ -57,10 +67,18 @@ async function upsertPineconeVectors(records) {
 }
 
 async function upsertClauseVectors(records) {
+  if (env.strictRemoteServices && !featureFlags.pinecone) {
+    throw buildPineconeRequiredError('upsert', new Error('Pinecone is not configured.'));
+  }
+
   if (featureFlags.pinecone) {
     try {
       return await upsertPineconeVectors(records);
     } catch (error) {
+      if (env.strictRemoteServices) {
+        throw buildPineconeRequiredError('upsert', error);
+      }
+
       console.warn('Falling back to local vector store:', error.message);
     }
   }
@@ -161,10 +179,18 @@ async function querySimilarClauses({
   contractId,
   queryText = '',
 }) {
+  if (env.strictRemoteServices && !featureFlags.pinecone) {
+    throw buildPineconeRequiredError('query', new Error('Pinecone is not configured.'));
+  }
+
   if (featureFlags.pinecone) {
     try {
       return await queryPinecone(vector, topK, contractId);
     } catch (error) {
+      if (env.strictRemoteServices) {
+        throw buildPineconeRequiredError('query', error);
+      }
+
       console.warn('Falling back to local semantic search:', error.message);
     }
   }

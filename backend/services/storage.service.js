@@ -3,6 +3,7 @@ const path = require('node:path');
 
 const { env } = require('../config/env');
 const { supabase, supabaseStatus } = require('../config/supabase');
+const AppError = require('../errors/AppError');
 const { ensureDirectory } = require('../utils/jsonStore');
 
 function sanitizeFileName(fileName = 'document') {
@@ -70,12 +71,27 @@ async function storeArtifactLocally({ assetType, localPath, content, encoding })
   }
 }
 
+function buildSupabaseRequiredError(message, details = {}) {
+  return new AppError(503, message, {
+    service: 'supabase',
+    fallbackDisabled: true,
+    ...details,
+  });
+}
+
 async function uploadRawDocument({ contractId, file, source }) {
   const safeName = sanitizeFileName(file.originalname);
   const storagePath = `contracts/raw/${contractId}/${safeName}`;
 
   if (env.artifactStorageMode === 'supabase') {
     if (!supabaseStatus.enabled || !supabase) {
+      if (env.strictRemoteServices) {
+        throw buildSupabaseRequiredError('Supabase Storage is required for raw document uploads but is not configured.', {
+          assetType: 'raw-document',
+          target: storagePath,
+        });
+      }
+
       return buildDisabledArtifact('raw-document', 'Supabase Storage is not configured.');
     }
 
@@ -92,6 +108,14 @@ async function uploadRawDocument({ contractId, file, source }) {
         },
       });
     } catch (error) {
+      if (env.strictRemoteServices) {
+        throw buildSupabaseRequiredError('Supabase Storage upload failed for the raw document and local fallback is disabled.', {
+          assetType: 'raw-document',
+          target: storagePath,
+          originalError: error.message,
+        });
+      }
+
       console.warn('Supabase raw storage failed, disabling artifact for this upload:', error.message);
       return buildDisabledArtifact('raw-document', `Supabase raw storage failed: ${error.message}`);
     }
@@ -114,6 +138,13 @@ async function uploadExtractedText({ contractId, text, source }) {
 
   if (env.artifactStorageMode === 'supabase') {
     if (!supabaseStatus.enabled || !supabase) {
+      if (env.strictRemoteServices) {
+        throw buildSupabaseRequiredError('Supabase Storage is required for extracted text uploads but is not configured.', {
+          assetType: 'extracted-text',
+          target: storagePath,
+        });
+      }
+
       return buildDisabledArtifact('extracted-text', 'Supabase Storage is not configured.');
     }
 
@@ -130,6 +161,14 @@ async function uploadExtractedText({ contractId, text, source }) {
         },
       });
     } catch (error) {
+      if (env.strictRemoteServices) {
+        throw buildSupabaseRequiredError('Supabase Storage upload failed for extracted text and local fallback is disabled.', {
+          assetType: 'extracted-text',
+          target: storagePath,
+          originalError: error.message,
+        });
+      }
+
       console.warn('Supabase text storage failed, disabling artifact for this upload:', error.message);
       return buildDisabledArtifact('extracted-text', `Supabase text storage failed: ${error.message}`);
     }
