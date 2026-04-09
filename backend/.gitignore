@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+
+# Private credentials and service accounts
+*-firebase-adminsdk-*.json
+*service-account*.json
+*credentials*.json
+client_secret*.json
+oauth-*.json
+secrets/
+credentials/
+tokens/
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+*.jks
+
+# Local runtime data
+tmp/
+uploads/
+logs/
+*.log
+
+# Build output
+dist/
+build/
+coverage/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

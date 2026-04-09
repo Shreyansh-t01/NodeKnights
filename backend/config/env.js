@@ -49,7 +49,12 @@ function asChoice(value, allowedValues, fallback) {
     return fallback;
   }
 
-  const normalized = String(value).trim().toLowerCase();
+  let normalized = String(value).trim().toLowerCase();
+
+  if (normalized === 'superbase') {
+    normalized = 'supabase';
+  }
+
   return allowedValues.includes(normalized) ? normalized : fallback;
 }
 
@@ -86,7 +91,10 @@ const env = {
   firebaseProjectId: process.env.FIREBASE_PROJECT_ID || '',
   firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
   firebasePrivateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-  artifactStorageMode: asChoice(process.env.ARTIFACT_STORAGE_MODE, ['disabled', 'local'], 'disabled'),
+  artifactStorageMode: asChoice(process.env.ARTIFACT_STORAGE_MODE, ['disabled', 'local', 'supabase'], 'disabled'),
+  supabaseUrl: process.env.SUPABASE_URL || '',
+  supabaseSecretKey: process.env.SUPABASE_SECRET_KEY || '',
+  supabaseStorageBucket: process.env.SUPABASE_STORAGE_BUCKET || '',
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
   googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || '',
@@ -117,6 +125,11 @@ const featureFlags = {
     env.firebaseProjectId
       && env.firebaseClientEmail
       && env.firebasePrivateKey,
+  ),
+  supabaseStorage: Boolean(
+    env.supabaseUrl
+      && env.supabaseSecretKey
+      && env.supabaseStorageBucket,
   ),
   googleConnectors: Boolean(
     env.googleClientId

@@ -1,4 +1,5 @@
 const { firestoreStatus, firebaseStatus } = require('../config/firebase');
+const { supabaseStatus } = require('../config/supabase');
 const { env, featureFlags } = require('../config/env');
 
 async function getMlServiceStatus() {
@@ -40,9 +41,11 @@ async function getHealth(req, res) {
       firestore: firestoreStatus,
       firebase: firebaseStatus,
       artifactStorage: {
-        enabled: env.artifactStorageMode !== 'disabled',
+        enabled: env.artifactStorageMode === 'local'
+          || (env.artifactStorageMode === 'supabase' && supabaseStatus.enabled),
         mode: env.artifactStorageMode,
       },
+      supabaseStorage: supabaseStatus,
       mlService: mlServiceStatus,
       pinecone: {
         enabled: featureFlags.pinecone,
