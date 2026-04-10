@@ -132,3 +132,8 @@ temp/
 # package-lock.json   ← remove this line if you want to keep it
 
 # yarn.lock
+
+# Python virtual environment
+.venv/
+venv/
+env/

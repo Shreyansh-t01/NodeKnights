@@ -16,6 +16,57 @@
   font-family: 'Space Grotesk', sans-serif;
 }
 
+.voice-bot-button {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border: 1px solid #d0d7e2;
+  border-radius: 12px;
+  background: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  transition: all 0.2s ease;
+}
+
+.voice-bot-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+.voice-bot-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.voice-bot-button.listening {
+  border-color: #0f9d58;
+  box-shadow: 0 0 0 4px rgba(15, 157, 88, 0.15);
+  animation: pulseVoice 1.2s infinite;
+}
+
+.voice-bot-button.unsupported {
+  opacity: 0.45;
+}
+
+.voice-bot-icon {
+  line-height: 1;
+}
+
+@keyframes pulseVoice {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 * {
   box-sizing: border-box;
 }

@@ -1,12 +1,68 @@
-function formatClauseType(value = 'Clause') {
-  return value.replace(/_/g, ' ');
-}
-
-function renderClauseBody(clause, fallback = 'Clause text is unavailable.') {
-  return clause?.clauseTextFull || clause?.clauseTextSummary || clause?.clauseText || fallback;
-}
+import { useState } from 'react';
 
 function ContractInsightsPanel({ contract, insights, pending }) {
+  const [isDownloading, setIsDownloading] = useState(false);
+
+ const handleDownloadPdf = async () => {
+  if (!contract || !insights) {
+    alert('No insight data available to download.');
+    return;
+  }
+
+  try {
+    setIsDownloading(true);
+
+    const payload = {
+      title: contract.title || 'insight-report',
+      summary: insights.summary || insights.headline || 'No summary available.',
+      nextSteps: insights.nextSteps || [],
+      priorityItems: insights.topRiskItems || [],
+      highRiskClauses: (insights.clauseInsights || []).map((item, index) => ({
+        name: item.clauseType?.replace(/_/g, ' ') || `Clause ${index + 1}`,
+        risk: item.riskLabel || 'high',
+        reason: item.whyItIsRisky || item.recommendedChange || 'No reason provided.',
+      })),
+    };
+
+    console.log('Sending PDF payload:', payload);
+
+    const response = await fetch('http://localhost:3000/api/documents/download-insight-pdf', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    console.log('Response status:', response.status);
+    console.log('Response ok:', response.ok);
+    console.log('Response headers content-type:', response.headers.get('content-type'));
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Backend error response:', errorText);
+      throw new Error(`HTTP ${response.status} - ${errorText}`);
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const safeFileName = `${contract.title || 'insight-report'}.pdf`;
+
+    link.href = url;
+    link.download = safeFileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Download PDF error:', error);
+    alert(`Failed to download PDF: ${error.message}`);
+  } finally {
+    setIsDownloading(false);
+  }
+};
+
   if (!contract) {
     return (
       <section className="panel">
@@ -31,7 +87,26 @@ function ContractInsightsPanel({ contract, insights, pending }) {
           <p className="eyebrow">AI Insights</p>
           <h3>{contract.title}</h3>
         </div>
-        <span className="mode-label">Auto-generated only for high-risk clauses</span>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span className="mode-label">Auto-generated only for high-risk clauses</span>
+
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            disabled={isDownloading || pending}
+            style={{
+              padding: '10px 14px',
+              borderRadius: '10px',
+              border: '1px solid #d0d7e2',
+              background: '#ffffff',
+              cursor: isDownloading || pending ? 'not-allowed' : 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            {isDownloading ? 'Downloading...' : 'Download PDF'}
+          </button>
+        </div>
       </div>
 
       <div className="insight-summary">
@@ -71,60 +146,12 @@ function ContractInsightsPanel({ contract, insights, pending }) {
           insights.clauseInsights.map((insight) => (
             <article key={insight.clauseId} className="insight-card">
               <div className="insight-meta">
-                <strong>{formatClauseType(insight.clauseType || 'Clause')}</strong>
+                <strong>{insight.clauseType?.replace(/_/g, ' ') || 'Clause'}</strong>
                 <span>{insight.riskLabel || 'high'} risk</span>
               </div>
-
-              <div className="insight-compare-grid">
-                <section className="insight-compare-block">
-                  <p className="eyebrow">Current Clause</p>
-                  <h4>{insight.currentClause?.contractTitle || contract.title}</h4>
-                  <p>{renderClauseBody(insight.currentClause, renderClauseBody(insight))}</p>
-                </section>
-
-                <section className="insight-compare-block">
-                  <p className="eyebrow">Best Precedent</p>
-                  <h4>{insight.precedentClause?.title || 'No stored precedent yet'}</h4>
-                  <p>
-                    {insight.precedentClause
-                      ? renderClauseBody(insight.precedentClause)
-                      : 'Add approved precedent clauses to your precedent bank and this side-by-side panel will populate automatically.'}
-                  </p>
-                </section>
-              </div>
-
               <p><strong>Why it is risky:</strong> {insight.whyItIsRisky}</p>
               <p><strong>Comparison:</strong> {insight.comparison}</p>
               <p><strong>Recommended change:</strong> {insight.recommendedChange}</p>
-
-              {(insight.ruleMatches || []).length ? (
-                <div className="insight-rule-stack">
-                  <p className="eyebrow">Rules And Policies</p>
-                  {(insight.ruleMatches || []).map((rule) => (
-                    <div key={rule.id} className="insight-rule-item">
-                      <strong>{rule.title || 'Benchmark guidance'}</strong>
-                      <p>{rule.benchmark || rule.textSummary || rule.textFull}</p>
-                      {rule.recommendedAction ? (
-                        <p><strong>Expected action:</strong> {rule.recommendedAction}</p>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              {(insight.precedentMatches || []).length > 1 ? (
-                <div className="insight-related-list">
-                  <p className="eyebrow">Additional Precedents</p>
-                  <ul>
-                    {insight.precedentMatches.slice(1).map((match) => (
-                      <li key={match.id}>
-                        <strong>{match.title || formatClauseType(match.clauseType || 'precedent')}</strong>
-                        {typeof match.score === 'number' ? ` (${match.score.toFixed(2)})` : ''}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
             </article>
           ))
         ) : (
@@ -138,3 +165,4 @@ function ContractInsightsPanel({ contract, insights, pending }) {
 }
 
 export default ContractInsightsPanel;
+

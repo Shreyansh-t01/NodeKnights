@@ -1,4 +1,4 @@
-import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 
 import AppNav from './components/AppNav';
 import { api } from './lib/api';
@@ -259,6 +259,12 @@ function App() {
   const [query, setQuery] = useState('What makes the termination clause risky, and what should we change?');
   const [searchResult, setSearchResult] = useState(null);
   const [searchPending, setSearchPending] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+const recognitionRef = useRef(null);
+
+const voiceSupported =
+  typeof window !== 'undefined' &&
+  ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
   const [documentQuery, setDocumentQuery] = useState('');
   const [documentResults, setDocumentResults] = useState([]);
   const [documentSearchPending, setDocumentSearchPending] = useState(false);
@@ -385,6 +391,20 @@ function App() {
       ignore = true;
     };
   }, []);
+
+  useEffect(() => {
+  return () => {
+    try {
+      recognitionRef.current?.stop();
+    } catch (error) {
+      console.error(error);
+    }
+
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  };
+}, []);
 
   useEffect(() => {
     let ignore = false;
@@ -546,34 +566,220 @@ function App() {
     document.title = `Legal Intelligence | ${titles[safePath] || 'Overview'}`;
   }, [safePath]);
 
-  async function handleSemanticSearch(event) {
-    event.preventDefault();
-    setSearchPending(true);
-    const activeContract = selectedContract || contracts.find((contract) => contract.id === selectedContractId) || null;
+  function normalizeSpeechValue(value) {
+  if (!value) return '';
 
-    try {
-      const response = await api.semanticSearch({
-        query,
-        contractId: selectedContractId,
-        topK: 5,
-      });
+  if (typeof value === 'string') {
+    return value.trim();
+  }
 
-      startTransition(() => {
-        setSearchResult(response.data);
-      });
-    } catch (error) {
-      startTransition(() => {
-        if (bootMode === 'mock' && activeContract) {
-          setSearchResult(buildMockSearchResult(deferredQuery || query, activeContract));
-          return;
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === 'string') {
+          return item.trim();
         }
 
-        setSearchResult(buildEmptySearchResult(deferredQuery || query));
-      });
-    } finally {
-      setSearchPending(false);
-    }
+        if (typeof item === 'object' && item !== null) {
+          return (
+            item.text ||
+            item.answer ||
+            item.recommendation ||
+            item.title ||
+            item.label ||
+            JSON.stringify(item)
+          );
+        }
+
+        return String(item);
+      })
+      .filter(Boolean)
+      .join('. ');
   }
+
+  if (typeof value === 'object') {
+    return (
+      value.text ||
+      value.answer ||
+      value.recommendation ||
+      value.title ||
+      value.label ||
+      JSON.stringify(value)
+    );
+  }
+
+  return String(value).trim();
+}
+function buildSpeechOutput(data) {
+  const answer =
+    normalizeSpeechValue(data?.speakText) ||
+    normalizeSpeechValue(data?.answer) ||
+    normalizeSpeechValue(data?.reasoning?.answer);
+
+  const recommendations = normalizeSpeechValue(data?.reasoning?.recommendations);
+
+  if (answer && recommendations) {
+    return `${answer}. Recommendations: ${recommendations}.`;
+  }
+
+  if (answer) {
+    return answer;
+  }
+
+  if (recommendations) {
+    return `Recommendations: ${recommendations}.`;
+  }
+
+  return '';
+}
+  function speakText(text) {
+  if (!text || typeof window === 'undefined' || !window.speechSynthesis) {
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+
+  const speech = new SpeechSynthesisUtterance(text);
+  speech.lang = 'en-IN';
+  speech.rate = 1;
+  speech.pitch = 1;
+
+  window.speechSynthesis.speak(speech);
+}
+async function handleSemanticSearch(event) {
+  event.preventDefault();
+  setSearchPending(true);
+  const activeContract = selectedContract || contracts.find((contract) => contract.id === selectedContractId) || null;
+
+  try {
+    const response = await api.semanticSearch({
+      query,
+      contractId: selectedContractId,
+      topK: 5,
+    });
+
+    startTransition(() => {
+      setSearchResult(response.data);
+    });
+
+const answerToSpeak = buildSpeechOutput(response.data);
+speakText(answerToSpeak);
+  } catch (error) {
+    startTransition(() => {
+      if (bootMode === 'mock' && activeContract) {
+        setSearchResult(buildMockSearchResult(deferredQuery || query, activeContract));
+        return;
+      }
+
+      setSearchResult(buildEmptySearchResult(deferredQuery || query));
+    });
+  } finally {
+    setSearchPending(false);
+  }
+}
+async function runVoiceSemanticSearch(spokenQuery) {
+  const finalQuery = String(spokenQuery || '').trim();
+  if (!finalQuery) {
+    return;
+  }
+
+  setSearchPending(true);
+  const activeContract = selectedContract || contracts.find((contract) => contract.id === selectedContractId) || null;
+
+  try {
+    const response = await api.semanticSearch({
+      query: finalQuery,
+      contractId: selectedContractId,
+      topK: 5,
+    });
+
+    startTransition(() => {
+      setQuery(finalQuery);
+      setSearchResult(response.data);
+    });
+
+    const answerToSpeak = buildSpeechOutput(response.data);
+speakText(answerToSpeak);
+  } catch (error) {
+    startTransition(() => {
+      setQuery(finalQuery);
+
+      if (bootMode === 'mock' && activeContract) {
+        setSearchResult(buildMockSearchResult(finalQuery, activeContract));
+        return;
+      }
+
+      setSearchResult(buildEmptySearchResult(finalQuery));
+    });
+  } finally {
+    setSearchPending(false);
+  }
+}
+
+function handleVoiceSearch() {
+  if (!voiceSupported || searchPending || !selectedContractId) {
+    return;
+  }
+
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert('Voice search is not supported in this browser.');
+    return;
+  }
+
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+
+  const recognition = new SpeechRecognition();
+  recognitionRef.current = recognition;
+
+  recognition.lang = 'en-IN';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.continuous = false;
+
+  recognition.onstart = () => {
+    setIsListening(true);
+  };
+
+  recognition.onresult = async (event) => {
+    const transcript = event.results?.[0]?.[0]?.transcript?.trim() || '';
+    setIsListening(false);
+
+    if (!transcript) {
+      return;
+    }
+
+    await runVoiceSemanticSearch(transcript);
+  };
+
+  recognition.onerror = (event) => {
+    console.error('Voice recognition error:', event.error);
+    setIsListening(false);
+
+    if (event.error !== 'aborted') {
+      alert(`Voice search failed: ${event.error}`);
+    }
+  };
+
+  recognition.onend = () => {
+    setIsListening(false);
+  };
+
+  recognition.start();
+}
+function handleStopVoice() {
+  try {
+    recognitionRef.current?.stop();
+  } catch (error) {
+    console.error('Stop voice error:', error);
+  }
+
+  setIsListening(false);
+}
 
   async function handleDocumentSearch(event) {
     event.preventDefault();
@@ -673,15 +879,19 @@ function App() {
   } else if (safePath === '/search') {
     page = (
       <SearchPage
-        {...pageProps}
-        query={query}
-        deferredQuery={deferredQuery}
-        searchPending={searchPending}
-        searchResult={searchResult}
-        onQueryChange={setQuery}
-        onSubmit={handleSemanticSearch}
-        modeLabel={modeLabel}
-      />
+    {...pageProps}
+    query={query}
+    deferredQuery={deferredQuery}
+    searchPending={searchPending}
+    searchResult={searchResult}
+    onQueryChange={setQuery}
+    onSubmit={handleSemanticSearch}
+    modeLabel={modeLabel}
+    onVoiceSearch={handleVoiceSearch}
+    onStopVoice={handleStopVoice}
+    isListening={isListening}
+    voiceSupported={voiceSupported}
+/>
     );
   } else if (safePath === '/documents') {
     page = (

@@ -14,6 +14,10 @@ function SearchPage({
   onQueryChange,
   onSubmit,
   modeLabel,
+  onVoiceSearch,
+  onStopVoice,
+  isListening,
+  voiceSupported,
 }) {
   const [scopeQuery, setScopeQuery] = useState('');
 
@@ -111,6 +115,10 @@ function SearchPage({
           onQueryChange={onQueryChange}
           onSubmit={onSubmit}
           modeLabel={modeLabel}
+          onVoiceSearch={onVoiceSearch}
+          onStopVoice={onStopVoice}
+          isListening={isListening}
+          voiceSupported={voiceSupported}
         />
       </div>
     </section>

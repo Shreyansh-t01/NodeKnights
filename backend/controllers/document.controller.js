@@ -4,6 +4,7 @@ const {
   getDocumentDetails,
   searchDocumentsByName,
 } = require('../services/document.service');
+const { generateInsightPdfBuffer } = require('../services/pdf.service');
 
 function encodeFileName(value = 'document') {
   return encodeURIComponent(value)
@@ -53,8 +54,37 @@ const streamDocumentContent = asyncHandler(async (req, res) => {
   res.send(document.buffer);
 });
 
+const downloadInsightPdf = asyncHandler(async (req, res) => {
+  const {
+    title,
+    summary,
+    nextSteps,
+    priorityItems,
+    highRiskClauses,
+  } = req.body || {};
+
+  const pdfBuffer = await generateInsightPdfBuffer({
+    title,
+    summary,
+    nextSteps,
+    priorityItems,
+    highRiskClauses,
+  });
+
+  const fileName = `${title || 'insight-report'}.pdf`;
+
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Content-Length', pdfBuffer.length);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', buildContentDisposition(fileName, 'attachment'));
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+
+  res.send(pdfBuffer);
+});
+
 module.exports = {
   getDocument,
   searchDocuments,
   streamDocumentContent,
+  downloadInsightPdf,
 };
