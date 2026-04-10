@@ -1,6 +1,7 @@
 const { firestore, firestoreStatus, firebaseStatus } = require('../config/firebase');
 const { supabase, supabaseStatus } = require('../config/supabase');
 const { env, featureFlags } = require('../config/env');
+const { getGoogleConnectorStatus } = require('../services/googleAuth.service');
 
 function buildPineconeBaseUrl() {
   return env.pineconeIndexHost.startsWith('http')
@@ -257,6 +258,7 @@ async function getMlServiceStatus() {
 
 async function getHealth(req, res) {
   const mlServiceStatus = await getMlServiceStatus();
+  const googleStatus = await getGoogleConnectorStatus();
 
   res.json({
     success: true,
@@ -279,7 +281,10 @@ async function getHealth(req, res) {
       },
       googleConnectors: {
         enabled: featureFlags.googleConnectors,
-        mode: featureFlags.googleConnectors ? 'oauth-refresh-token' : 'disabled',
+        connected: googleStatus.connected,
+        tokenSource: googleStatus.tokenSource,
+        redirectUri: googleStatus.redirectUri,
+        mode: featureFlags.googleConnectors ? 'oauth-browser-flow' : 'disabled',
       },
       reasoning: {
         enabled: featureFlags.externalGenAi,

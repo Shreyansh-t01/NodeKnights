@@ -220,6 +220,12 @@ input {
   gap: 1rem;
 }
 
+.contracts-route {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
 .metric-card,
 .connector-card,
 .upload-panel,
@@ -258,7 +264,8 @@ input {
 .contract-list,
 .contract-grid-preview,
 .insight-stack,
-.document-list {
+.document-list,
+.contract-review-list {
   display: grid;
   gap: 0.9rem;
 }
@@ -280,6 +287,129 @@ input {
 .contract-card-active {
   transform: translateY(-2px);
   border-color: rgba(32, 54, 95, 0.2);
+}
+
+.contracts-route-header {
+  padding: 1.2rem;
+}
+
+.contract-review-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.2rem;
+  background: rgba(255, 251, 244, 0.96);
+}
+
+.contract-review-card-active {
+  border-color: rgba(32, 54, 95, 0.22);
+}
+
+.contract-review-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.contract-review-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.contract-review-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.contract-review-toggle,
+.clause-action-button {
+  border: 1px solid rgba(32, 54, 95, 0.16);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--navy);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.contract-review-toggle {
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+}
+
+.contract-review-body {
+  display: grid;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(23, 32, 51, 0.08);
+}
+
+.contract-review-body-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.contract-clause-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.contract-clause-item {
+  border: 1px solid rgba(23, 32, 51, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.74);
+  overflow: hidden;
+}
+
+.contract-clause-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  padding: 1rem;
+  align-items: start;
+}
+
+.contract-clause-copy {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.contract-clause-copy p {
+  margin: 0;
+}
+
+.contract-clause-actions {
+  display: grid;
+  justify-items: end;
+  gap: 0.65rem;
+}
+
+.clause-action-button {
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+}
+
+.contract-clause-board {
+  padding: 1rem;
+  border-top: 1px solid rgba(23, 32, 51, 0.08);
+  background: rgba(248, 251, 255, 0.88);
+}
+
+.contract-clause-board-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.contract-clause-board-grid p {
+  margin: 0;
+}
+
+.contract-clause-board-full {
+  line-height: 1.7;
 }
 
 .document-card {
@@ -560,6 +690,15 @@ input {
   .insight-grid,
   .contract-grid-preview {
     grid-template-columns: 1fr;
+  }
+
+  .contract-review-meta-grid,
+  .contract-clause-row {
+    grid-template-columns: 1fr;
+  }
+
+  .contract-clause-actions {
+    justify-items: start;
   }
 }
 

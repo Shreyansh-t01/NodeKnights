@@ -135,8 +135,7 @@ const featureFlags = {
   googleConnectors: Boolean(
     env.googleClientId
       && env.googleClientSecret
-      && env.googleRedirectUri
-      && env.googleRefreshToken,
+      && env.googleRedirectUri,
   ),
   pinecone: Boolean(env.pineconeApiKey && env.pineconeIndexHost),
   externalGenAi: Boolean(

@@ -15,15 +15,12 @@ const SUPPORTED_MIME_TYPES = new Set([
   'application/vnd.google-apps.document',
 ]);
 
-function getDriveClient() {
-  return google.drive({
-    version: 'v3',
-    auth: getOAuthClient(),
-  });
-}
-
 async function listFilesInFolder(folderId, limit = 5) {
-  const drive = getDriveClient();
+  const auth = await getOAuthClient();
+  const drive = google.drive({
+    version: 'v3',
+    auth,
+  });
 
   const response = await drive.files.list({
     q: `'${folderId}' in parents and trashed = false`,
@@ -35,7 +32,11 @@ async function listFilesInFolder(folderId, limit = 5) {
 }
 
 async function downloadDriveFile(fileId) {
-  const drive = getDriveClient();
+  const auth = await getOAuthClient();
+  const drive = google.drive({
+    version: 'v3',
+    auth,
+  });
   const metadataResponse = await drive.files.get({
     fileId,
     fields: 'id, name, mimeType, webViewLink',

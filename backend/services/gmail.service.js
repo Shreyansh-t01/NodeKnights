@@ -13,13 +13,6 @@ const SUPPORTED_MIME_TYPES = new Set([
   'image/webp',
 ]);
 
-function getGmailClient() {
-  return google.gmail({
-    version: 'v1',
-    auth: getOAuthClient(),
-  });
-}
-
 function collectAttachmentParts(part, attachments = []) {
   if (!part) {
     return attachments;
@@ -58,7 +51,11 @@ async function downloadAttachment(gmail, messageId, attachment) {
 }
 
 async function importGmailAttachments({ query, maxResults = 5 }) {
-  const gmail = getGmailClient();
+  const auth = await getOAuthClient();
+  const gmail = google.gmail({
+    version: 'v1',
+    auth,
+  });
   const searchQuery = query || env.gmailDefaultQuery;
 
   const listResponse = await gmail.users.messages.list({
