@@ -257,7 +257,8 @@ input {
 .connector-grid,
 .contract-list,
 .contract-grid-preview,
-.insight-stack {
+.insight-stack,
+.document-list {
   display: grid;
   gap: 0.9rem;
 }
@@ -279,6 +280,48 @@ input {
 .contract-card-active {
   transform: translateY(-2px);
   border-color: rgba(32, 54, 95, 0.2);
+}
+
+.document-card {
+  width: 100%;
+  text-align: left;
+  padding: 1rem;
+  border: 1px solid rgba(32, 54, 95, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.76);
+  cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.document-card:hover,
+.document-card-active {
+  transform: translateY(-2px);
+  border-color: rgba(32, 54, 95, 0.24);
+  background: rgba(248, 251, 255, 0.96);
+}
+
+.document-card-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.9rem;
+}
+
+.document-card-meta {
+  margin: 0.45rem 0 0;
+}
+
+.document-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(32, 54, 95, 0.12);
+  color: var(--navy);
+  font-size: 0.76rem;
+  font-weight: 700;
 }
 
 .contract-type {
@@ -450,6 +493,49 @@ input {
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--navy);
+}
+
+.document-viewer-panel {
+  min-height: 0;
+}
+
+.document-viewer-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.document-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.action-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(32, 54, 95, 0.18);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--navy);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.document-frame {
+  width: 100%;
+  min-height: 72vh;
+  border: 1px solid rgba(23, 32, 51, 0.08);
+  border-radius: 20px;
+  background: white;
+}
+
+.document-image {
+  width: 100%;
+  border-radius: 20px;
+  border: 1px solid rgba(23, 32, 51, 0.08);
+  background: white;
 }
 
 @keyframes fade-up {

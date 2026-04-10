@@ -1,5 +1,20 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
 
+function buildQueryString(params = {}) {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') {
+      return;
+    }
+
+    searchParams.set(key, value);
+  });
+
+  const queryString = searchParams.toString();
+  return queryString ? `?${queryString}` : '';
+}
+
 async function readErrorMessage(response) {
   const contentType = response.headers.get('content-type') || '';
 
@@ -50,6 +65,13 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(payload),
   }),
+  searchDocuments: (params = {}) => request(`/documents${buildQueryString(params)}`),
+  getDocumentById: (contractId) => request(`/documents/${contractId}`),
+  getDocumentContentUrl: (contractId, options = {}) => (
+    `${API_BASE_URL}/documents/${encodeURIComponent(contractId)}/content${buildQueryString({
+      download: options.download ? '1' : '',
+    })}`
+  ),
   uploadContract: (formData) => request('/contracts/upload', {
     method: 'POST',  
     body: formData,

@@ -130,7 +130,10 @@ async function queryLocalVectors(vector, topK, contractId, queryText) {
       id: item.id,
       score: (
         cosineSimilarity(vector, item.values) * 0.55
-        + lexicalOverlapScore(queryText, item.metadata.clauseText) * 0.35
+        + lexicalOverlapScore(
+          queryText,
+          item.metadata.clauseTextFull || item.metadata.clauseTextSummary || item.metadata.clauseText,
+        ) * 0.35
         + clauseTypeBoost(queryText, item.metadata.clauseType)
       ),
       metadata: item.metadata,

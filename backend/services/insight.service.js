@@ -86,7 +86,8 @@ function toSupportingMatches(matches = []) {
     score: match.score,
     clauseType: match.metadata?.clauseType || 'other',
     riskLabel: match.metadata?.riskLabel || 'unknown',
-    clauseText: match.metadata?.clauseText || '',
+    clauseText: match.metadata?.clauseTextSummary || match.metadata?.clauseText || '',
+    clauseTextFull: match.metadata?.clauseTextFull || match.metadata?.clauseText || '',
   }));
 }
 
@@ -96,7 +97,8 @@ function toPromptMatches(matches = []) {
     score: typeof match.score === 'number' ? Number(match.score.toFixed(4)) : null,
     clauseType: match.metadata?.clauseType || 'other',
     riskLabel: match.metadata?.riskLabel || 'unknown',
-    clauseText: match.metadata?.clauseText || '',
+    clauseTextSummary: match.metadata?.clauseTextSummary || match.metadata?.clauseText || '',
+    clauseTextFull: match.metadata?.clauseTextFull || match.metadata?.clauseText || '',
     contractTitle: match.metadata?.contractTitle || '',
     position: match.metadata?.position || null,
   }));
@@ -202,7 +204,11 @@ function buildContractOverviewPrompt(contractBundle, fallback) {
         clauseId: insight.clauseId,
         clauseType: insight.clauseType,
         riskLabel: insight.riskLabel,
-        clauseText: clauses.find((clause) => clause.id === insight.clauseId)?.clauseText || '',
+        clauseText: (
+          clauses.find((clause) => clause.id === insight.clauseId)?.clauseTextFull
+          || clauses.find((clause) => clause.id === insight.clauseId)?.clauseText
+          || ''
+        ),
       })),
     }),
     '',
@@ -229,7 +235,8 @@ function buildClauseInsightPrompt(clause, precedentMatches) {
         clauseId: clause.id,
         clauseType: clause.clauseType,
         riskLabel: clause.riskLabel,
-        clauseText: clause.clauseText,
+        clauseTextSummary: clause.clauseTextSummary || clause.clauseText,
+        clauseTextFull: clause.clauseTextFull || clause.clauseText,
       },
       precedentMatches: toPromptMatches(precedentMatches),
     }),

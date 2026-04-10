@@ -8,9 +8,11 @@ class AnalyzeRequest(BaseModel):
 
 class ClauseResult(BaseModel):
     clause_text: str
+    clause_text_full: str
+    clause_text_summary: str
     clause_type: str
     risk_label: str
-    extracted_values: Dict[str, Any]
+    extracted_values: Dict[str, Any] = {}
 
 
 class AnalyzeResponse(BaseModel):

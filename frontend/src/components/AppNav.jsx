@@ -4,6 +4,7 @@ const navItems = [
   { path: '/contracts', label: 'Contracts' },
   { path: '/insights', label: 'Insights' },
   { path: '/search', label: 'Search' },
+  { path: '/documents', label: 'Documents' },
 ];
 
 function AppNav({ currentPath, onNavigate, modeLabel }) {

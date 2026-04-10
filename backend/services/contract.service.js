@@ -18,7 +18,8 @@ const {
 async function createVectorRecords(contract, clauses) {
   return Promise.all(
     clauses.map(async (clause) => {
-      const embedding = await embedText(clause.clauseText);
+      const searchText = clause.clauseTextFull || clause.clauseText;
+      const embedding = await embedText(searchText);
 
       return {
         id: clause.id,
@@ -30,6 +31,8 @@ async function createVectorRecords(contract, clauses) {
           clauseType: clause.clauseType,
           riskLabel: clause.riskLabel,
           clauseText: clause.clauseText,
+          clauseTextSummary: clause.clauseTextSummary || clause.clauseText,
+          clauseTextFull: clause.clauseTextFull || clause.clauseText,
           position: clause.position,
         },
       };
@@ -183,12 +186,13 @@ async function buildContractInsights(contractId, clauseId) {
     throw new AppError(404, `Clause not found: ${clauseId}`);
   }
 
-  const embedding = await embedText(clause.clauseText);
+  const searchText = clause.clauseTextFull || clause.clauseText;
+  const embedding = await embedText(searchText);
   const matches = await querySimilarClauses({
     vector: embedding.values,
     topK: 3,
     contractId,
-    queryText: clause.clauseText,
+    queryText: searchText,
   });
 
   return await generateClauseInsight(clause, matches);

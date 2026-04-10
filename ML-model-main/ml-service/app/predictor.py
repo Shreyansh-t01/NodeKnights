@@ -182,14 +182,18 @@ def analyze_text(text: str):
     clauses = []
 
     for clause in split_clauses:
+        full_text = " ".join(clause.split()).strip()
         clause_type = predict_clause_type(clause)
         risk = predict_risk(clause)
         short_text = make_short_clause_text(clause_type, clause)
 
         clauses.append({
             "clause_text": short_text,
+            "clause_text_full": full_text,
+            "clause_text_summary": short_text,
             "clause_type": clause_type,
-            "risk_label": risk
+            "risk_label": risk,
+            "extracted_values": {}
         })
         print("analyse hone laga text python model se")
 

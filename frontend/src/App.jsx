@@ -14,8 +14,9 @@ import IntakePage from './pages/IntakePage';
 import ContractsPage from './pages/ContractsPage';
 import InsightsPage from './pages/InsightsPage';
 import SearchPage from './pages/SearchPage';
+import DocumentsPage from './pages/DocumentsPage';
 
-const KNOWN_ROUTES = new Set(['/', '/intake', '/contracts', '/insights', '/search']);
+const KNOWN_ROUTES = new Set(['/', '/intake', '/contracts', '/insights', '/search', '/documents']);
 
 function normalizePath(pathname) {
   if (!pathname || pathname === '/') {
@@ -31,6 +32,9 @@ function normalizeContractSummary(contract) {
     title: contract.title,
     source: contract.source,
     status: contract.status,
+    metadata: contract.metadata || {},
+    originalName: contract.metadata?.originalName || contract.originalName || contract.title,
+    mimeType: contract.metadata?.mimeType || contract.mimeType || '',
     contractType: contract.metadata?.contractType || contract.contractType || 'Contract',
     parties: contract.metadata?.parties || contract.parties || [],
     dates: contract.metadata?.dates || contract.dates || [],
@@ -39,6 +43,9 @@ function normalizeContractSummary(contract) {
     clauses: contract.clauses || [],
     risks: contract.risks || [],
     textPreview: contract.textPreview || '',
+    artifacts: contract.artifacts || {},
+    createdAt: contract.createdAt || null,
+    updatedAt: contract.updatedAt || contract.createdAt || null,
   };
 }
 
@@ -50,6 +57,7 @@ function normalizeContractDetail(bundle) {
     clauses: bundle.clauses || [],
     risks: bundle.risks || [],
     pipeline: bundle.contract?.pipeline || [],
+    artifacts: bundle.contract?.artifacts || summary.artifacts || {},
   };
 }
 
@@ -130,6 +138,115 @@ function buildLiveMetrics(contracts) {
   });
 }
 
+function getDocumentPreviewMode(mimeType = '') {
+  if (mimeType === 'application/pdf') {
+    return 'pdf';
+  }
+
+  if (mimeType.startsWith('image/')) {
+    return 'image';
+  }
+
+  if (mimeType.startsWith('text/')) {
+    return 'text';
+  }
+
+  return 'browser';
+}
+
+function normalizeDocumentSearchItem(document) {
+  return {
+    id: document.id,
+    title: document.title,
+    originalName: document.originalName,
+    mimeType: document.mimeType,
+    contractType: document.contractType,
+    source: document.source,
+    status: document.status,
+    parties: document.parties || [],
+    riskCounts: document.riskCounts || { low: 0, medium: 0, high: 0 },
+    textPreview: document.textPreview || '',
+    createdAt: document.createdAt || null,
+    updatedAt: document.updatedAt || null,
+    available: Boolean(document.available),
+    storageMode: document.storageMode || 'disabled',
+    previewMode: document.previewMode || getDocumentPreviewMode(document.mimeType || ''),
+    artifactReason: document.artifactReason || null,
+  };
+}
+
+function buildDocumentRecordFromContract(contract, options = {}) {
+  const rawArtifact = contract.artifacts?.rawDocument || null;
+  const forceUnavailable = Boolean(options.forceUnavailable);
+  const available = !forceUnavailable && Boolean(rawArtifact && rawArtifact.mode !== 'disabled' && rawArtifact.path);
+
+  return {
+    id: contract.id,
+    title: contract.title,
+    originalName: contract.originalName || contract.metadata?.originalName || contract.title,
+    mimeType: contract.mimeType || contract.metadata?.mimeType || '',
+    contractType: contract.contractType || contract.metadata?.contractType || 'Contract',
+    source: contract.source || 'unknown',
+    status: contract.status || 'unknown',
+    parties: contract.parties || contract.metadata?.parties || [],
+    riskCounts: contract.riskCounts || contract.metadata?.riskCounts || { low: 0, medium: 0, high: 0 },
+    textPreview: contract.textPreview || '',
+    createdAt: contract.createdAt || null,
+    updatedAt: contract.updatedAt || null,
+    available,
+    storageMode: forceUnavailable ? 'mock-preview' : rawArtifact?.mode || 'disabled',
+    previewMode: getDocumentPreviewMode(contract.mimeType || contract.metadata?.mimeType || ''),
+    artifactReason: forceUnavailable ? 'Live artifact preview is unavailable in mock preview mode.' : rawArtifact?.reason || null,
+  };
+}
+
+function scoreDocumentForQuery(document, query) {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return 1;
+  }
+
+  const title = String(document.title || '').trim().toLowerCase();
+  const originalName = String(document.originalName || '').trim().toLowerCase();
+  const combined = `${title} ${originalName}`.trim();
+  const terms = normalizedQuery.split(/\s+/).filter(Boolean);
+
+  if (!combined || !terms.every((term) => combined.includes(term))) {
+    return 0;
+  }
+
+  let score = terms.length * 10;
+
+  if (title === normalizedQuery || originalName === normalizedQuery) {
+    score += 500;
+  } else if (title.startsWith(normalizedQuery) || originalName.startsWith(normalizedQuery)) {
+    score += 300;
+  } else if (combined.includes(normalizedQuery)) {
+    score += 180;
+  }
+
+  return score;
+}
+
+function buildFallbackDocumentResults(query, contracts, options = {}) {
+  return contracts
+    .map((contract) => buildDocumentRecordFromContract(contract, options))
+    .map((document) => ({
+      document,
+      score: scoreDocumentForQuery(document, query),
+    }))
+    .filter((item) => !query.trim() || item.score > 0)
+    .sort((left, right) => {
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+
+      return new Date(right.document.createdAt || 0) - new Date(left.document.createdAt || 0);
+    })
+    .map((item) => item.document);
+}
+
 function App() {
   const [currentPath, setCurrentPath] = useState(normalizePath(window.location.pathname));
   const [health, setHealth] = useState(null);
@@ -142,14 +259,25 @@ function App() {
   const [query, setQuery] = useState('What makes the termination clause risky, and what should we change?');
   const [searchResult, setSearchResult] = useState(null);
   const [searchPending, setSearchPending] = useState(false);
+  const [documentQuery, setDocumentQuery] = useState('');
+  const [documentResults, setDocumentResults] = useState([]);
+  const [documentSearchPending, setDocumentSearchPending] = useState(false);
+  const [selectedDocumentId, setSelectedDocumentId] = useState(null);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const deferredQuery = useDeferredValue(query);
+  const deferredDocumentQuery = useDeferredValue(documentQuery);
 
   const safePath = KNOWN_ROUTES.has(currentPath) ? currentPath : '/';
   const connectors = buildConnectorState(health);
   const metrics = useMemo(() => buildLiveMetrics(contracts), [contracts]);
   const modeLabel = bootMode === 'live' ? 'Live backend mode' : bootMode === 'mock' ? 'Mock preview mode' : 'Connecting';
+  const selectedDocument = useMemo(
+    () => documentResults.find((document) => document.id === selectedDocumentId) || documentResults[0] || null,
+    [documentResults, selectedDocumentId],
+  );
+  const selectedDocumentViewerUrl = selectedDocument ? api.getDocumentContentUrl(selectedDocument.id) : '';
+  const selectedDocumentDownloadUrl = selectedDocument ? api.getDocumentContentUrl(selectedDocument.id, { download: true }) : '';
 
   function navigate(path) {
     const normalized = normalizePath(path);
@@ -193,6 +321,8 @@ function App() {
           setSelectedContract(sampleContracts[0]);
           setContractInsights(buildMockContractInsights(sampleContracts[0]));
           setSearchResult(buildMockSearchResult(query, sampleContracts[0]));
+          setDocumentResults(buildFallbackDocumentResults('', sampleContracts, { forceUnavailable: true }));
+          setSelectedDocumentId(sampleContracts[0].id);
           setBootMode('mock');
           return;
         }
@@ -218,6 +348,8 @@ function App() {
             setSelectedContract(null);
             setContractInsights(buildEmptyInsights());
             setSearchResult(buildEmptySearchResult(query));
+            setDocumentResults([]);
+            setSelectedDocumentId(null);
           }
         } else {
           setContracts([]);
@@ -225,6 +357,8 @@ function App() {
           setSelectedContract(null);
           setContractInsights(buildEmptyInsights());
           setSearchResult(buildEmptySearchResult(query));
+          setDocumentResults([]);
+          setSelectedDocumentId(null);
         }
 
         setBootMode('live');
@@ -325,12 +459,74 @@ function App() {
   }, [bootMode, contracts, selectedContract, selectedContractId]);
 
   useEffect(() => {
+    if (!documentResults.length) {
+      if (selectedDocumentId !== null) {
+        setSelectedDocumentId(null);
+      }
+
+      return;
+    }
+
+    if (!documentResults.some((document) => document.id === selectedDocumentId)) {
+      setSelectedDocumentId(documentResults[0].id);
+    }
+  }, [documentResults, selectedDocumentId]);
+
+  useEffect(() => {
+    if (safePath !== '/documents' || bootMode === 'loading') {
+      return undefined;
+    }
+
+    let ignore = false;
+
+    async function hydrateDocumentResults() {
+      setDocumentSearchPending(true);
+
+      try {
+        const response = await api.searchDocuments({
+          query: documentQuery,
+          limit: 20,
+        });
+
+        if (!ignore) {
+          const items = (response.data?.items || []).map(normalizeDocumentSearchItem);
+
+          startTransition(() => {
+            setDocumentResults(items);
+          });
+        }
+      } catch (error) {
+        if (!ignore) {
+          const fallbackItems = buildFallbackDocumentResults(documentQuery, contracts, {
+            forceUnavailable: bootMode !== 'live',
+          });
+
+          startTransition(() => {
+            setDocumentResults(fallbackItems);
+          });
+        }
+      } finally {
+        if (!ignore) {
+          setDocumentSearchPending(false);
+        }
+      }
+    }
+
+    hydrateDocumentResults();
+
+    return () => {
+      ignore = true;
+    };
+  }, [bootMode, contracts, safePath]);
+
+  useEffect(() => {
     const titles = {
       '/': 'Overview',
       '/intake': 'Intake',
       '/contracts': 'Contracts',
       '/insights': 'Insights',
       '/search': 'Search',
+      '/documents': 'Documents',
     };
 
     document.title = `Legal Intelligence | ${titles[safePath] || 'Overview'}`;
@@ -365,6 +561,30 @@ function App() {
     }
   }
 
+  async function handleDocumentSearch(event) {
+    event.preventDefault();
+    setDocumentSearchPending(true);
+
+    try {
+      const response = await api.searchDocuments({
+        query: documentQuery,
+        limit: 20,
+      });
+
+      startTransition(() => {
+        setDocumentResults((response.data?.items || []).map(normalizeDocumentSearchItem));
+      });
+    } catch (error) {
+      startTransition(() => {
+        setDocumentResults(buildFallbackDocumentResults(documentQuery, contracts, {
+          forceUnavailable: bootMode !== 'live',
+        }));
+      });
+    } finally {
+      setDocumentSearchPending(false);
+    }
+  }
+
   async function handleUpload() {
     if (!uploadFile) {
       return;
@@ -389,6 +609,11 @@ function App() {
         setSelectedContract(uploadedContract);
         setContractInsights(response.data.insights || buildEmptyInsights(uploadedContract));
         setSearchResult(buildEmptySearchResult(query));
+        setDocumentResults((current) => [
+          buildDocumentRecordFromContract(uploadedContract),
+          ...current.filter((item) => item.id !== uploadedContract.id),
+        ]);
+        setSelectedDocumentId(uploadedContract.id);
         setBootMode('live');
         setUploadFile(null);
       });
@@ -440,6 +665,23 @@ function App() {
         searchResult={searchResult}
         onQueryChange={setQuery}
         onSubmit={handleSemanticSearch}
+        modeLabel={modeLabel}
+      />
+    );
+  } else if (safePath === '/documents') {
+    page = (
+      <DocumentsPage
+        query={documentQuery}
+        deferredQuery={deferredDocumentQuery}
+        pending={documentSearchPending}
+        results={documentResults}
+        selectedDocumentId={selectedDocument?.id || null}
+        selectedDocument={selectedDocument}
+        viewerUrl={selectedDocumentViewerUrl}
+        downloadUrl={selectedDocumentDownloadUrl}
+        onQueryChange={setDocumentQuery}
+        onSubmit={handleDocumentSearch}
+        onSelectDocument={setSelectedDocumentId}
         modeLabel={modeLabel}
       />
     );

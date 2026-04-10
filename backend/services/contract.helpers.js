@@ -92,19 +92,26 @@ function buildContractMetadata({
 function buildClauseRecords({ contractId, clauses = [] }) {
   const createdAt = new Date().toISOString();
 
-  return clauses.map((clause, index) => ({
-    id: `clause_${uuidv4()}`,
-    contractId,
-    position: index + 1,
-    clauseText: clause.clauseText,
-    clauseType: clause.clauseType || 'other',
-    clauseLabel: formatClauseType(clause.clauseType || 'other'),
-    riskLabel: clause.riskLabel || 'low',
-    riskScore: riskWeight(clause.riskLabel),
-    extractedValues: clause.extractedValues || {},
-    tags: [clause.clauseType || 'other', clause.riskLabel || 'low'],
-    createdAt,
-  }));
+  return clauses.map((clause, index) => {
+    const clauseTextFull = String(clause.clauseTextFull || clause.clauseText || '').trim();
+    const clauseTextSummary = String(clause.clauseTextSummary || clause.clauseText || clauseTextFull).trim();
+
+    return {
+      id: `clause_${uuidv4()}`,
+      contractId,
+      position: index + 1,
+      clauseText: clauseTextSummary,
+      clauseTextFull,
+      clauseTextSummary,
+      clauseType: clause.clauseType || 'other',
+      clauseLabel: formatClauseType(clause.clauseType || 'other'),
+      riskLabel: clause.riskLabel || 'low',
+      riskScore: riskWeight(clause.riskLabel),
+      extractedValues: clause.extractedValues || {},
+      tags: [clause.clauseType || 'other', clause.riskLabel || 'low'],
+      createdAt,
+    };
+  });
 }
 
 function buildRiskRecords({ contractId, clauses = [] }) {
@@ -120,7 +127,7 @@ function buildRiskRecords({ contractId, clauses = [] }) {
       severity: clause.riskLabel,
       score: clause.riskScore,
       title: `${formatClauseType(clause.clauseType)} clause requires review`,
-      summary: clause.clauseText,
+      summary: clause.clauseTextSummary || clause.clauseText,
       createdAt,
     }));
 }

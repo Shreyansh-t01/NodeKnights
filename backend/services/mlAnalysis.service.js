@@ -128,6 +128,10 @@ function makeShortClauseText(clauseType, clauseText) {
   return words.length > 16 ? `${words.slice(0, 16).join(' ')}...` : normalized;
 }
 
+function normalizeClauseBody(clauseText = '') {
+  return String(clauseText || '').replace(/\s+/g, ' ').trim();
+}
+
 function analyzeLocally(text) {
   const entities = [
     ...collectMatches(DATE_REGEX, text, 'DATE'),
@@ -138,11 +142,15 @@ function analyzeLocally(text) {
   ];
 
   const clauses = splitIntoClauses(text).map((clauseText) => {
+    const clauseTextFull = normalizeClauseBody(clauseText);
     const clauseType = predictClauseType(clauseText);
     const riskLabel = predictRisk(clauseText, clauseType);
+    const clauseTextSummary = makeShortClauseText(clauseType, clauseTextFull);
 
     return {
-      clauseText: makeShortClauseText(clauseType, clauseText),
+      clauseText: clauseTextSummary,
+      clauseTextFull,
+      clauseTextSummary,
       clauseType,
       riskLabel,
       extractedValues: {},
@@ -181,7 +189,13 @@ async function analyzeWithMlService(text) {
     source: 'python-ml-service',
     entities: payload.entities || [],
     clauses: (payload.clauses || []).map((clause) => ({
-      clauseText: clause.clause_text || clause.clauseText,
+      clauseText: clause.clause_text_summary || clause.clauseTextSummary || clause.clause_text || clause.clauseText,
+      clauseTextFull: normalizeClauseBody(
+        clause.clause_text_full || clause.clauseTextFull || clause.clause_text || clause.clauseText,
+      ),
+      clauseTextSummary: normalizeClauseBody(
+        clause.clause_text_summary || clause.clauseTextSummary || clause.clause_text || clause.clauseText,
+      ),
       clauseType: clause.clause_type || clause.clauseType || 'other',
       riskLabel: clause.risk_label || clause.riskLabel || 'low',
       extractedValues: clause.extracted_values || clause.extractedValues || {},

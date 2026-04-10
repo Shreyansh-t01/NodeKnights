@@ -9,6 +9,7 @@ const healthRoutes = require('./routes/health.routes');
 const contractRoutes = require('./routes/contract.routes');
 const connectorRoutes = require('./routes/connector.routes');
 const searchRoutes = require('./routes/search.routes');
+const documentRoutes = require('./routes/document.routes');
 const notFound = require('./middlewares/notFound');
 const errorHandler = require('./middlewares/errorHandler');
 
@@ -31,6 +32,7 @@ app.get('/', (req, res) => {
       contracts: `${env.apiPrefix}/contracts`,
       connectors: `${env.apiPrefix}/connectors`,
       search: `${env.apiPrefix}/search`,
+      documents: `${env.apiPrefix}/documents`,
     },
   });
 });
@@ -39,6 +41,7 @@ app.use(`${env.apiPrefix}/health`, healthRoutes);
 app.use(`${env.apiPrefix}/contracts`, contractRoutes);
 app.use(`${env.apiPrefix}/connectors`, connectorRoutes);
 app.use(`${env.apiPrefix}/search`, searchRoutes);
+app.use(`${env.apiPrefix}/documents`, documentRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
