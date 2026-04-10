@@ -325,6 +325,12 @@ input {
   flex-wrap: wrap;
 }
 
+.contract-review-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .contract-review-toggle,
 .clause-action-button {
   border: 1px solid rgba(32, 54, 95, 0.16);
@@ -337,6 +343,12 @@ input {
 .contract-review-toggle {
   padding: 0.85rem 1rem;
   border-radius: 8px;
+}
+
+.contract-review-insights {
+  background: rgba(32, 54, 95, 0.94);
+  border-color: rgba(32, 54, 95, 0.94);
+  color: #fff;
 }
 
 .contract-review-body {
@@ -541,6 +553,49 @@ input {
   flex-wrap: wrap;
 }
 
+.scope-search-row {
+  margin-bottom: 0.85rem;
+}
+
+.scope-search-row input {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(23, 32, 51, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--navy);
+}
+
+.contract-scope-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.contract-scope-item {
+  width: 100%;
+  padding: 0.85rem 0.95rem;
+  border-radius: 8px;
+  border: 1px solid rgba(23, 32, 51, 0.12);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--navy);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.contract-scope-item:hover,
+.contract-scope-item-active {
+  border-color: rgba(32, 54, 95, 0.24);
+  background: rgba(226, 233, 248, 0.7);
+  transform: translateY(-1px);
+}
+
+.contract-scope-name {
+  display: block;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .search-row input,
 .upload-row input {
   flex: 1 1 320px;
@@ -605,6 +660,41 @@ input {
 
 .insight-stack {
   margin-top: 1rem;
+}
+
+.insight-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.insight-compare-block {
+  padding: 0.85rem;
+  border: 1px solid rgba(23, 32, 51, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.insight-rule-stack,
+.insight-related-list {
+  margin-top: 1rem;
+}
+
+.insight-rule-item {
+  padding: 0.85rem;
+  border: 1px solid rgba(23, 32, 51, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.insight-rule-item + .insight-rule-item {
+  margin-top: 0.75rem;
+}
+
+.insight-related-list ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
 }
 
 .insight-meta {
@@ -693,7 +783,8 @@ input {
   }
 
   .contract-review-meta-grid,
-  .contract-clause-row {
+  .contract-clause-row,
+  .insight-compare-grid {
     grid-template-columns: 1fr;
   }
 

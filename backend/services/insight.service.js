@@ -80,43 +80,203 @@ function serializePromptContext(value) {
   return JSON.stringify(value, null, 2);
 }
 
+function buildCurrentClausePayload(clause, override = {}) {
+  return {
+    contractId: override.contractId || clause.contractId || '',
+    contractTitle: override.contractTitle || clause.contractTitle || '',
+    clauseId: override.clauseId || clause.id || clause.clauseId || '',
+    clauseType: override.clauseType || clause.clauseType || 'other',
+    riskLabel: override.riskLabel || clause.riskLabel || 'unknown',
+    clauseText: override.clauseText || clause.clauseText || '',
+    clauseTextSummary: override.clauseTextSummary || clause.clauseTextSummary || clause.clauseText || '',
+    clauseTextFull: override.clauseTextFull || clause.clauseTextFull || clause.clauseText || '',
+    position: override.position ?? clause.position ?? null,
+  };
+}
+
+function normalizePrecedentMatch(match = {}) {
+  return {
+    id: match.id || match.clauseId || '',
+    score: typeof match.score === 'number' ? Number(match.score.toFixed(4)) : (match.score ?? null),
+    precedentId: match.precedentId || match.metadata?.precedentId || '',
+    title: match.title || match.metadata?.precedentTitle || match.metadata?.contractTitle || '',
+    clauseId: match.clauseId || match.metadata?.clauseId || match.id || '',
+    clauseType: match.clauseType || match.metadata?.clauseType || 'other',
+    riskLabel: match.riskLabel || match.metadata?.riskLabel || 'unknown',
+    clauseTextSummary: (
+      match.clauseTextSummary
+      || match.metadata?.clauseTextSummary
+      || match.clauseText
+      || match.metadata?.clauseText
+      || ''
+    ),
+    clauseTextFull: (
+      match.clauseTextFull
+      || match.metadata?.clauseTextFull
+      || match.clauseTextSummary
+      || match.metadata?.clauseTextSummary
+      || match.clauseText
+      || match.metadata?.clauseText
+      || ''
+    ),
+    sectionHeading: match.sectionHeading || match.metadata?.sectionHeading || '',
+    contractType: match.contractType || match.metadata?.contractType || '',
+    jurisdiction: match.jurisdiction || match.metadata?.jurisdiction || '',
+    sourceType: match.sourceType || match.metadata?.sourceType || 'precedent',
+  };
+}
+
+function normalizeRuleMatch(match = {}) {
+  return {
+    id: match.id || match.chunkId || '',
+    score: typeof match.score === 'number' ? Number(match.score.toFixed(4)) : (match.score ?? null),
+    knowledgeId: match.knowledgeId || match.metadata?.knowledgeId || '',
+    title: match.title || match.metadata?.knowledgeTitle || '',
+    chunkId: match.chunkId || match.metadata?.chunkId || match.id || '',
+    sectionTitle: match.sectionTitle || match.metadata?.sectionTitle || '',
+    sourceType: match.sourceType || match.metadata?.sourceType || 'policy',
+    documentType: match.documentType || match.metadata?.documentType || 'rulebook',
+    primaryClauseType: match.primaryClauseType || match.metadata?.primaryClauseType || 'other',
+    clauseTypes: Array.isArray(match.clauseTypes)
+      ? match.clauseTypes
+      : (Array.isArray(match.metadata?.clauseTypes) ? match.metadata.clauseTypes : []),
+    primaryConcern: match.primaryConcern || match.metadata?.primaryConcern || '',
+    benchmark: match.benchmark || match.metadata?.benchmark || '',
+    recommendedAction: match.recommendedAction || match.metadata?.recommendedAction || '',
+    textSummary: match.textSummary || match.metadata?.textSummary || '',
+    textFull: match.textFull || match.metadata?.textFull || '',
+    organization: match.organization || match.metadata?.organization || '',
+    jurisdiction: match.jurisdiction || match.metadata?.jurisdiction || '',
+    league: match.league || match.metadata?.league || '',
+    sport: match.sport || match.metadata?.sport || '',
+    version: match.version || match.metadata?.version || '',
+    status: match.status || match.metadata?.status || 'active',
+  };
+}
+
+function buildRuleFallbackMatch(clauseType = 'other') {
+  const rule = getRulebookEntry(clauseType);
+
+  return {
+    id: `rulebook_${rule.clauseType}`,
+    score: null,
+    knowledgeId: 'local-rulebook',
+    title: 'Default Rulebook Benchmark',
+    chunkId: `rulebook_${rule.clauseType}`,
+    sectionTitle: formatClauseType(rule.clauseType),
+    sourceType: 'rulebook-fallback',
+    documentType: 'rulebook',
+    primaryClauseType: rule.clauseType,
+    clauseTypes: [rule.clauseType],
+    primaryConcern: rule.primaryConcern,
+    benchmark: rule.benchmark,
+    recommendedAction: rule.recommendedAction,
+    textSummary: rule.benchmark,
+    textFull: `${rule.primaryConcern}\n${rule.benchmark}\n${rule.recommendedAction}`,
+    organization: '',
+    jurisdiction: '',
+    league: '',
+    sport: '',
+    version: '',
+    status: 'active',
+  };
+}
+
+function ensureRuleMatches(ruleMatches = [], clauseType = 'other') {
+  const normalized = ruleMatches.map(normalizeRuleMatch).filter((match) => match.id);
+  return normalized.length ? normalized : [buildRuleFallbackMatch(clauseType)];
+}
+
 function toSupportingMatches(matches = []) {
-  return matches.map((match) => ({
-    id: match.id,
-    score: match.score,
-    clauseType: match.metadata?.clauseType || 'other',
-    riskLabel: match.metadata?.riskLabel || 'unknown',
-    clauseText: match.metadata?.clauseTextSummary || match.metadata?.clauseText || '',
-    clauseTextFull: match.metadata?.clauseTextFull || match.metadata?.clauseText || '',
-  }));
+  return matches.map((match) => {
+    const normalized = normalizePrecedentMatch(match);
+
+    return {
+      id: normalized.id,
+      score: normalized.score,
+      clauseType: normalized.clauseType,
+      riskLabel: normalized.riskLabel,
+      clauseText: normalized.clauseTextSummary,
+      clauseTextFull: normalized.clauseTextFull,
+    };
+  });
 }
 
 function toPromptMatches(matches = []) {
-  return matches.slice(0, 5).map((match) => ({
-    id: match.id,
-    score: typeof match.score === 'number' ? Number(match.score.toFixed(4)) : null,
-    clauseType: match.metadata?.clauseType || 'other',
-    riskLabel: match.metadata?.riskLabel || 'unknown',
-    clauseTextSummary: match.metadata?.clauseTextSummary || match.metadata?.clauseText || '',
-    clauseTextFull: match.metadata?.clauseTextFull || match.metadata?.clauseText || '',
-    contractTitle: match.metadata?.contractTitle || '',
-    position: match.metadata?.position || null,
-  }));
+  return matches.slice(0, 5).map((match) => {
+    const normalized = normalizePrecedentMatch(match);
+
+    return {
+      id: normalized.id,
+      score: normalized.score,
+      clauseType: normalized.clauseType,
+      riskLabel: normalized.riskLabel,
+      clauseTextSummary: normalized.clauseTextSummary,
+      clauseTextFull: normalized.clauseTextFull,
+      contractTitle: normalized.title,
+      position: match.position || match.metadata?.position || null,
+      sectionHeading: normalized.sectionHeading,
+      contractType: normalized.contractType,
+      jurisdiction: normalized.jurisdiction,
+    };
+  });
 }
 
-function buildTemplateClauseInsight(clause, precedentMatches = []) {
-  const rule = getRulebookEntry(clause.clauseType);
-  const precedentSummary = precedentMatches.length
-    ? `Found ${precedentMatches.length} similar clauses in the vector index. The closest example scored ${precedentMatches[0].score?.toFixed(2) || 'N/A'} and was tagged as ${precedentMatches[0].metadata?.riskLabel || 'unknown'} risk.`
-    : 'No close precedent was available yet, so the recommendation is based on your internal rulebook context.';
+function toPromptRuleMatches(matches = []) {
+  return matches.slice(0, 5).map((match) => {
+    const normalized = normalizeRuleMatch(match);
+
+    return {
+      id: normalized.id,
+      title: normalized.title,
+      sectionTitle: normalized.sectionTitle,
+      sourceType: normalized.sourceType,
+      documentType: normalized.documentType,
+      primaryClauseType: normalized.primaryClauseType,
+      clauseTypes: normalized.clauseTypes,
+      primaryConcern: normalized.primaryConcern,
+      benchmark: normalized.benchmark,
+      recommendedAction: normalized.recommendedAction,
+      textSummary: normalized.textSummary,
+      textFull: normalized.textFull,
+      jurisdiction: normalized.jurisdiction,
+      league: normalized.league,
+      sport: normalized.sport,
+    };
+  });
+}
+
+function buildTemplateClauseInsight(clause, reviewContext = {}) {
+  const currentClause = buildCurrentClausePayload(
+    clause,
+    reviewContext.currentClause || {},
+  );
+  const precedentMatches = (reviewContext.precedentMatches || []).map(normalizePrecedentMatch);
+  const precedentClause = reviewContext.precedentClause
+    ? normalizePrecedentMatch(reviewContext.precedentClause)
+    : (precedentMatches[0] || null);
+  const ruleMatches = ensureRuleMatches(reviewContext.ruleMatches || [], clause.clauseType);
+  const topRule = ruleMatches[0];
+  const fallbackRule = getRulebookEntry(clause.clauseType);
+
+  const precedentSummary = precedentClause
+    ? `Closest precedent${precedentClause.title ? ` from ${precedentClause.title}` : ''} scored ${precedentClause.score ?? 'N/A'} and uses "${precedentClause.clauseTextSummary || precedentClause.clauseTextFull}".`
+    : 'No stored precedent matched closely yet, so the comparison relies on benchmark guidance.';
+  const ruleSummary = topRule
+    ? `Policy benchmark${topRule.title ? ` from ${topRule.title}` : ''}: ${topRule.benchmark || topRule.textSummary || topRule.primaryConcern}.`
+    : `Benchmark: ${fallbackRule.benchmark}`;
 
   return {
     clauseId: clause.id,
     clauseType: clause.clauseType,
     riskLabel: clause.riskLabel,
-    whyItIsRisky: rule.primaryConcern,
-    comparison: `${precedentSummary} Benchmark: ${rule.benchmark}`,
-    recommendedChange: rule.recommendedAction,
+    currentClause,
+    precedentClause,
+    precedentMatches,
+    ruleMatches,
+    whyItIsRisky: topRule.primaryConcern || fallbackRule.primaryConcern,
+    comparison: `${precedentSummary} ${ruleSummary}`.trim(),
+    recommendedChange: topRule.recommendedAction || fallbackRule.recommendedAction,
   };
 }
 
@@ -125,11 +285,13 @@ function buildTemplateContractOverview(contractBundle) {
   const headline = contract.metadata.riskCounts.high > 0
     ? 'Immediate legal review is recommended before approval.'
     : 'No critical blockers were detected, but a clause review is still recommended.';
-
   const topRiskItems = risks.slice(0, 3).map((risk) => risk.title);
   const automaticInsightClauses = clauses
     .filter((clause) => clause.riskLabel === 'high')
     .slice(0, 5);
+  const clauseInsights = Array.isArray(contractBundle.clauseInsights) && contractBundle.clauseInsights.length
+    ? contractBundle.clauseInsights
+    : automaticInsightClauses.map((clause) => buildTemplateClauseInsight(clause));
 
   return {
     headline,
@@ -137,10 +299,10 @@ function buildTemplateContractOverview(contractBundle) {
     topRiskItems,
     nextSteps: [
       'Validate extracted parties, dates, and payment amounts.',
-      'Review every high-risk clause against your internal playbook.',
-      'Compare risky clauses with Pinecone precedent matches before redrafting.',
+      'Review every high-risk clause against the retrieved precedent bank.',
+      'Check policy and rule matches before redrafting the clause.',
     ],
-    clauseInsights: automaticInsightClauses.map((clause) => buildTemplateClauseInsight(clause)),
+    clauseInsights,
   };
 }
 
@@ -156,12 +318,12 @@ function buildTemplateSemanticAnswer({ query, matches, contract }) {
     };
   }
 
-  const primaryMatch = matches[0];
-  const clauseType = primaryMatch.metadata?.clauseType || 'other';
+  const primaryMatch = normalizePrecedentMatch(matches[0]);
+  const clauseType = primaryMatch.clauseType || 'other';
   const rule = getRulebookEntry(clauseType);
 
   return {
-    answer: `The strongest match for "${query}" is a ${formatClauseType(clauseType)} clause from ${contract?.title || 'your indexed corpus'}. ${rule.primaryConcern}`,
+    answer: `The strongest match for "${query}" is a ${formatClauseType(clauseType)} clause from ${contract?.title || primaryMatch.title || 'your indexed corpus'}. ${rule.primaryConcern}`,
     supportingMatches: toSupportingMatches(matches),
     recommendations: [
       rule.recommendedAction,
@@ -171,7 +333,7 @@ function buildTemplateSemanticAnswer({ query, matches, contract }) {
 }
 
 function buildContractOverviewPrompt(contractBundle, fallback) {
-  const { contract, clauses, risks } = contractBundle;
+  const { contract, risks } = contractBundle;
 
   return [
     'You are a legal contract review assistant.',
@@ -204,11 +366,9 @@ function buildContractOverviewPrompt(contractBundle, fallback) {
         clauseId: insight.clauseId,
         clauseType: insight.clauseType,
         riskLabel: insight.riskLabel,
-        clauseText: (
-          clauses.find((clause) => clause.id === insight.clauseId)?.clauseTextFull
-          || clauses.find((clause) => clause.id === insight.clauseId)?.clauseText
-          || ''
-        ),
+        currentClause: insight.currentClause,
+        precedentClause: insight.precedentClause,
+        ruleMatches: toPromptRuleMatches(insight.ruleMatches || []),
       })),
     }),
     '',
@@ -221,24 +381,24 @@ function buildContractOverviewPrompt(contractBundle, fallback) {
   ].join('\n');
 }
 
-function buildClauseInsightPrompt(clause, precedentMatches) {
+function buildClauseInsightPrompt(clause, reviewContext = {}) {
+  const currentClause = buildCurrentClausePayload(clause, reviewContext.currentClause || {});
+  const precedentMatches = (reviewContext.precedentMatches || []).map(normalizePrecedentMatch);
+  const ruleMatches = ensureRuleMatches(reviewContext.ruleMatches || [], clause.clauseType);
+
   return [
     'You are a legal contract review assistant.',
-    'Review the target clause using only the clause data and precedent matches below.',
+    'Review the target clause using only the clause data, precedent matches, and policy/rule matches below.',
     'Do not invent facts beyond the provided context.',
     'Keep the explanation practical and actionable.',
+    'When explaining the comparison, explicitly anchor it to the precedent and benchmark guidance in the context.',
     'Return JSON only.',
     '',
     'Context:',
     serializePromptContext({
-      clause: {
-        clauseId: clause.id,
-        clauseType: clause.clauseType,
-        riskLabel: clause.riskLabel,
-        clauseTextSummary: clause.clauseTextSummary || clause.clauseText,
-        clauseTextFull: clause.clauseTextFull || clause.clauseText,
-      },
+      currentClause,
       precedentMatches: toPromptMatches(precedentMatches),
+      ruleMatches: toPromptRuleMatches(ruleMatches),
     }),
   ].join('\n');
 }
@@ -307,8 +467,8 @@ async function generateContractOverview(contractBundle) {
   }
 }
 
-async function generateClauseInsight(clause, precedentMatches = []) {
-  const fallback = buildTemplateClauseInsight(clause, precedentMatches);
+async function generateClauseInsight(clause, reviewContext = {}) {
+  const fallback = buildTemplateClauseInsight(clause, reviewContext);
 
   if (!isGeminiEnabled()) {
     return fallback;
@@ -316,7 +476,7 @@ async function generateClauseInsight(clause, precedentMatches = []) {
 
   try {
     const generated = await generateStructuredObject({
-      prompt: buildClauseInsightPrompt(clause, precedentMatches),
+      prompt: buildClauseInsightPrompt(clause, reviewContext),
       responseSchema: clauseInsightSchema,
       label: 'clause insight',
     });

@@ -7,6 +7,10 @@ const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 
 const localVectorStorePath = path.join(env.tempStorageDir, 'local-store', 'vectors.json');
 
+function resolveNamespace(namespace) {
+  return namespace || env.pineconeContractNamespace || env.pineconeNamespace;
+}
+
 function pineconeBaseUrl() {
   return env.pineconeIndexHost.startsWith('http')
     ? env.pineconeIndexHost
@@ -22,20 +26,97 @@ function buildPineconeRequiredError(operation, error) {
   });
 }
 
-async function upsertLocalVectors(records) {
+function normalizeLocalNamespace(item = {}) {
+  return item.namespace || env.pineconeContractNamespace || env.pineconeNamespace;
+}
+
+function metadataMatchesFilterValue(actualValue, expectedValue) {
+  if (expectedValue && typeof expectedValue === 'object' && !Array.isArray(expectedValue)) {
+    if (Object.prototype.hasOwnProperty.call(expectedValue, '$eq')) {
+      return actualValue === expectedValue.$eq;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(expectedValue, '$ne')) {
+      return actualValue !== expectedValue.$ne;
+    }
+
+    if (Array.isArray(expectedValue.$in)) {
+      if (Array.isArray(actualValue)) {
+        return actualValue.some((item) => expectedValue.$in.includes(item));
+      }
+
+      return expectedValue.$in.includes(actualValue);
+    }
+  }
+
+  if (Array.isArray(expectedValue)) {
+    if (Array.isArray(actualValue)) {
+      return actualValue.some((item) => expectedValue.includes(item));
+    }
+
+    return expectedValue.includes(actualValue);
+  }
+
+  if (Array.isArray(actualValue)) {
+    return actualValue.includes(expectedValue);
+  }
+
+  return actualValue === expectedValue;
+}
+
+function matchesMetadataFilters(metadata = {}, filters = {}) {
+  return Object.entries(filters).every(([key, expectedValue]) => (
+    metadataMatchesFilterValue(metadata[key], expectedValue)
+  ));
+}
+
+function buildPineconeFilter(filters = {}) {
+  const clauses = Object.entries(filters).flatMap(([key, expectedValue]) => {
+    if (expectedValue === undefined || expectedValue === null || expectedValue === '') {
+      return [];
+    }
+
+    if (expectedValue && typeof expectedValue === 'object' && !Array.isArray(expectedValue)) {
+      return [{ [key]: expectedValue }];
+    }
+
+    if (Array.isArray(expectedValue)) {
+      return expectedValue.length ? [{ [key]: { $in: expectedValue } }] : [];
+    }
+
+    return [{ [key]: { $eq: expectedValue } }];
+  });
+
+  if (!clauses.length) {
+    return null;
+  }
+
+  return clauses.length === 1 ? clauses[0] : { $and: clauses };
+}
+
+async function upsertLocalVectors(records, namespace) {
+  const resolvedNamespace = resolveNamespace(namespace);
   const current = await readJsonFile(localVectorStorePath, []);
-  const next = current.filter((item) => !records.some((record) => record.id === item.id));
-  next.push(...records);
+  const next = current.filter((item) => !records.some((record) => (
+    record.id === item.id
+      && resolveNamespace(record.namespace || resolvedNamespace) === normalizeLocalNamespace(item)
+  )));
+  next.push(...records.map((record) => ({
+    ...record,
+    namespace: resolveNamespace(record.namespace || resolvedNamespace),
+  })));
   await writeJsonFile(localVectorStorePath, next);
 
   return {
     mode: 'local-vector-store',
     count: records.length,
     location: localVectorStorePath,
+    namespace: resolvedNamespace,
   };
 }
 
-async function upsertPineconeVectors(records) {
+async function upsertPineconeVectors(records, namespace) {
+  const resolvedNamespace = resolveNamespace(namespace);
   const response = await fetch(`${pineconeBaseUrl()}/vectors/upsert`, {
     method: 'POST',
     headers: {
@@ -43,7 +124,7 @@ async function upsertPineconeVectors(records) {
       'Api-Key': env.pineconeApiKey,
     },
     body: JSON.stringify({
-      namespace: env.pineconeNamespace,
+      namespace: resolvedNamespace,
       vectors: records.map((record) => ({
         id: record.id,
         values: record.values,
@@ -62,18 +143,20 @@ async function upsertPineconeVectors(records) {
   return {
     mode: 'pinecone',
     count: payload.upsertedCount || records.length,
-    namespace: env.pineconeNamespace,
+    namespace: resolvedNamespace,
   };
 }
 
-async function upsertClauseVectors(records) {
+async function upsertClauseVectors(records, options = {}) {
+  const namespace = resolveNamespace(options.namespace || records[0]?.namespace);
+
   if (env.strictRemoteServices && !featureFlags.pinecone) {
     throw buildPineconeRequiredError('upsert', new Error('Pinecone is not configured.'));
   }
 
   if (featureFlags.pinecone) {
     try {
-      return await upsertPineconeVectors(records);
+      return await upsertPineconeVectors(records, namespace);
     } catch (error) {
       if (env.strictRemoteServices) {
         throw buildPineconeRequiredError('upsert', error);
@@ -83,7 +166,7 @@ async function upsertClauseVectors(records) {
     }
   }
 
-  return upsertLocalVectors(records);
+  return upsertLocalVectors(records, namespace);
 }
 
 function tokenize(text = '') {
@@ -119,11 +202,18 @@ function clauseTypeBoost(queryText, clauseType = 'other') {
   return typeTokens.some((token) => queryTokens.has(token)) ? 0.25 : 0;
 }
 
-async function queryLocalVectors(vector, topK, contractId, queryText) {
+function excludeMatch(match, excludeIds = []) {
+  return excludeIds.includes(match.id) || excludeIds.includes(match.metadata?.clauseId);
+}
+
+async function queryLocalVectors(vector, topK, namespace, filters, queryText, excludeIds = []) {
+  const resolvedNamespace = resolveNamespace(namespace);
   const current = await readJsonFile(localVectorStorePath, []);
-  const filtered = contractId
-    ? current.filter((item) => item.metadata.contractId === contractId)
-    : current;
+  const filtered = current.filter((item) => (
+    normalizeLocalNamespace(item) === resolvedNamespace
+      && matchesMetadataFilters(item.metadata || {}, filters)
+      && !excludeMatch(item, excludeIds)
+  ));
 
   return filtered
     .map((item) => ({
@@ -132,9 +222,14 @@ async function queryLocalVectors(vector, topK, contractId, queryText) {
         cosineSimilarity(vector, item.values) * 0.55
         + lexicalOverlapScore(
           queryText,
-          item.metadata.clauseTextFull || item.metadata.clauseTextSummary || item.metadata.clauseText,
+          item.metadata.clauseTextFull
+            || item.metadata.clauseTextSummary
+            || item.metadata.clauseText
+            || item.metadata.textFull
+            || item.metadata.textSummary
+            || '',
         ) * 0.35
-        + clauseTypeBoost(queryText, item.metadata.clauseType)
+        + clauseTypeBoost(queryText, item.metadata.clauseType || item.metadata.primaryClauseType || 'other')
       ),
       metadata: item.metadata,
     }))
@@ -142,20 +237,19 @@ async function queryLocalVectors(vector, topK, contractId, queryText) {
     .slice(0, topK);
 }
 
-async function queryPinecone(vector, topK, contractId) {
+async function queryPinecone(vector, topK, namespace, filters) {
+  const resolvedNamespace = resolveNamespace(namespace);
   const body = {
-    namespace: env.pineconeNamespace,
+    namespace: resolvedNamespace,
     vector,
     topK,
     includeMetadata: true,
   };
 
-  if (contractId) {
-    body.filter = {
-      contractId: {
-        $eq: contractId,
-      },
-    };
+  const pineconeFilter = buildPineconeFilter(filters);
+
+  if (pineconeFilter) {
+    body.filter = pineconeFilter;
   }
 
   const response = await fetch(`${pineconeBaseUrl()}/query`, {
@@ -179,8 +273,10 @@ async function queryPinecone(vector, topK, contractId) {
 async function querySimilarClauses({
   vector,
   topK = 5,
-  contractId,
+  namespace,
+  filters = {},
   queryText = '',
+  excludeIds = [],
 }) {
   if (env.strictRemoteServices && !featureFlags.pinecone) {
     throw buildPineconeRequiredError('query', new Error('Pinecone is not configured.'));
@@ -188,7 +284,7 @@ async function querySimilarClauses({
 
   if (featureFlags.pinecone) {
     try {
-      return await queryPinecone(vector, topK, contractId);
+      return await queryPinecone(vector, topK, namespace, filters);
     } catch (error) {
       if (env.strictRemoteServices) {
         throw buildPineconeRequiredError('query', error);
@@ -198,7 +294,7 @@ async function querySimilarClauses({
     }
   }
 
-  return queryLocalVectors(vector, topK, contractId, queryText);
+  return queryLocalVectors(vector, topK, namespace, filters, queryText, excludeIds);
 }
 
 module.exports = {

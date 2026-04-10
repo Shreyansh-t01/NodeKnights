@@ -285,6 +285,20 @@ function App() {
     setCurrentPath(normalized);
   }
 
+  function handleSelectContract(contractId) {
+    const summary = contracts.find((contract) => contract.id === contractId) || null;
+    setSelectedContractId(contractId);
+    setSelectedContract(summary);
+  }
+
+  function handleOpenInsights(contractId) {
+    const summary = contracts.find((contract) => contract.id === contractId) || null;
+    setSelectedContractId(contractId);
+    setSelectedContract(summary);
+    setContractInsights(buildEmptyInsights(summary));
+    navigate('/insights');
+  }
+
   useEffect(() => {
     function handlePopState() {
       setCurrentPath(normalizePath(window.location.pathname));
@@ -630,7 +644,7 @@ function App() {
     contracts,
     selectedContractId,
     selectedContract,
-    onSelectContract: setSelectedContractId,
+    onSelectContract: handleSelectContract,
   };
 
   let page = null;
@@ -646,13 +660,14 @@ function App() {
       />
     );
   } else if (safePath === '/contracts') {
-    page = <ContractsPage {...pageProps} />;
+    page = <ContractsPage {...pageProps} onOpenInsights={handleOpenInsights} />;
   } else if (safePath === '/insights') {
     page = (
       <InsightsPage
         {...pageProps}
         insights={contractInsights}
         insightsPending={insightsPending}
+        onNavigate={navigate}
       />
     );
   } else if (safePath === '/search') {
@@ -693,7 +708,7 @@ function App() {
         metrics={metrics}
         contracts={contracts}
         selectedContractId={selectedContractId}
-        onSelectContract={setSelectedContractId}
+        onSelectContract={handleSelectContract}
         onNavigate={navigate}
       />
     );

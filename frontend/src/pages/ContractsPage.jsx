@@ -7,6 +7,7 @@ function ContractsPage({
   selectedContractId,
   selectedContract,
   onSelectContract,
+  onOpenInsights,
 }) {
   const [expandedContractId, setExpandedContractId] = useState(selectedContractId || null);
 
@@ -32,7 +33,7 @@ function ContractsPage({
         </div>
 
         <p className="contract-meta">
-          Each tracked contract now carries its own clause-level review. Open a contract, then open any clause dropdown to inspect that clause risk board.
+          Each tracked contract now carries its own clause-level review. Open a contract to inspect the clause board, or jump straight into side-by-side AI insights from the card itself.
         </p>
       </section>
 
@@ -45,6 +46,7 @@ function ContractsPage({
               isExpanded={expandedContractId === contract.id}
               selectedContract={selectedContract}
               onToggleExpand={() => handleToggleExpand(contract.id)}
+              onOpenInsights={() => onOpenInsights(contract.id)}
             />
           ))
         ) : (

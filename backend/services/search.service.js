@@ -1,3 +1,4 @@
+const { env } = require('../config/env');
 const AppError = require('../errors/AppError');
 const { embedText } = require('./embedding.service');
 const { querySimilarClauses } = require('./vector.service');
@@ -13,7 +14,15 @@ async function runSemanticSearch({ query, contractId, topK = 5 }) {
   const matches = await querySimilarClauses({
     vector: embedding.values,
     topK,
-    contractId,
+    namespace: env.pineconeContractNamespace,
+    filters: contractId
+      ? {
+        corpusType: 'contract_clause',
+        contractId,
+      }
+      : {
+        corpusType: 'contract_clause',
+      },
     queryText: query,
   });
 

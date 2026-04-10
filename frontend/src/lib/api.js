@@ -65,6 +65,33 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(payload),
   }),
+  getPrecedents: () => request('/precedents'),
+  getPrecedentById: (precedentId) => request(`/precedents/${precedentId}`),
+  createPrecedentEntry: (payload) => request('/precedents/entries', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  uploadPrecedent: (formData) => request('/precedents/upload', {
+    method: 'POST',
+    body: formData,
+  }),
+  getClausePrecedents: (contractId, clauseId, topK = 3) => request(
+    `/precedents/review/${encodeURIComponent(contractId)}/${encodeURIComponent(clauseId)}${buildQueryString({ topK })}`
+  ),
+  getKnowledgeDocuments: () => request('/knowledge'),
+  getKnowledgeById: (knowledgeId) => request(`/knowledge/${knowledgeId}`),
+  createKnowledgeEntry: (payload) => request('/knowledge/entries', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  uploadKnowledge: (formData) => request('/knowledge/upload', {
+    method: 'POST',
+    body: formData,
+  }),
+  searchKnowledge: (payload) => request('/knowledge/search', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
   searchDocuments: (params = {}) => request(`/documents${buildQueryString(params)}`),
   getDocumentById: (contractId) => request(`/documents/${contractId}`),
   getDocumentContentUrl: (contractId, options = {}) => (

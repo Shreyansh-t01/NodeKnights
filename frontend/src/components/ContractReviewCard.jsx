@@ -31,6 +31,7 @@ function ContractReviewCard({
   isExpanded,
   selectedContract,
   onToggleExpand,
+  onOpenInsights,
 }) {
   const [openClauseId, setOpenClauseId] = useState(null);
 
@@ -77,9 +78,14 @@ function ContractReviewCard({
           <span>High {contract.riskCounts.high ?? 0}</span>
         </div>
 
-        <button type="button" className="contract-review-toggle" onClick={onToggleExpand}>
-          {isExpanded ? 'Hide Clause Review' : 'View Clause Review'}
-        </button>
+        <div className="contract-review-actions">
+          <button type="button" className="contract-review-toggle" onClick={onToggleExpand}>
+            {isExpanded ? 'Hide Clause Review' : 'View Clause Review'}
+          </button>
+          <button type="button" className="contract-review-toggle contract-review-insights" onClick={onOpenInsights}>
+            Get Insights
+          </button>
+        </div>
       </div>
 
       {isExpanded ? (

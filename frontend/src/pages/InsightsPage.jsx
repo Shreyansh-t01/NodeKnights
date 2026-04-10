@@ -1,47 +1,39 @@
-import ContractCard from '../components/ContractCard';
 import ContractInsightsPanel from '../components/ContractInsightsPanel';
 
 function InsightsPage({
-  contracts,
-  selectedContractId,
   selectedContract,
   insights,
   insightsPending,
-  onSelectContract,
+  onNavigate,
 }) {
   return (
-    <section className="workspace-grid route-grid">
-      <section className="panel">
-        <div className="panel-header">
-          <div>
-            <p className="eyebrow">AI Insights</p>
-            <h3>Select a contract</h3>
+    <section className="route-grid">
+      {!selectedContract ? (
+        <section className="panel">
+          <div className="panel-header">
+            <div>
+              <p className="eyebrow">AI Insights</p>
+              <h3>Open insights from a contract card</h3>
+            </div>
           </div>
-        </div>
 
-        <div className="contract-list">
-          {contracts.length ? (
-            contracts.map((contract) => (
-              <ContractCard
-                key={contract.id}
-                contract={contract}
-                isActive={contract.id === selectedContractId}
-                onSelect={onSelectContract}
-              />
-            ))
-          ) : (
-            <p className="empty-state">
-              No contracts are ready for insight review yet. Upload a contract first.
-            </p>
-          )}
-        </div>
-      </section>
+          <p className="empty-state">
+            Choose a contract from the Contracts page and use the Get Insights button to open the full comparison and AI review flow here.
+          </p>
 
-      <ContractInsightsPanel
-        contract={selectedContract}
-        insights={insights}
-        pending={insightsPending}
-      />
+          <div className="hero-actions">
+            <button type="button" onClick={() => onNavigate('/contracts')}>Open Contracts</button>
+          </div>
+        </section>
+      ) : null}
+
+      {selectedContract ? (
+        <ContractInsightsPanel
+          contract={selectedContract}
+          insights={insights}
+          pending={insightsPending}
+        />
+      ) : null}
     </section>
   );
 }

@@ -1,3 +1,11 @@
+function formatClauseType(value = 'Clause') {
+  return value.replace(/_/g, ' ');
+}
+
+function renderClauseBody(clause, fallback = 'Clause text is unavailable.') {
+  return clause?.clauseTextFull || clause?.clauseTextSummary || clause?.clauseText || fallback;
+}
+
 function ContractInsightsPanel({ contract, insights, pending }) {
   if (!contract) {
     return (
@@ -63,12 +71,60 @@ function ContractInsightsPanel({ contract, insights, pending }) {
           insights.clauseInsights.map((insight) => (
             <article key={insight.clauseId} className="insight-card">
               <div className="insight-meta">
-                <strong>{insight.clauseType?.replace(/_/g, ' ') || 'Clause'}</strong>
+                <strong>{formatClauseType(insight.clauseType || 'Clause')}</strong>
                 <span>{insight.riskLabel || 'high'} risk</span>
               </div>
+
+              <div className="insight-compare-grid">
+                <section className="insight-compare-block">
+                  <p className="eyebrow">Current Clause</p>
+                  <h4>{insight.currentClause?.contractTitle || contract.title}</h4>
+                  <p>{renderClauseBody(insight.currentClause, renderClauseBody(insight))}</p>
+                </section>
+
+                <section className="insight-compare-block">
+                  <p className="eyebrow">Best Precedent</p>
+                  <h4>{insight.precedentClause?.title || 'No stored precedent yet'}</h4>
+                  <p>
+                    {insight.precedentClause
+                      ? renderClauseBody(insight.precedentClause)
+                      : 'Add approved precedent clauses to your precedent bank and this side-by-side panel will populate automatically.'}
+                  </p>
+                </section>
+              </div>
+
               <p><strong>Why it is risky:</strong> {insight.whyItIsRisky}</p>
               <p><strong>Comparison:</strong> {insight.comparison}</p>
               <p><strong>Recommended change:</strong> {insight.recommendedChange}</p>
+
+              {(insight.ruleMatches || []).length ? (
+                <div className="insight-rule-stack">
+                  <p className="eyebrow">Rules And Policies</p>
+                  {(insight.ruleMatches || []).map((rule) => (
+                    <div key={rule.id} className="insight-rule-item">
+                      <strong>{rule.title || 'Benchmark guidance'}</strong>
+                      <p>{rule.benchmark || rule.textSummary || rule.textFull}</p>
+                      {rule.recommendedAction ? (
+                        <p><strong>Expected action:</strong> {rule.recommendedAction}</p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {(insight.precedentMatches || []).length > 1 ? (
+                <div className="insight-related-list">
+                  <p className="eyebrow">Additional Precedents</p>
+                  <ul>
+                    {insight.precedentMatches.slice(1).map((match) => (
+                      <li key={match.id}>
+                        <strong>{match.title || formatClauseType(match.clauseType || 'precedent')}</strong>
+                        {typeof match.score === 'number' ? ` (${match.score.toFixed(2)})` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </article>
           ))
         ) : (

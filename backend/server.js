@@ -10,6 +10,8 @@ const contractRoutes = require('./routes/contract.routes');
 const connectorRoutes = require('./routes/connector.routes');
 const searchRoutes = require('./routes/search.routes');
 const documentRoutes = require('./routes/document.routes');
+const precedentRoutes = require('./routes/precedent.routes');
+const knowledgeRoutes = require('./routes/knowledge.routes');
 const notFound = require('./middlewares/notFound');
 const errorHandler = require('./middlewares/errorHandler');
 
@@ -33,6 +35,8 @@ app.get('/', (req, res) => {
       connectors: `${env.apiPrefix}/connectors`,
       search: `${env.apiPrefix}/search`,
       documents: `${env.apiPrefix}/documents`,
+      precedents: `${env.apiPrefix}/precedents`,
+      knowledge: `${env.apiPrefix}/knowledge`,
     },
   });
 });
@@ -42,6 +46,8 @@ app.use(`${env.apiPrefix}/contracts`, contractRoutes);
 app.use(`${env.apiPrefix}/connectors`, connectorRoutes);
 app.use(`${env.apiPrefix}/search`, searchRoutes);
 app.use(`${env.apiPrefix}/documents`, documentRoutes);
+app.use(`${env.apiPrefix}/precedents`, precedentRoutes);
+app.use(`${env.apiPrefix}/knowledge`, knowledgeRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

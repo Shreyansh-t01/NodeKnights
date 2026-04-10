@@ -1,13 +1,16 @@
 const { v4: uuidv4 } = require('uuid');
 
+const { env } = require('../config/env');
 const AppError = require('../errors/AppError');
 const { uploadRawDocument, uploadExtractedText } = require('./storage.service');
 const { extractTextFromDocument } = require('./documentExtraction.service');
 const { analyzeContractText } = require('./mlAnalysis.service');
 const { embedText } = require('./embedding.service');
 const { saveContractBundle, listContracts, getContractById } = require('./contract.repository');
-const { upsertClauseVectors, querySimilarClauses } = require('./vector.service');
+const { upsertClauseVectors } = require('./vector.service');
 const { generateContractOverview, generateClauseInsight } = require('./insight.service');
+const { findPrecedentMatchesForClause } = require('./precedent.service');
+const { findRelevantKnowledge } = require('./knowledge.service');
 const {
   buildClauseRecords,
   buildContractMetadata,
@@ -23,8 +26,10 @@ async function createVectorRecords(contract, clauses) {
 
       return {
         id: clause.id,
+        namespace: env.pineconeContractNamespace,
         values: embedding.values,
         metadata: {
+          corpusType: 'contract_clause',
           contractId: contract.id,
           contractTitle: contract.title,
           clauseId: clause.id,
@@ -36,6 +41,47 @@ async function createVectorRecords(contract, clauses) {
           position: clause.position,
         },
       };
+    }),
+  );
+}
+
+function buildCurrentClauseContext(contract, clause) {
+  return {
+    contractId: contract.id,
+    contractTitle: contract.title,
+    clauseId: clause.id,
+    clauseType: clause.clauseType,
+    riskLabel: clause.riskLabel,
+    clauseText: clause.clauseText,
+    clauseTextSummary: clause.clauseTextSummary || clause.clauseText,
+    clauseTextFull: clause.clauseTextFull || clause.clauseText,
+    position: clause.position || null,
+  };
+}
+
+async function buildClauseReviewContext(contract, clause) {
+  const [precedentMatches, ruleMatches] = await Promise.all([
+    findPrecedentMatchesForClause({ clause, topK: 3 }),
+    findRelevantKnowledge({ clause, topK: 4 }),
+  ]);
+
+  return {
+    currentClause: buildCurrentClauseContext(contract, clause),
+    precedentMatches,
+    precedentClause: precedentMatches[0] || null,
+    ruleMatches,
+  };
+}
+
+async function buildAutomaticClauseInsights(contract, clauses = []) {
+  const targets = clauses
+    .filter((clause) => clause.riskLabel === 'high')
+    .slice(0, 5);
+
+  return Promise.all(
+    targets.map(async (clause) => {
+      const reviewContext = await buildClauseReviewContext(contract, clause);
+      return generateClauseInsight(clause, reviewContext);
     }),
   );
 }
@@ -117,7 +163,9 @@ async function ingestManualContract(file, options = {}) {
   });
 
   const vectorRecords = await createVectorRecords(contract, clauses);
-  const vectorIndex = await upsertClauseVectors(vectorRecords);
+  const vectorIndex = await upsertClauseVectors(vectorRecords, {
+    namespace: env.pineconeContractNamespace,
+  });
   const persistence = await saveContractBundle({
     contract,
     clauses,
@@ -145,10 +193,12 @@ async function ingestManualContract(file, options = {}) {
     risks,
   });
 
+  const clauseInsights = await buildAutomaticClauseInsights(contract, clauses);
   const insights = await generateContractOverview({
     contract,
     clauses,
     risks,
+    clauseInsights,
   });
 
   return {
@@ -177,7 +227,15 @@ async function buildContractInsights(contractId, clauseId) {
   const contractBundle = await getContractById(contractId);
 
   if (!clauseId) {
-    return await generateContractOverview(contractBundle);
+    const clauseInsights = await buildAutomaticClauseInsights(
+      contractBundle.contract,
+      contractBundle.clauses,
+    );
+
+    return await generateContractOverview({
+      ...contractBundle,
+      clauseInsights,
+    });
   }
 
   const clause = contractBundle.clauses.find((item) => item.id === clauseId);
@@ -186,16 +244,9 @@ async function buildContractInsights(contractId, clauseId) {
     throw new AppError(404, `Clause not found: ${clauseId}`);
   }
 
-  const searchText = clause.clauseTextFull || clause.clauseText;
-  const embedding = await embedText(searchText);
-  const matches = await querySimilarClauses({
-    vector: embedding.values,
-    topK: 3,
-    contractId,
-    queryText: searchText,
-  });
+  const reviewContext = await buildClauseReviewContext(contractBundle.contract, clause);
 
-  return await generateClauseInsight(clause, matches);
+  return await generateClauseInsight(clause, reviewContext);
 }
 
 module.exports = {

@@ -138,7 +138,7 @@ async function getPineconeDependencyStatus() {
         'Api-Key': env.pineconeApiKey,
       },
       body: JSON.stringify({
-        namespace: env.pineconeNamespace,
+        namespace: env.pineconeContractNamespace,
         vectors: [
           {
             id,
@@ -166,7 +166,7 @@ async function getPineconeDependencyStatus() {
           'Api-Key': env.pineconeApiKey,
         },
         body: JSON.stringify({
-          namespace: env.pineconeNamespace,
+          namespace: env.pineconeContractNamespace,
           vector,
           topK: 1,
           includeMetadata: true,
@@ -200,7 +200,7 @@ async function getPineconeDependencyStatus() {
         'Api-Key': env.pineconeApiKey,
       },
       body: JSON.stringify({
-        namespace: env.pineconeNamespace,
+        namespace: env.pineconeContractNamespace,
         ids: [id],
       }),
     });
@@ -212,7 +212,7 @@ async function getPineconeDependencyStatus() {
       writeVerified: true,
       queryVerified: matched,
       mode: 'pinecone',
-      namespace: env.pineconeNamespace,
+      namespace: env.pineconeContractNamespace,
       cleanup: deleteResponse.ok ? 'deleted' : 'delete-failed',
     };
   } catch (error) {
@@ -278,6 +278,11 @@ async function getHealth(req, res) {
       pinecone: {
         enabled: featureFlags.pinecone,
         mode: featureFlags.pinecone ? 'pinecone' : 'local-vector-fallback',
+        namespaces: {
+          contracts: env.pineconeContractNamespace,
+          precedents: env.pineconePrecedentNamespace,
+          knowledge: env.pineconeKnowledgeNamespace,
+        },
       },
       googleConnectors: {
         enabled: featureFlags.googleConnectors,

@@ -4,6 +4,8 @@ function SearchWorkbench({
   pending,
   result,
   disabled,
+  disabledMessage,
+  scopeLabel,
   onQueryChange,
   onSubmit,
   modeLabel,
@@ -37,6 +39,9 @@ function SearchWorkbench({
             {pending ? 'Searching...' : 'Run Search'}
           </button>
         </div>
+        <p className="search-hint">
+          {scopeLabel ? `Scoped contract: ${scopeLabel}` : 'Scoped contract: select a contract name first.'}
+        </p>
         <p className="search-hint">Focused context preview: {deferredQuery || 'Start typing a contract question.'}</p>
       </form>
 
@@ -45,7 +50,7 @@ function SearchWorkbench({
         <p>
           {result?.reasoning?.answer || (
             disabled
-              ? 'Upload a contract to enable live semantic search.'
+              ? disabledMessage
               : 'Run a semantic search to see grounded reasoning and supporting matches.'
           )}
         </p>
