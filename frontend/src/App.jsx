@@ -1,4 +1,4 @@
-import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { startTransition, useDeferredValue, useEffect, useEffectEvent, useMemo, useState } from 'react';
 
 import AppNav from './components/AppNav';
 import { api } from './lib/api';
@@ -17,6 +17,7 @@ import SearchPage from './pages/SearchPage';
 import DocumentsPage from './pages/DocumentsPage';
 
 const KNOWN_ROUTES = new Set(['/', '/intake', '/contracts', '/insights', '/search', '/documents']);
+const LIVE_REFRESH_INTERVAL_MS = 15000;
 
 function normalizePath(pathname) {
   if (!pathname || pathname === '/') {
@@ -29,6 +30,7 @@ function normalizePath(pathname) {
 function normalizeContractSummary(contract) {
   return {
     id: contract.id,
+    isHydrated: false,
     title: contract.title,
     source: contract.source,
     status: contract.status,
@@ -54,6 +56,7 @@ function normalizeContractDetail(bundle) {
 
   return {
     ...summary,
+    isHydrated: true,
     clauses: bundle.clauses || [],
     risks: bundle.risks || [],
     pipeline: bundle.contract?.pipeline || [],
@@ -279,6 +282,57 @@ function App() {
   const selectedDocumentViewerUrl = selectedDocument ? api.getDocumentContentUrl(selectedDocument.id) : '';
   const selectedDocumentDownloadUrl = selectedDocument ? api.getDocumentContentUrl(selectedDocument.id, { download: true }) : '';
 
+  const refreshLiveDashboard = useEffectEvent(async () => {
+    if (document.visibilityState === 'hidden') {
+      return;
+    }
+
+    const [healthResult, contractsResult] = await Promise.allSettled([
+      api.getHealth(),
+      api.getContracts(),
+    ]);
+
+    const healthConnected = healthResult.status === 'fulfilled';
+    const contractsConnected = (
+      contractsResult.status === 'fulfilled'
+      && Array.isArray(contractsResult.value.data)
+    );
+
+    if (!healthConnected && !contractsConnected) {
+      return;
+    }
+
+    startTransition(() => {
+      if (healthConnected) {
+        setHealth(healthResult.value.services);
+      }
+
+      if (contractsConnected) {
+        const normalizedContracts = contractsResult.value.data.map(normalizeContractSummary);
+        setContracts(normalizedContracts);
+
+        if (normalizedContracts.length) {
+          setSelectedContractId((currentId) => (
+            normalizedContracts.some((contract) => contract.id === currentId)
+              ? currentId
+              : normalizedContracts[0].id
+          ));
+        } else {
+          setSelectedContractId(null);
+          setSelectedContract(null);
+          setContractInsights(buildEmptyInsights());
+          setSearchResult(buildEmptySearchResult(query));
+          setDocumentResults([]);
+          setSelectedDocumentId(null);
+        }
+      }
+
+      if (bootMode !== 'live') {
+        setBootMode('live');
+      }
+    });
+  });
+
   function navigate(path) {
     const normalized = normalizePath(path);
     window.history.pushState({}, '', normalized);
@@ -387,6 +441,20 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (bootMode !== 'live') {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void refreshLiveDashboard();
+    }, LIVE_REFRESH_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [bootMode]);
+
+  useEffect(() => {
     let ignore = false;
     const summary = contracts.find((contract) => contract.id === selectedContractId) || null;
 
@@ -397,6 +465,14 @@ function App() {
 
     if (summary.clauses?.length) {
       setSelectedContract(summary);
+      return undefined;
+    }
+
+    if (
+      selectedContract?.id === selectedContractId
+      && selectedContract.isHydrated
+      && selectedContract.updatedAt === summary.updatedAt
+    ) {
       return undefined;
     }
 
@@ -423,14 +499,16 @@ function App() {
     return () => {
       ignore = true;
     };
-  }, [contracts, selectedContractId]);
+  }, [contracts, selectedContract, selectedContractId]);
 
   useEffect(() => {
     let ignore = false;
 
-    if (!selectedContractId) {
+    if (safePath !== '/insights' || !selectedContractId) {
       setInsightsPending(false);
-      setContractInsights(buildEmptyInsights());
+      if (!selectedContractId) {
+        setContractInsights(buildEmptyInsights());
+      }
       return undefined;
     }
 
@@ -470,7 +548,7 @@ function App() {
     return () => {
       ignore = true;
     };
-  }, [bootMode, contracts, selectedContract, selectedContractId]);
+  }, [bootMode, contracts, safePath, selectedContract, selectedContractId]);
 
   useEffect(() => {
     if (!documentResults.length) {

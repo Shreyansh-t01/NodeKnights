@@ -12,6 +12,7 @@ const searchRoutes = require('./routes/search.routes');
 const documentRoutes = require('./routes/document.routes');
 const precedentRoutes = require('./routes/precedent.routes');
 const knowledgeRoutes = require('./routes/knowledge.routes');
+const { bootstrapDriveWatchAutomation } = require('./services/drive.service');
 const notFound = require('./middlewares/notFound');
 const errorHandler = require('./middlewares/errorHandler');
 
@@ -56,6 +57,16 @@ const server = http.createServer(app);
 
 server.listen(env.port, () => {
   console.log(`Legal intelligence backend listening on port ${env.port}`);
+
+  bootstrapDriveWatchAutomation()
+    .then((result) => {
+      if (result?.enabled) {
+        console.log(`Drive watch automation enabled for folders: ${result.folderIds.join(', ')}`);
+      }
+    })
+    .catch((error) => {
+      console.error('Drive watch automation startup failed:', error.message);
+    });
 });
 
 server.on('error', (error) => {

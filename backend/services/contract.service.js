@@ -101,6 +101,15 @@ async function ingestManualContract(file, options = {}) {
 
   const contractId = `contract_${uuidv4()}`;
   const source = options.source || 'manual-upload';
+  const sourceContext = {
+    externalId: options.externalId || file.externalId || '',
+    sourceUrl: options.sourceUrl || file.sourceUrl || '',
+    folderId: options.folderId || file.folderId || '',
+    modifiedTime: options.modifiedTime || file.modifiedTime || null,
+    dedupeKey: options.dedupeKey || file.dedupeKey || '',
+    messageId: options.messageId || file.messageId || '',
+    attachmentId: options.attachmentId || file.attachmentId || '',
+  };
 
   const rawDocument = await uploadRawDocument({ contractId, file, source });
   const extracted = await extractTextFromDocument(file);
@@ -154,6 +163,7 @@ async function ingestManualContract(file, options = {}) {
     contractId,
     metadata,
     source,
+    sourceContext,
     extractedText: extracted.text,
     artifacts: {
       rawDocument,
