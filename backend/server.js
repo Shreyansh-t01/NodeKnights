@@ -13,6 +13,7 @@ const searchRoutes = require('./routes/search.routes');
 const documentRoutes = require('./routes/document.routes');
 const precedentRoutes = require('./routes/precedent.routes');
 const knowledgeRoutes = require('./routes/knowledge.routes');
+const { syncSearchIndexes } = require('./services/searchIndex.service');
 const { bootstrapDriveWatchAutomation } = require('./services/drive.service');
 const { bootstrapGmailPollingAutomation } = require('./services/gmail.service');
 const notFound = require('./middlewares/notFound');
@@ -80,6 +81,14 @@ server.listen(env.port, () => {
       console.error('Gmail polling startup failed:', gmailResult.reason?.message || gmailResult.reason);
     }
   });
+
+  syncSearchIndexes()
+    .then((result) => {
+      console.log(`Search indexes refreshed: ${result.contracts.vectorCount} contract vectors, ${result.precedents.vectorCount} precedent vectors, ${result.knowledge.vectorCount + (result.rulebook.chunkCount || 0)} knowledge vectors.`);
+    })
+    .catch((error) => {
+      console.error('Search index refresh failed:', error.message);
+    });
 });
 
 server.on('error', (error) => {

@@ -126,6 +126,14 @@ Then set your real service credentials:
 - Gemini
 - Google OAuth
 
+Recommended Gemini env additions:
+
+```env
+GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL_CANDIDATES=gemini-2.5-flash
+GEMINI_EMBEDDING_MODEL=gemini-embedding-001
+```
+
 ### Step 2. Set Google production URLs
 
 These are the most important Google-related production values:
@@ -179,6 +187,14 @@ Production recommendation:
 
 - run it under a process manager or hosting platform that keeps it alive
 - the Drive watch renewal logic depends on the backend staying up
+- on boot, the backend now refreshes the contract/precedent/knowledge vector indexes and seeds the system rulebook into live knowledge search
+
+If you need to refresh the search corpus manually after a migration or bulk import, run:
+
+```bash
+cd backend
+npm run reindex:search
+```
 
 ### Step 5. Expose backend publicly over HTTPS
 

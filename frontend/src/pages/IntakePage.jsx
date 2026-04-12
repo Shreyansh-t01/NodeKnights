@@ -5,6 +5,7 @@ function IntakePage({
   connectors,
   uploadFile,
   uploading,
+  uploadError,
   onFileChange,
   onUpload,
 }) {
@@ -13,6 +14,7 @@ function IntakePage({
       <UploadPanel
         selectedFileName={uploadFile?.name}
         uploading={uploading}
+        error={uploadError}
         onFileChange={onFileChange}
         onUpload={onUpload}
       />

@@ -5,7 +5,7 @@ const { env, featureFlags } = require('../config/env');
 const AppError = require('../errors/AppError');
 const { extractTextFromDocument } = require('./documentExtraction.service');
 const { analyzeContractText } = require('./mlAnalysis.service');
-const { embedText } = require('./embedding.service');
+const { embedText, embedTexts } = require('./embedding.service');
 const { formatClauseType } = require('./contract.helpers');
 const { getContractById } = require('./contract.repository');
 const { querySimilarClauses, upsertClauseVectors } = require('./vector.service');
@@ -159,34 +159,39 @@ function buildAnalyzedClauseRecords(precedentId, analysisClauses = [], defaults 
 }
 
 async function buildVectorRecords(precedent, clauses = []) {
-  return Promise.all(
-    clauses.map(async (clause) => {
-      const embedding = await embedText(clause.clauseTextFull || clause.clauseText);
-
-      return {
-        id: clause.id,
-        namespace: env.pineconePrecedentNamespace,
-        values: embedding.values,
-        metadata: {
-          corpusType: 'precedent_clause',
-          precedentId: precedent.id,
-          precedentTitle: precedent.title,
-          clauseId: clause.id,
-          clauseType: clause.clauseType,
-          riskLabel: clause.riskLabel,
-          clauseText: clause.clauseText,
-          clauseTextSummary: clause.clauseTextSummary || clause.clauseText,
-          clauseTextFull: clause.clauseTextFull || clause.clauseText,
-          position: clause.position,
-          sectionHeading: clause.sectionHeading || '',
-          contractType: clause.contractType || precedent.metadata?.contractType || '',
-          jurisdiction: clause.jurisdiction || precedent.metadata?.jurisdiction || '',
-          sourceType: 'precedent',
-          tags: clause.tags || [],
-        },
-      };
-    }),
+  const embeddings = await embedTexts(
+    clauses.map((clause) => ({
+      text: clause.clauseTextFull || clause.clauseText,
+      title: `${precedent.title} ${clause.clauseLabel || clause.clauseType || 'clause'}`.trim(),
+      taskType: 'RETRIEVAL_DOCUMENT',
+    })),
   );
+
+  return clauses.map((clause, index) => ({
+    id: clause.id,
+    namespace: env.pineconePrecedentNamespace,
+    values: embeddings[index].values,
+    metadata: {
+      corpusType: 'precedent_clause',
+      precedentId: precedent.id,
+      precedentTitle: precedent.title,
+      clauseId: clause.id,
+      clauseType: clause.clauseType,
+      riskLabel: clause.riskLabel,
+      clauseText: clause.clauseText,
+      clauseTextSummary: clause.clauseTextSummary || clause.clauseText,
+      clauseTextFull: clause.clauseTextFull || clause.clauseText,
+      position: clause.position,
+      sectionHeading: clause.sectionHeading || '',
+      contractType: clause.contractType || precedent.metadata?.contractType || '',
+      jurisdiction: clause.jurisdiction || precedent.metadata?.jurisdiction || '',
+      sourceType: 'precedent',
+      tags: clause.tags || [],
+      embeddingProvider: embeddings[index].provider,
+      embeddingModel: embeddings[index].model,
+      embeddingTaskType: embeddings[index].taskType,
+    },
+  }));
 }
 
 function normalizeMatch(match) {
@@ -312,7 +317,9 @@ async function findPrecedentMatchesForClause({ clause, topK = 3 }) {
   }
 
   try {
-    const embedding = await embedText(searchText);
+    const embedding = await embedText(searchText, {
+      taskType: 'RETRIEVAL_QUERY',
+    });
     const clauseType = normalizeClauseType(clause?.clauseType || 'other');
 
     const primaryMatches = clauseType !== 'other'
@@ -339,6 +346,45 @@ async function findPrecedentMatchesForClause({ clause, topK = 3 }) {
     return mergeMatches(primaryMatches, fallbackMatches, topK).map(normalizeMatch);
   } catch (error) {
     console.warn('Precedent retrieval failed, continuing without precedent matches:', error.message);
+    return [];
+  }
+}
+
+async function findComparableContractMatchesForClause({ clause, topK = 3 }) {
+  const searchText = asText(clause?.clauseTextFull || clause?.clauseText);
+
+  if (!searchText || !featureFlags.pinecone) {
+    return [];
+  }
+
+  try {
+    const embedding = await embedText(searchText, {
+      taskType: 'RETRIEVAL_QUERY',
+    });
+    const clauseType = normalizeClauseType(clause?.clauseType || 'other');
+
+    const primaryMatches = await querySimilarClauses({
+      vector: embedding.values,
+      topK,
+      namespace: env.pineconeContractNamespace,
+      filters: {
+        corpusType: 'contract_clause',
+        contractId: {
+          $ne: clause?.contractId || '',
+        },
+        ...(clauseType !== 'other' ? { clauseType } : {}),
+      },
+      queryText: searchText,
+      excludeIds: [clause?.id].filter(Boolean),
+    });
+
+    return primaryMatches.map((match) => ({
+      ...normalizeMatch(match),
+      title: match.metadata?.contractTitle || '',
+      sourceType: 'contract-comparison',
+    }));
+  } catch (error) {
+    console.warn('Contract comparison retrieval failed, continuing without comparison matches:', error.message);
     return [];
   }
 }
@@ -383,6 +429,8 @@ async function getClausePrecedents(contractId, clauseId, topK = 3) {
 
 module.exports = {
   createPrecedentFromEntries,
+  buildVectorRecords,
+  findComparableContractMatchesForClause,
   findPrecedentMatchesForClause,
   getClausePrecedents,
   getPrecedentDetails,

@@ -28,19 +28,19 @@ function OverviewPage({
             in the pipeline gets a focused view.
           </p>
           <div className="hero-pills">
-            <StatusPill status={bootMode === 'live' ? 'ready' : 'fallback'}>{modeLabel}</StatusPill>
-            <StatusPill status={health?.firebase?.enabled ? 'ready' : 'fallback'}>
-              {!health ? 'Backend service check pending' : health?.firebase?.enabled ? 'Firebase configured' : 'Local fallback storage'}
+            <StatusPill status={bootMode === 'live' ? 'ready' : bootMode === 'offline' ? 'error' : 'configure'}>{modeLabel}</StatusPill>
+            <StatusPill status={health?.firebase?.enabled ? 'ready' : health ? 'configure' : 'configure'}>
+              {!health ? 'Backend service check pending' : health?.firebase?.enabled ? 'Firebase configured' : 'Structured storage not configured'}
             </StatusPill>
-            <StatusPill status={health?.pinecone?.enabled ? 'ready' : 'fallback'}>
-              {!health ? 'Backend service check pending' : health?.pinecone?.enabled ? 'Pinecone live' : 'Local vector fallback'}
+            <StatusPill status={health?.pinecone?.enabled ? 'ready' : health ? 'configure' : 'configure'}>
+              {!health ? 'Backend service check pending' : health?.pinecone?.enabled ? 'Pinecone live' : 'Vector search not configured'}
             </StatusPill>
-            <StatusPill status={health?.reasoning?.enabled ? 'ready' : 'fallback'}>
+            <StatusPill status={health?.reasoning?.enabled ? 'ready' : health ? 'configure' : 'configure'}>
               {!health
                 ? 'Backend service check pending'
                 : health?.reasoning?.enabled
                 ? `${health?.reasoning?.provider || 'external'} active`
-                : 'Template fallback active'}
+                : 'Gemini reasoning unavailable'}
             </StatusPill>
           </div>
 

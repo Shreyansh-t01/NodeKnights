@@ -7,6 +7,7 @@
     "dev": "nodemon server.js",
     "dev:ml": "python -m uvicorn app.main:app --app-dir ..\\ML-model-main\\ml-service --reload --port 8001",
     "check": "node --check server.js",
+    "reindex:search": "node scripts/reindex-search.js",
     "start": "node server.js"
   },
   "keywords": [

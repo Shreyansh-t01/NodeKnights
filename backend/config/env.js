@@ -114,6 +114,12 @@ const configuredGenAiApiKey = process.env.GEMINI_API_KEY || process.env.GENAI_AP
 const configuredGenAiModel = process.env.GEMINI_MODEL
   || process.env.GENAI_MODEL
   || (configuredGenAiProvider === 'gemini' ? 'gemini-2.5-flash' : '');
+const configuredGenAiModelCandidates = asList(
+  process.env.GEMINI_MODEL_CANDIDATES || process.env.GENAI_MODEL_CANDIDATES,
+);
+const configuredEmbeddingModel = process.env.GEMINI_EMBEDDING_MODEL
+  || process.env.EMBEDDING_MODEL
+  || 'gemini-embedding-001';
 const configuredApiPrefix = process.env.API_PREFIX || '/api';
 const configuredCorsOrigin = process.env.CORS_ORIGIN || '*';
 const configuredGoogleRedirectUri = process.env.GOOGLE_REDIRECT_URI || '';
@@ -170,6 +176,9 @@ const env = {
   genAiBaseUrl: configuredGenAiBaseUrl,
   genAiApiKey: configuredGenAiApiKey,
   genAiModel: configuredGenAiModel,
+  genAiModelCandidates: configuredGenAiModelCandidates,
+  embeddingModel: configuredEmbeddingModel,
+  embeddingBatchSize: asNumber(process.env.EMBEDDING_BATCH_SIZE, 20),
   genAiTimeoutMs: asNumber(process.env.GENAI_TIMEOUT_MS, 30000),
   genAiTemperature: asNumber(process.env.GENAI_TEMPERATURE, 0.2),
   genAiMaxOutputTokens: asNumber(process.env.GENAI_MAX_OUTPUT_TOKENS, 1400),
@@ -197,6 +206,11 @@ const featureFlags = {
       && env.googleRedirectUri,
   ),
   pinecone: Boolean(env.pineconeApiKey && env.pineconeIndexHost),
+  embeddingApi: Boolean(
+    env.genAiBaseUrl
+      && env.genAiApiKey
+      && env.embeddingModel,
+  ),
   externalGenAi: Boolean(
     env.genAiProvider !== 'template'
       && env.genAiBaseUrl

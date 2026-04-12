@@ -6,7 +6,7 @@ function renderClauseBody(clause, fallback = 'Clause text is unavailable.') {
   return clause?.clauseTextFull || clause?.clauseTextSummary || clause?.clauseText || fallback;
 }
 
-function ContractInsightsPanel({ contract, insights, pending }) {
+function ContractInsightsPanel({ contract, insights, pending, error }) {
   if (!contract) {
     return (
       <section className="panel">
@@ -36,7 +36,7 @@ function ContractInsightsPanel({ contract, insights, pending }) {
 
       <div className="insight-summary">
         <h4>{pending ? 'Refreshing insights...' : insights?.headline || 'Contract insight summary'}</h4>
-        <p>{insights?.summary || 'Insight summary will appear here after analysis completes.'}</p>
+        <p>{error || insights?.summary || 'Insight summary will appear here after analysis completes.'}</p>
       </div>
 
       <div className="insight-grid">
@@ -83,12 +83,12 @@ function ContractInsightsPanel({ contract, insights, pending }) {
                 </section>
 
                 <section className="insight-compare-block">
-                  <p className="eyebrow">Best Precedent</p>
+                  <p className="eyebrow">Best Comparison</p>
                   <h4>{insight.precedentClause?.title || 'No stored precedent yet'}</h4>
                   <p>
                     {insight.precedentClause
                       ? renderClauseBody(insight.precedentClause)
-                      : 'Add approved precedent clauses to your precedent bank and this side-by-side panel will populate automatically.'}
+                      : 'This panel fills from your indexed precedent bank or the closest matching clause from another indexed contract.'}
                   </p>
                 </section>
               </div>
@@ -114,7 +114,7 @@ function ContractInsightsPanel({ contract, insights, pending }) {
 
               {(insight.precedentMatches || []).length > 1 ? (
                 <div className="insight-related-list">
-                  <p className="eyebrow">Additional Precedents</p>
+                  <p className="eyebrow">Additional Comparisons</p>
                   <ul>
                     {insight.precedentMatches.slice(1).map((match) => (
                       <li key={match.id}>

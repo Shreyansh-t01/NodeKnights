@@ -10,6 +10,7 @@ function SearchPage({
   deferredQuery,
   searchPending,
   searchResult,
+  searchError,
   onSelectContract,
   onQueryChange,
   onSubmit,
@@ -101,6 +102,7 @@ function SearchPage({
           deferredQuery={deferredQuery}
           pending={searchPending}
           result={searchResult}
+          error={searchError}
           disabled={!contracts.length || !selectedContractId}
           disabledMessage={
             contracts.length

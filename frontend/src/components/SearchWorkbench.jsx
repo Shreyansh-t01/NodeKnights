@@ -3,6 +3,7 @@ function SearchWorkbench({
   deferredQuery,
   pending,
   result,
+  error,
   disabled,
   disabledMessage,
   scopeLabel,
@@ -48,7 +49,7 @@ function SearchWorkbench({
       <div className="search-answer">
         <h4>Answer</h4>
         <p>
-          {result?.reasoning?.answer || (
+          {error || result?.reasoning?.answer || (
             disabled
               ? disabledMessage
               : 'Run a semantic search to see grounded reasoning and supporting matches.'

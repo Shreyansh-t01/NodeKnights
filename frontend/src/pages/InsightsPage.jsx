@@ -4,6 +4,7 @@ function InsightsPage({
   selectedContract,
   insights,
   insightsPending,
+  insightsError,
   onNavigate,
 }) {
   return (
@@ -32,6 +33,7 @@ function InsightsPage({
           contract={selectedContract}
           insights={insights}
           pending={insightsPending}
+          error={insightsError}
         />
       ) : null}
     </section>

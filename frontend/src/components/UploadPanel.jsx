@@ -1,6 +1,7 @@
 function UploadPanel({
   selectedFileName,
   uploading,
+  error,
   onFileChange,
   onUpload,
 }) {
@@ -28,6 +29,10 @@ function UploadPanel({
       <p className="search-hint">
         {selectedFileName ? `Selected file: ${selectedFileName}` : 'No file selected yet.'}
       </p>
+
+      {error ? (
+        <p className="empty-state">{error}</p>
+      ) : null}
     </section>
   );
 }

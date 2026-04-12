@@ -112,6 +112,7 @@ function DocumentsPage({
   query,
   deferredQuery,
   pending,
+  error,
   results,
   selectedDocumentId,
   selectedDocument,
@@ -152,6 +153,10 @@ function DocumentsPage({
             File name focus: {deferredQuery || 'Type the stored document name to open the original file.'}
           </p>
         </form>
+
+        {error ? (
+          <p className="empty-state">{error}</p>
+        ) : null}
 
         <div className="document-list">
           {results.length ? (

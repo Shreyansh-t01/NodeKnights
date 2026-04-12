@@ -102,7 +102,7 @@ function buildConnectorState(health) {
   if (!health) {
     return connectorCards.map((connector) => ({
       ...connector,
-      status: 'fallback',
+      status: 'configure',
       description: 'Backend not connected. Connector status will appear automatically once the API responds.',
     }));
   }
@@ -353,16 +353,20 @@ function App() {
   const [selectedContract, setSelectedContract] = useState(null);
   const [contractInsights, setContractInsights] = useState(() => buildEmptyInsights());
   const [insightsPending, setInsightsPending] = useState(false);
+  const [insightsError, setInsightsError] = useState('');
   const [bootMode, setBootMode] = useState('loading');
   const [query, setQuery] = useState('What makes the termination clause risky, and what should we change?');
   const [searchResult, setSearchResult] = useState(null);
   const [searchPending, setSearchPending] = useState(false);
+  const [searchError, setSearchError] = useState('');
   const [documentQuery, setDocumentQuery] = useState('');
   const [documentResults, setDocumentResults] = useState([]);
   const [documentSearchPending, setDocumentSearchPending] = useState(false);
+  const [documentError, setDocumentError] = useState('');
   const [selectedDocumentId, setSelectedDocumentId] = useState(null);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const [notifications, setNotifications] = useState([]);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -434,6 +438,9 @@ function App() {
           setSelectedContract(null);
           setContractInsights(buildEmptyInsights());
           setSearchResult(buildEmptySearchResult(query));
+          setInsightsError('');
+          setSearchError('');
+          setDocumentError('');
           setDocumentResults([]);
           setSelectedDocumentId(null);
         }
@@ -461,6 +468,7 @@ function App() {
     const summary = contracts.find((contract) => contract.id === contractId) || null;
     setSelectedContractId(contractId);
     setSelectedContract(summary);
+    setSearchError('');
   }
 
   function handleOpenInsights(contractId) {
@@ -468,6 +476,7 @@ function App() {
     setSelectedContractId(contractId);
     setSelectedContract(summary);
     setContractInsights(buildEmptyInsights(summary));
+    setInsightsError('');
     navigate('/insights');
   }
 
@@ -508,6 +517,9 @@ function App() {
           setSelectedContract(null);
           setContractInsights(buildEmptyInsights());
           setSearchResult(buildEmptySearchResult(query));
+          setInsightsError('');
+          setSearchError('');
+          setDocumentError('');
           setDocumentResults([]);
           setSelectedDocumentId(null);
           setNotifications([]);
@@ -537,6 +549,9 @@ function App() {
             setSelectedContract(null);
             setContractInsights(buildEmptyInsights());
             setSearchResult(buildEmptySearchResult(query));
+            setInsightsError('');
+            setSearchError('');
+            setDocumentError('');
             setDocumentResults([]);
             setSelectedDocumentId(null);
           }
@@ -546,6 +561,9 @@ function App() {
           setSelectedContract(null);
           setContractInsights(buildEmptyInsights());
           setSearchResult(buildEmptySearchResult(query));
+          setInsightsError('');
+          setSearchError('');
+          setDocumentError('');
           setDocumentResults([]);
           setSelectedDocumentId(null);
         }
@@ -638,6 +656,7 @@ function App() {
 
     if (safePath !== '/insights' || !selectedContractId) {
       setInsightsPending(false);
+      setInsightsError('');
       if (!selectedContractId) {
         setContractInsights(buildEmptyInsights());
       }
@@ -646,6 +665,7 @@ function App() {
 
     async function hydrateInsights() {
       setInsightsPending(true);
+      setInsightsError('');
 
       try {
         const response = await api.getContractInsights(selectedContractId);
@@ -653,14 +673,13 @@ function App() {
         if (!ignore) {
           startTransition(() => {
             setContractInsights(response.data);
+            setInsightsError('');
           });
         }
       } catch (error) {
-        const fallbackContract = contracts.find((contract) => contract.id === selectedContractId) || selectedContract;
-
         if (!ignore) {
           startTransition(() => {
-            setContractInsights(buildEmptyInsights(fallbackContract));
+            setInsightsError(error.message || 'Live insights are unavailable right now.');
           });
         }
       } finally {
@@ -700,6 +719,7 @@ function App() {
 
     async function hydrateDocumentResults() {
       setDocumentSearchPending(true);
+      setDocumentError('');
 
       try {
         const response = await api.searchDocuments({
@@ -712,16 +732,14 @@ function App() {
 
           startTransition(() => {
             setDocumentResults(items);
+            setDocumentError('');
           });
         }
       } catch (error) {
         if (!ignore) {
-          const fallbackItems = buildFallbackDocumentResults(documentQuery, contracts, {
-            forceUnavailable: bootMode !== 'live',
-          });
-
           startTransition(() => {
-            setDocumentResults(fallbackItems);
+            setDocumentResults([]);
+            setDocumentError(error.message || 'Document search is unavailable right now.');
           });
         }
       } finally {
@@ -823,6 +841,7 @@ function App() {
   async function handleSemanticSearch(event) {
     event.preventDefault();
     setSearchPending(true);
+    setSearchError('');
 
     try {
       const response = await api.semanticSearch({
@@ -833,10 +852,11 @@ function App() {
 
       startTransition(() => {
         setSearchResult(response.data);
+        setSearchError('');
       });
     } catch (error) {
       startTransition(() => {
-        setSearchResult(buildEmptySearchResult(deferredQuery || query));
+        setSearchError(error.message || 'Semantic search is unavailable right now.');
       });
     } finally {
       setSearchPending(false);
@@ -846,6 +866,7 @@ function App() {
   async function handleDocumentSearch(event) {
     event.preventDefault();
     setDocumentSearchPending(true);
+    setDocumentError('');
 
     try {
       const response = await api.searchDocuments({
@@ -855,12 +876,12 @@ function App() {
 
       startTransition(() => {
         setDocumentResults((response.data?.items || []).map(normalizeDocumentSearchItem));
+        setDocumentError('');
       });
     } catch (error) {
       startTransition(() => {
-        setDocumentResults(buildFallbackDocumentResults(documentQuery, contracts, {
-          forceUnavailable: bootMode !== 'live',
-        }));
+        setDocumentResults([]);
+        setDocumentError(error.message || 'Document search is unavailable right now.');
       });
     } finally {
       setDocumentSearchPending(false);
@@ -873,6 +894,7 @@ function App() {
     }
 
     setUploading(true);
+    setUploadError('');
 
     try {
       const formData = new FormData();
@@ -898,11 +920,15 @@ function App() {
         setSelectedDocumentId(uploadedContract.id);
         setBootMode('live');
         setUploadFile(null);
+        setUploadError('');
+        setInsightsError('');
+        setSearchError('');
+        setDocumentError('');
       });
 
       navigate('/insights');
     } catch (error) {
-      console.error(error);
+      setUploadError(error.message || 'The contract upload failed.');
     } finally {
       setUploading(false);
     }
@@ -991,6 +1017,7 @@ function App() {
         connectors={connectors}
         uploadFile={uploadFile}
         uploading={uploading}
+        uploadError={uploadError}
         onFileChange={(event) => setUploadFile(event.target.files?.[0] || null)}
         onUpload={handleUpload}
       />
@@ -1003,6 +1030,7 @@ function App() {
         {...pageProps}
         insights={contractInsights}
         insightsPending={insightsPending}
+        insightsError={insightsError}
         onNavigate={navigate}
       />
     );
@@ -1014,6 +1042,7 @@ function App() {
         deferredQuery={deferredQuery}
         searchPending={searchPending}
         searchResult={searchResult}
+        searchError={searchError}
         onQueryChange={setQuery}
         onSubmit={handleSemanticSearch}
         modeLabel={modeLabel}
@@ -1025,6 +1054,7 @@ function App() {
         query={documentQuery}
         deferredQuery={deferredDocumentQuery}
         pending={documentSearchPending}
+        error={documentError}
         results={documentResults}
         selectedDocumentId={selectedDocument?.id || null}
         selectedDocument={selectedDocument}

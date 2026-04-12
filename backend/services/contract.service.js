@@ -5,11 +5,14 @@ const AppError = require('../errors/AppError');
 const { uploadRawDocument, uploadExtractedText } = require('./storage.service');
 const { extractTextFromDocument } = require('./documentExtraction.service');
 const { analyzeContractText } = require('./mlAnalysis.service');
-const { embedText } = require('./embedding.service');
+const { embedTexts } = require('./embedding.service');
 const { saveContractBundle, listContracts, getContractById } = require('./contract.repository');
 const { upsertClauseVectors } = require('./vector.service');
 const { generateContractOverview, generateClauseInsight } = require('./insight.service');
-const { findPrecedentMatchesForClause } = require('./precedent.service');
+const {
+  findComparableContractMatchesForClause,
+  findPrecedentMatchesForClause,
+} = require('./precedent.service');
 const { findRelevantKnowledge } = require('./knowledge.service');
 const {
   buildClauseRecords,
@@ -19,30 +22,35 @@ const {
 } = require('./contract.helpers');
 
 async function createVectorRecords(contract, clauses) {
-  return Promise.all(
-    clauses.map(async (clause) => {
-      const searchText = clause.clauseTextFull || clause.clauseText;
-      const embedding = await embedText(searchText);
-
-      return {
-        id: clause.id,
-        namespace: env.pineconeContractNamespace,
-        values: embedding.values,
-        metadata: {
-          corpusType: 'contract_clause',
-          contractId: contract.id,
-          contractTitle: contract.title,
-          clauseId: clause.id,
-          clauseType: clause.clauseType,
-          riskLabel: clause.riskLabel,
-          clauseText: clause.clauseText,
-          clauseTextSummary: clause.clauseTextSummary || clause.clauseText,
-          clauseTextFull: clause.clauseTextFull || clause.clauseText,
-          position: clause.position,
-        },
-      };
-    }),
+  const embeddings = await embedTexts(
+    clauses.map((clause) => ({
+      text: clause.clauseTextFull || clause.clauseText,
+      title: `${contract.title} ${clause.clauseLabel || clause.clauseType || 'clause'}`.trim(),
+      taskType: 'RETRIEVAL_DOCUMENT',
+    })),
   );
+
+  return clauses.map((clause, index) => ({
+    id: clause.id,
+    namespace: env.pineconeContractNamespace,
+    values: embeddings[index].values,
+    metadata: {
+      corpusType: 'contract_clause',
+      contractId: contract.id,
+      contractTitle: contract.title,
+      clauseId: clause.id,
+      clauseType: clause.clauseType,
+      riskLabel: clause.riskLabel,
+      clauseText: clause.clauseText,
+      clauseTextSummary: clause.clauseTextSummary || clause.clauseText,
+      clauseTextFull: clause.clauseTextFull || clause.clauseText,
+      position: clause.position,
+      sourceType: 'contract',
+      embeddingProvider: embeddings[index].provider,
+      embeddingModel: embeddings[index].model,
+      embeddingTaskType: embeddings[index].taskType,
+    },
+  }));
 }
 
 function buildCurrentClauseContext(contract, clause) {
@@ -60,15 +68,17 @@ function buildCurrentClauseContext(contract, clause) {
 }
 
 async function buildClauseReviewContext(contract, clause) {
-  const [precedentMatches, ruleMatches] = await Promise.all([
+  const [precedentMatches, comparisonMatches, ruleMatches] = await Promise.all([
     findPrecedentMatchesForClause({ clause, topK: 3 }),
+    findComparableContractMatchesForClause({ clause, topK: 3 }),
     findRelevantKnowledge({ clause, topK: 4 }),
   ]);
+  const effectiveMatches = precedentMatches.length ? precedentMatches : comparisonMatches;
 
   return {
     currentClause: buildCurrentClauseContext(contract, clause),
-    precedentMatches,
-    precedentClause: precedentMatches[0] || null,
+    precedentMatches: effectiveMatches,
+    precedentClause: effectiveMatches[0] || null,
     ruleMatches,
   };
 }
@@ -261,6 +271,7 @@ async function buildContractInsights(contractId, clauseId) {
 
 module.exports = {
   buildContractInsights,
+  createVectorRecords,
   getContractDetails,
   ingestManualContract,
   listContractSummaries,

@@ -3,6 +3,7 @@ function StatusPill({ status, children }) {
     ready: 'pill pill-ready',
     active: 'pill pill-ready',
     configure: 'pill pill-warning',
+    error: 'pill pill-danger',
     fallback: 'pill pill-warning',
     disabled: 'pill pill-ink',
     'review-required': 'pill pill-danger',

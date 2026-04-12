@@ -206,6 +206,34 @@ function excludeMatch(match, excludeIds = []) {
   return excludeIds.includes(match.id) || excludeIds.includes(match.metadata?.clauseId);
 }
 
+function searchableTextFromMetadata(metadata = {}) {
+  return metadata.clauseTextFull
+    || metadata.clauseTextSummary
+    || metadata.clauseText
+    || metadata.textFull
+    || metadata.textSummary
+    || '';
+}
+
+function rerankMatches(matches = [], queryText = '', excludeIds = []) {
+  const normalizedQuery = String(queryText || '').trim();
+
+  return matches
+    .filter((match) => !excludeMatch(match, excludeIds))
+    .map((match) => ({
+      ...match,
+      score: (
+        (typeof match.score === 'number' ? match.score : 0) * 0.6
+        + lexicalOverlapScore(normalizedQuery, searchableTextFromMetadata(match.metadata || {})) * 0.3
+        + clauseTypeBoost(
+          normalizedQuery,
+          match.metadata?.clauseType || match.metadata?.primaryClauseType || 'other',
+        ) * 0.4
+      ),
+    }))
+    .sort((left, right) => right.score - left.score);
+}
+
 async function queryLocalVectors(vector, topK, namespace, filters, queryText, excludeIds = []) {
   const resolvedNamespace = resolveNamespace(namespace);
   const current = await readJsonFile(localVectorStorePath, []);
@@ -220,15 +248,7 @@ async function queryLocalVectors(vector, topK, namespace, filters, queryText, ex
       id: item.id,
       score: (
         cosineSimilarity(vector, item.values) * 0.55
-        + lexicalOverlapScore(
-          queryText,
-          item.metadata.clauseTextFull
-            || item.metadata.clauseTextSummary
-            || item.metadata.clauseText
-            || item.metadata.textFull
-            || item.metadata.textSummary
-            || '',
-        ) * 0.35
+        + lexicalOverlapScore(queryText, searchableTextFromMetadata(item.metadata || {})) * 0.35
         + clauseTypeBoost(queryText, item.metadata.clauseType || item.metadata.primaryClauseType || 'other')
       ),
       metadata: item.metadata,
@@ -237,12 +257,13 @@ async function queryLocalVectors(vector, topK, namespace, filters, queryText, ex
     .slice(0, topK);
 }
 
-async function queryPinecone(vector, topK, namespace, filters) {
+async function queryPinecone(vector, topK, namespace, filters, queryText = '', excludeIds = []) {
   const resolvedNamespace = resolveNamespace(namespace);
+  const fetchTopK = Math.max(topK, Math.min(50, topK * 8));
   const body = {
     namespace: resolvedNamespace,
     vector,
-    topK,
+    topK: fetchTopK,
     includeMetadata: true,
   };
 
@@ -267,7 +288,7 @@ async function queryPinecone(vector, topK, namespace, filters) {
   }
 
   const payload = await response.json();
-  return payload.matches || [];
+  return rerankMatches(payload.matches || [], queryText, excludeIds).slice(0, topK);
 }
 
 async function querySimilarClauses({
@@ -284,7 +305,7 @@ async function querySimilarClauses({
 
   if (featureFlags.pinecone) {
     try {
-      return await queryPinecone(vector, topK, namespace, filters);
+      return await queryPinecone(vector, topK, namespace, filters, queryText, excludeIds);
     } catch (error) {
       if (env.strictRemoteServices) {
         throw buildPineconeRequiredError('query', error);

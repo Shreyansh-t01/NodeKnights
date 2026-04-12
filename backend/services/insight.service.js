@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 
+const AppError = require('../errors/AppError');
 const { env } = require('../config/env');
 const { formatClauseType } = require('./contract.helpers');
 const { generateStructuredObject, isGeminiEnabled } = require('./genAi.service');
@@ -99,7 +100,7 @@ function normalizePrecedentMatch(match = {}) {
     id: match.id || match.clauseId || '',
     score: typeof match.score === 'number' ? Number(match.score.toFixed(4)) : (match.score ?? null),
     precedentId: match.precedentId || match.metadata?.precedentId || '',
-    title: match.title || match.metadata?.precedentTitle || match.metadata?.contractTitle || '',
+    title: match.title || match.contractTitle || match.metadata?.precedentTitle || match.metadata?.contractTitle || '',
     clauseId: match.clauseId || match.metadata?.clauseId || match.id || '',
     clauseType: match.clauseType || match.metadata?.clauseType || 'other',
     riskLabel: match.riskLabel || match.metadata?.riskLabel || 'unknown',
@@ -309,11 +310,15 @@ function buildTemplateContractOverview(contractBundle) {
 function buildTemplateSemanticAnswer({ query, matches, contract }) {
   if (!matches.length) {
     return {
-      answer: 'No close semantic matches were found yet. Try a more specific clause question or ingest more precedents into Pinecone.',
+      answer: contract?.title
+        ? `No close clause matches were found inside ${contract.title} for "${query}" yet. Try a more specific clause question or search for a named obligation such as termination, payment, or confidentiality.`
+        : 'No close semantic matches were found yet. Try a more specific clause question or search for a named obligation such as termination, payment, or confidentiality.',
       supportingMatches: [],
       recommendations: [
         'Ask about a concrete clause type such as termination, payment, or confidentiality.',
-        'Index additional precedents so semantic search has more context.',
+        contract?.title
+          ? 'Try wording the query around the exact obligation, notice period, payment term, or risk you want to inspect.'
+          : 'Index additional contracts or precedents so semantic search has more context.',
       ],
     };
   }
@@ -427,8 +432,21 @@ function buildSemanticAnswerPrompt({ query, matches, contract }) {
   ].join('\n');
 }
 
+function ensureGeminiReady(featureLabel) {
+  if (!env.strictRemoteServices || isGeminiEnabled()) {
+    return;
+  }
+
+  throw new AppError(503, `Gemini is required for ${featureLabel} but is not configured.`, {
+    provider: 'gemini',
+    model: env.genAiModel,
+  });
+}
+
 async function generateContractOverview(contractBundle) {
   const fallback = buildTemplateContractOverview(contractBundle);
+
+  ensureGeminiReady('contract insights');
 
   if (!isGeminiEnabled()) {
     return fallback;
@@ -462,6 +480,10 @@ async function generateContractOverview(contractBundle) {
       }),
     };
   } catch (error) {
+    if (env.strictRemoteServices) {
+      throw error;
+    }
+
     console.warn('Gemini contract overview failed, using template fallback:', error.message);
     return fallback;
   }
@@ -469,6 +491,8 @@ async function generateContractOverview(contractBundle) {
 
 async function generateClauseInsight(clause, reviewContext = {}) {
   const fallback = buildTemplateClauseInsight(clause, reviewContext);
+
+  ensureGeminiReady('clause insights');
 
   if (!isGeminiEnabled()) {
     return fallback;
@@ -488,6 +512,10 @@ async function generateClauseInsight(clause, reviewContext = {}) {
       recommendedChange: asText(generated?.recommendedChange, fallback.recommendedChange),
     };
   } catch (error) {
+    if (env.strictRemoteServices) {
+      throw error;
+    }
+
     console.warn('Gemini clause insight failed, using template fallback:', error.message);
     return fallback;
   }
@@ -495,6 +523,8 @@ async function generateClauseInsight(clause, reviewContext = {}) {
 
 async function buildSemanticAnswer({ query, matches, contract }) {
   const fallback = buildTemplateSemanticAnswer({ query, matches, contract });
+
+  ensureGeminiReady('semantic answers');
 
   if (!matches.length || !isGeminiEnabled()) {
     return fallback;
@@ -513,6 +543,10 @@ async function buildSemanticAnswer({ query, matches, contract }) {
       recommendations: asStringArray(generated?.recommendations, fallback.recommendations, 5),
     };
   } catch (error) {
+    if (env.strictRemoteServices) {
+      throw error;
+    }
+
     console.warn('Gemini semantic answer failed, using template fallback:', error.message);
     return fallback;
   }
