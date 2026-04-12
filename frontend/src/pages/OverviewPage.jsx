@@ -11,7 +11,11 @@ function OverviewPage({
   onSelectContract,
   onNavigate,
 }) {
-  const modeLabel = bootMode === 'live' ? 'Live backend mode' : bootMode === 'mock' ? 'Mock preview mode' : 'Connecting';
+  const modeLabel = bootMode === 'live'
+    ? 'Live backend mode'
+    : bootMode === 'offline'
+      ? 'Backend not connected, retrying'
+      : 'Connecting to backend';
 
   return (
     <>
@@ -26,13 +30,15 @@ function OverviewPage({
           <div className="hero-pills">
             <StatusPill status={bootMode === 'live' ? 'ready' : 'fallback'}>{modeLabel}</StatusPill>
             <StatusPill status={health?.firebase?.enabled ? 'ready' : 'fallback'}>
-              {health?.firebase?.enabled ? 'Firebase configured' : 'Local fallback storage'}
+              {!health ? 'Backend service check pending' : health?.firebase?.enabled ? 'Firebase configured' : 'Local fallback storage'}
             </StatusPill>
             <StatusPill status={health?.pinecone?.enabled ? 'ready' : 'fallback'}>
-              {health?.pinecone?.enabled ? 'Pinecone live' : 'Local vector fallback'}
+              {!health ? 'Backend service check pending' : health?.pinecone?.enabled ? 'Pinecone live' : 'Local vector fallback'}
             </StatusPill>
             <StatusPill status={health?.reasoning?.enabled ? 'ready' : 'fallback'}>
-              {health?.reasoning?.enabled
+              {!health
+                ? 'Backend service check pending'
+                : health?.reasoning?.enabled
                 ? `${health?.reasoning?.provider || 'external'} active`
                 : 'Template fallback active'}
             </StatusPill>

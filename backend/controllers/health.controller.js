@@ -238,13 +238,23 @@ async function getMlServiceStatus() {
         Accept: 'application/json',
       },
     });
+    let payload = null;
+
+    try {
+      payload = await response.json();
+    } catch (error) {
+      payload = null;
+    }
+    const predictorReady = payload?.predictorReady !== false;
 
     return {
       enabled: true,
       required: env.requirePythonMlService,
-      reachable: response.ok,
+      reachable: response.ok && predictorReady,
       target: `${env.mlServiceUrl}/analyze`,
       mode: 'python-ml-service',
+      predictorReady,
+      message: payload?.error || null,
     };
   } catch (error) {
     return {

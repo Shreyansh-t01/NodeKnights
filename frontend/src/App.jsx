@@ -5,9 +5,6 @@ import { api } from './lib/api';
 import {
   dashboardMetrics,
   connectorCards,
-  sampleContracts,
-  buildMockSearchResult,
-  buildMockContractInsights,
 } from './data/mockData';
 import OverviewPage from './pages/OverviewPage';
 import IntakePage from './pages/IntakePage';
@@ -102,11 +99,15 @@ function buildEmptySearchResult(query = '') {
 }
 
 function buildConnectorState(health) {
-  return connectorCards.map((connector) => {
-    if (!health) {
-      return connector;
-    }
+  if (!health) {
+    return connectorCards.map((connector) => ({
+      ...connector,
+      status: 'fallback',
+      description: 'Backend not connected. Connector status will appear automatically once the API responds.',
+    }));
+  }
 
+  return connectorCards.map((connector) => {
     if (connector.key === 'google-drive') {
       if (!health.googleConnectors?.enabled) {
         return {
@@ -291,9 +292,9 @@ function buildDocumentRecordFromContract(contract, options = {}) {
     createdAt: contract.createdAt || null,
     updatedAt: contract.updatedAt || null,
     available,
-    storageMode: forceUnavailable ? 'mock-preview' : rawArtifact?.mode || 'disabled',
+    storageMode: forceUnavailable ? 'preview-unavailable' : rawArtifact?.mode || 'disabled',
     previewMode: getDocumentPreviewMode(contract.mimeType || contract.metadata?.mimeType || ''),
-    artifactReason: forceUnavailable ? 'Live artifact preview is unavailable in mock preview mode.' : rawArtifact?.reason || null,
+    artifactReason: forceUnavailable ? 'Live artifact preview is temporarily unavailable while the backend reconnects.' : rawArtifact?.reason || null,
   };
 }
 
@@ -371,7 +372,11 @@ function App() {
   const safePath = KNOWN_ROUTES.has(currentPath) ? currentPath : '/';
   const connectors = buildConnectorState(health);
   const metrics = useMemo(() => buildLiveMetrics(contracts), [contracts]);
-  const modeLabel = bootMode === 'live' ? 'Live backend mode' : bootMode === 'mock' ? 'Mock preview mode' : 'Connecting';
+  const modeLabel = bootMode === 'live'
+    ? 'Live backend mode'
+    : bootMode === 'offline'
+      ? 'Backend not connected, retrying'
+      : 'Connecting to backend';
   const selectedDocument = useMemo(
     () => documentResults.find((document) => document.id === selectedDocumentId) || documentResults[0] || null,
     [documentResults, selectedDocumentId],
@@ -401,6 +406,10 @@ function App() {
     );
 
     if (!healthConnected && !contractsConnected) {
+      startTransition(() => {
+        setHealth(null);
+        setBootMode('offline');
+      });
       return;
     }
 
@@ -493,16 +502,16 @@ function App() {
 
         if (!healthConnected && !contractsConnected) {
           setHealth(null);
-          setContracts(sampleContracts);
-          setSelectedContractId(sampleContracts[0].id);
-          setSelectedContract(sampleContracts[0]);
-          setContractInsights(buildMockContractInsights(sampleContracts[0]));
-          setSearchResult(buildMockSearchResult(query, sampleContracts[0]));
-          setDocumentResults(buildFallbackDocumentResults('', sampleContracts, { forceUnavailable: true }));
-          setSelectedDocumentId(sampleContracts[0].id);
+          setContracts([]);
+          setSelectedContractId(null);
+          setSelectedContract(null);
+          setContractInsights(buildEmptyInsights());
+          setSearchResult(buildEmptySearchResult(query));
+          setDocumentResults([]);
+          setSelectedDocumentId(null);
           setNotifications([]);
           setNotificationUnreadCount(0);
-          setBootMode('mock');
+          setBootMode('offline');
           return;
         }
 
@@ -563,7 +572,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (bootMode !== 'live') {
+    if (bootMode === 'loading') {
       return undefined;
     }
 
@@ -650,11 +659,6 @@ function App() {
 
         if (!ignore) {
           startTransition(() => {
-            if (bootMode === 'mock' && fallbackContract) {
-              setContractInsights(buildMockContractInsights(fallbackContract));
-              return;
-            }
-
             setContractInsights(buildEmptyInsights(fallbackContract));
           });
         }
@@ -749,7 +753,6 @@ function App() {
   async function handleSemanticSearch(event) {
     event.preventDefault();
     setSearchPending(true);
-    const activeContract = selectedContract || contracts.find((contract) => contract.id === selectedContractId) || null;
 
     try {
       const response = await api.semanticSearch({
@@ -763,11 +766,6 @@ function App() {
       });
     } catch (error) {
       startTransition(() => {
-        if (bootMode === 'mock' && activeContract) {
-          setSearchResult(buildMockSearchResult(deferredQuery || query, activeContract));
-          return;
-        }
-
         setSearchResult(buildEmptySearchResult(deferredQuery || query));
       });
     } finally {
