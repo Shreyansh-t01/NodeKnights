@@ -1,4 +1,4 @@
-import { startTransition, useDeferredValue, useEffect, useEffectEvent, useMemo, useState } from 'react';
+import { startTransition, useDeferredValue, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 
 import AppNav from './components/AppNav';
 import { api } from './lib/api';
@@ -366,6 +366,8 @@ function App() {
   const [notifications, setNotifications] = useState([]);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [selectedDocumentViewerUrl, setSelectedDocumentViewerUrl] = useState('');
+  const viewerObjectUrlRef = useRef('');
   const deferredQuery = useDeferredValue(query);
   const deferredDocumentQuery = useDeferredValue(documentQuery);
 
@@ -381,7 +383,6 @@ function App() {
     () => documentResults.find((document) => document.id === selectedDocumentId) || documentResults[0] || null,
     [documentResults, selectedDocumentId],
   );
-  const selectedDocumentViewerUrl = selectedDocument ? api.getDocumentContentUrl(selectedDocument.id) : '';
   const selectedDocumentDownloadUrl = selectedDocument ? api.getDocumentContentUrl(selectedDocument.id, { download: true }) : '';
 
   const refreshLiveDashboard = useEffectEvent(async () => {
@@ -736,6 +737,75 @@ function App() {
       ignore = true;
     };
   }, [bootMode, contracts, safePath]);
+
+  useEffect(() => {
+    let ignore = false;
+    let createdObjectUrl = '';
+
+    async function hydrateSelectedDocumentViewer() {
+      if (!selectedDocument?.id || !selectedDocument?.available) {
+        if (viewerObjectUrlRef.current) {
+          URL.revokeObjectURL(viewerObjectUrlRef.current);
+          viewerObjectUrlRef.current = '';
+        }
+
+        setSelectedDocumentViewerUrl('');
+        return;
+      }
+
+      try {
+        const response = await fetch(api.getDocumentContentUrl(selectedDocument.id), {
+          method: 'GET',
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to load document preview: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        createdObjectUrl = URL.createObjectURL(blob);
+
+        if (ignore) {
+          URL.revokeObjectURL(createdObjectUrl);
+          return;
+        }
+
+        if (viewerObjectUrlRef.current) {
+          URL.revokeObjectURL(viewerObjectUrlRef.current);
+        }
+
+        viewerObjectUrlRef.current = createdObjectUrl;
+        setSelectedDocumentViewerUrl(createdObjectUrl);
+      } catch (error) {
+        if (!ignore) {
+          if (viewerObjectUrlRef.current) {
+            URL.revokeObjectURL(viewerObjectUrlRef.current);
+            viewerObjectUrlRef.current = '';
+          }
+
+          setSelectedDocumentViewerUrl('');
+        }
+      }
+    }
+
+    hydrateSelectedDocumentViewer();
+
+    return () => {
+      ignore = true;
+      if (createdObjectUrl) {
+        URL.revokeObjectURL(createdObjectUrl);
+      }
+    };
+  }, [selectedDocument]);
+
+  useEffect(() => {
+    return () => {
+      if (viewerObjectUrlRef.current) {
+        URL.revokeObjectURL(viewerObjectUrlRef.current);
+        viewerObjectUrlRef.current = '';
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const titles = {
