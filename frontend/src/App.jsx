@@ -107,10 +107,75 @@ function buildConnectorState(health) {
       return connector;
     }
 
-    if (connector.key === 'google-drive' || connector.key === 'gmail') {
+    if (connector.key === 'google-drive') {
+      if (!health.googleConnectors?.enabled) {
+        return {
+          ...connector,
+          status: 'configure',
+          description: 'Add Google OAuth credentials to the backend before Drive imports can run.',
+        };
+      }
+
+      if (!health.googleConnectors?.connected) {
+        return {
+          ...connector,
+          status: 'configure',
+          description: 'Google OAuth is configured, but the backend still needs to complete the browser consent flow.',
+        };
+      }
+
+      if (health.googleConnectors?.drive?.watchState?.status === 'active') {
+        return {
+          ...connector,
+          status: 'active',
+          description: 'Drive watch is live and will auto-analyze new supported files from monitored folders.',
+        };
+      }
+
+      if (health.googleConnectors?.drive?.folderIds?.length) {
+        return {
+          ...connector,
+          status: 'ready',
+          description: 'Drive is connected for monitored-folder imports. Start the watch to make ingestion continuous.',
+        };
+      }
+
       return {
         ...connector,
-        status: health.googleConnectors?.enabled ? 'ready' : 'configure',
+        status: 'configure',
+        description: 'Google is connected, but GOOGLE_DRIVE_FOLDER_IDS still needs to be set for monitored imports.',
+      };
+    }
+
+    if (connector.key === 'gmail') {
+      if (!health.googleConnectors?.enabled) {
+        return {
+          ...connector,
+          status: 'configure',
+          description: 'Add Google OAuth credentials to the backend before Gmail attachment imports can run.',
+        };
+      }
+
+      if (!health.googleConnectors?.connected) {
+        return {
+          ...connector,
+          status: 'configure',
+          description: 'Google OAuth is configured, but the backend still needs to complete the browser consent flow.',
+        };
+      }
+
+      if (health.googleConnectors?.gmail?.enabled) {
+        return {
+          ...connector,
+          status: 'active',
+          description: 'Gmail polling is active and will auto-analyze matching attachments on the configured interval.',
+        };
+      }
+
+      return {
+        ...connector,
+        status: 'ready',
+        description: 'Gmail is connected for attachment imports. Enable polling to ingest new messages automatically.',
       };
     }
 
@@ -175,6 +240,35 @@ function normalizeDocumentSearchItem(document) {
     storageMode: document.storageMode || 'disabled',
     previewMode: document.previewMode || getDocumentPreviewMode(document.mimeType || ''),
     artifactReason: document.artifactReason || null,
+  };
+}
+
+function normalizeNotificationRecord(notification) {
+  return {
+    id: notification.id,
+    type: notification.type || 'document-analyzed',
+    severity: notification.severity || 'info',
+    title: notification.title || 'New document analyzed',
+    message: notification.message || '',
+    source: notification.source || 'unknown',
+    sourceLabel: notification.sourceLabel || notification.source || 'Platform',
+    trigger: notification.trigger || 'unknown',
+    contractId: notification.contractId || null,
+    contractTitle: notification.contractTitle || '',
+    documentName: notification.documentName || notification.contractTitle || 'Document',
+    status: notification.status || 'analysis-ready',
+    statusLabel: notification.statusLabel || notification.status || 'Analysis Ready',
+    riskCounts: notification.riskCounts || { low: 0, medium: 0, high: 0 },
+    readAt: notification.readAt || null,
+    createdAt: notification.createdAt || null,
+    updatedAt: notification.updatedAt || notification.createdAt || null,
+    email: notification.email || {
+      attempted: false,
+      sent: false,
+      recipients: [],
+      reason: 'not-attempted',
+    },
+    details: notification.details || {},
   };
 }
 
@@ -268,6 +362,9 @@ function App() {
   const [selectedDocumentId, setSelectedDocumentId] = useState(null);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const deferredQuery = useDeferredValue(query);
   const deferredDocumentQuery = useDeferredValue(documentQuery);
 
@@ -287,15 +384,20 @@ function App() {
       return;
     }
 
-    const [healthResult, contractsResult] = await Promise.allSettled([
+    const [healthResult, contractsResult, notificationsResult] = await Promise.allSettled([
       api.getHealth(),
       api.getContracts(),
+      api.getNotifications({ limit: 8 }),
     ]);
 
     const healthConnected = healthResult.status === 'fulfilled';
     const contractsConnected = (
       contractsResult.status === 'fulfilled'
       && Array.isArray(contractsResult.value.data)
+    );
+    const notificationsConnected = (
+      notificationsResult.status === 'fulfilled'
+      && Array.isArray(notificationsResult.value.data?.items)
     );
 
     if (!healthConnected && !contractsConnected) {
@@ -327,6 +429,11 @@ function App() {
         }
       }
 
+      if (notificationsConnected) {
+        setNotifications(notificationsResult.value.data.items.map(normalizeNotificationRecord));
+        setNotificationUnreadCount(notificationsResult.value.data.unreadCount || 0);
+      }
+
       if (bootMode !== 'live') {
         setBootMode('live');
       }
@@ -337,6 +444,7 @@ function App() {
     const normalized = normalizePath(path);
     window.history.pushState({}, '', normalized);
     setCurrentPath(normalized);
+    setNotificationsOpen(false);
   }
 
   function handleSelectContract(contractId) {
@@ -366,9 +474,10 @@ function App() {
     let ignore = false;
 
     async function hydrateDashboard() {
-      const [healthResult, contractsResult] = await Promise.allSettled([
+      const [healthResult, contractsResult, notificationsResult] = await Promise.allSettled([
         api.getHealth(),
         api.getContracts(),
+        api.getNotifications({ limit: 8 }),
       ]);
 
       if (ignore) {
@@ -391,6 +500,8 @@ function App() {
           setSearchResult(buildMockSearchResult(query, sampleContracts[0]));
           setDocumentResults(buildFallbackDocumentResults('', sampleContracts, { forceUnavailable: true }));
           setSelectedDocumentId(sampleContracts[0].id);
+          setNotifications([]);
+          setNotificationUnreadCount(0);
           setBootMode('mock');
           return;
         }
@@ -427,6 +538,17 @@ function App() {
           setSearchResult(buildEmptySearchResult(query));
           setDocumentResults([]);
           setSelectedDocumentId(null);
+        }
+
+        if (
+          notificationsResult.status === 'fulfilled'
+          && Array.isArray(notificationsResult.value.data?.items)
+        ) {
+          setNotifications(notificationsResult.value.data.items.map(normalizeNotificationRecord));
+          setNotificationUnreadCount(notificationsResult.value.data.unreadCount || 0);
+        } else {
+          setNotifications([]);
+          setNotificationUnreadCount(0);
         }
 
         setBootMode('live');
@@ -718,6 +840,74 @@ function App() {
     }
   }
 
+  async function handleMarkNotificationsRead() {
+    if (!notificationUnreadCount) {
+      return;
+    }
+
+    try {
+      await api.markNotificationsRead();
+      const readAt = new Date().toISOString();
+
+      startTransition(() => {
+        setNotifications((current) => current.map((item) => (
+          item.readAt
+            ? item
+            : {
+              ...item,
+              readAt,
+            }
+        )));
+        setNotificationUnreadCount(0);
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async function handleNotificationSelect(notification) {
+    if (!notification) {
+      return;
+    }
+
+    if (!notification.readAt) {
+      void handleMarkNotificationsRead();
+    }
+
+    if (notification.contractId) {
+      const summary = contracts.find((contract) => contract.id === notification.contractId) || null;
+
+      if (summary) {
+        setSelectedContractId(summary.id);
+        setSelectedContract(summary);
+        setContractInsights(buildEmptyInsights(summary));
+      } else {
+        try {
+          const response = await api.getContractById(notification.contractId);
+          const hydratedContract = normalizeContractDetail(response.data);
+
+          startTransition(() => {
+            setContracts((current) => [
+              hydratedContract,
+              ...current.filter((item) => item.id !== hydratedContract.id),
+            ]);
+            setSelectedContractId(hydratedContract.id);
+            setSelectedContract(hydratedContract);
+            setContractInsights(buildEmptyInsights(hydratedContract));
+            setDocumentResults((current) => [
+              buildDocumentRecordFromContract(hydratedContract),
+              ...current.filter((item) => item.id !== hydratedContract.id),
+            ]);
+          });
+        } catch (error) {
+          console.error(error);
+        }
+      }
+    }
+
+    navigate(notification.details?.appPath || '/insights');
+  }
+
   const pageProps = {
     contracts,
     selectedContractId,
@@ -794,7 +984,17 @@ function App() {
 
   return (
     <main className="app-shell">
-      <AppNav currentPath={safePath} onNavigate={navigate} modeLabel={modeLabel} />
+      <AppNav
+        currentPath={safePath}
+        notifications={notifications}
+        notificationsOpen={notificationsOpen}
+        notificationUnreadCount={notificationUnreadCount}
+        onMarkNotificationsRead={handleMarkNotificationsRead}
+        onNavigate={navigate}
+        onNotificationSelect={handleNotificationSelect}
+        onToggleNotifications={() => setNotificationsOpen((current) => !current)}
+        modeLabel={modeLabel}
+      />
       {page}
     </main>
   );

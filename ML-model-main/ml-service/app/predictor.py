@@ -25,40 +25,87 @@ RISK_LEVELS = {
     "high": 2,
 }
 
+_nlp = None
+_clause_model = None
+_risk_model = None
+_clause_model_loaded = False
+_risk_model_loaded = False
+
 
 def log_status(level: str, message: str):
     print(f"[{level}] {message}")
 
 
-try:
-    if os.path.exists(NER_MODEL_PATH) and os.listdir(NER_MODEL_PATH):
-        nlp = spacy.load(NER_MODEL_PATH)
-        log_status("OK", "NER model loaded")
-    else:
-        nlp = spacy.load("en_core_web_sm")
+def get_nlp():
+    global _nlp
+
+    if _nlp is not None:
+        return _nlp
+
+    try:
+        if os.path.exists(NER_MODEL_PATH) and os.listdir(NER_MODEL_PATH):
+            _nlp = spacy.load(NER_MODEL_PATH)
+            log_status("OK", "NER model loaded")
+            return _nlp
+    except Exception as e:
+        log_status("ERROR", f"NER load error: {e}")
+
+    try:
+        _nlp = spacy.load("en_core_web_sm")
         log_status("OK", "Fallback spaCy model loaded")
-except Exception as e:
-    log_status("ERROR", f"NER load error: {e}")
-    nlp = spacy.load("en_core_web_sm")
-    log_status("OK", "Fallback spaCy model loaded after error")
+        return _nlp
+    except Exception as e:
+        log_status("WARN", f"Fallback spaCy model unavailable: {e}")
 
-clause_model = None
-risk_model = None
+    _nlp = spacy.blank("en")
+    log_status("OK", "Using blank English spaCy pipeline fallback")
+    return _nlp
 
-if os.path.exists(CLAUSE_MODEL_PATH):
-    clause_model = joblib.load(CLAUSE_MODEL_PATH)
-    log_status("OK", "Clause model loaded")
-else:
-    log_status("WARN", "Clause model not found")
 
-if os.path.exists(RISK_MODEL_PATH):
-    risk_model = joblib.load(RISK_MODEL_PATH)
-    log_status("OK", "Risk model loaded")
-else:
-    log_status("WARN", "Risk model not found")
+def get_clause_model():
+    global _clause_model, _clause_model_loaded
+
+    if _clause_model_loaded:
+        return _clause_model
+
+    _clause_model_loaded = True
+
+    if os.path.exists(CLAUSE_MODEL_PATH):
+        try:
+            _clause_model = joblib.load(CLAUSE_MODEL_PATH)
+            log_status("OK", "Clause model loaded")
+        except Exception as e:
+            log_status("WARN", f"Clause model load failed: {e}")
+            _clause_model = None
+    else:
+        log_status("WARN", "Clause model not found")
+
+    return _clause_model
+
+
+def get_risk_model():
+    global _risk_model, _risk_model_loaded
+
+    if _risk_model_loaded:
+        return _risk_model
+
+    _risk_model_loaded = True
+
+    if os.path.exists(RISK_MODEL_PATH):
+        try:
+            _risk_model = joblib.load(RISK_MODEL_PATH)
+            log_status("OK", "Risk model loaded")
+        except Exception as e:
+            log_status("WARN", f"Risk model load failed: {e}")
+            _risk_model = None
+    else:
+        log_status("WARN", "Risk model not found")
+
+    return _risk_model
 
 
 def predict_entities(text: str):
+    nlp = get_nlp()
     doc = nlp(text)
     entities = []
 
@@ -139,6 +186,8 @@ def predict_clause_type(clause_text: str):
     ]):
         return "payment"
 
+    clause_model = get_clause_model()
+
     if clause_model:
         return clause_model.predict([clause_text])[0]
 
@@ -156,6 +205,8 @@ def predict_risk(clause_text: str):
         heuristic_risk = "high"
     elif "may terminate" in lower or "material breach" in lower or "automatic renewal" in lower:
         heuristic_risk = "medium"
+
+    risk_model = get_risk_model()
 
     if not risk_model:
         return heuristic_risk

@@ -37,6 +37,8 @@ backend/*-firebase-adminsdk-*.json
 backend/*service-account*.json
 *credentials*.json
 backend/*credentials*.json
+client_secret*.json
+backend/client_secret*.json
 secrets/
 backend/secrets/
 credentials/

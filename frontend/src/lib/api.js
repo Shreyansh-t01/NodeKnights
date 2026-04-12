@@ -54,6 +54,11 @@ async function request(path, options = {}) {
 export const api = {
   baseUrl: API_BASE_URL,
   getHealth: () => request('/health'),
+  getNotifications: (params = {}) => request(`/notifications${buildQueryString(params)}`),
+  markNotificationsRead: () => request('/notifications/read', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  }),
   getContracts: () => request('/contracts'),
   getContractById: (contractId) => request(`/contracts/${contractId}`),
   getContractInsights: (contractId, clauseId) => request(

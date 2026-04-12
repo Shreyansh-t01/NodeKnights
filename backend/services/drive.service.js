@@ -5,6 +5,7 @@ const AppError = require('../errors/AppError');
 const { env, featureFlags } = require('../config/env');
 const { ingestManualContract } = require('./contract.service');
 const { getOAuthClient } = require('./googleAuth.service');
+const { notifyAnalyzedDocument } = require('./notification.service');
 const {
   getConnectorState,
   getProcessedSource,
@@ -97,17 +98,21 @@ function normalizeHeaderMap(headers = {}) {
 }
 
 function ensureDriveWatchConfigured() {
-  if (!hasConfiguredDriveFolders()) {
-    throw new AppError(
-      400,
-      'Set GOOGLE_DRIVE_FOLDER_IDS in the backend env file before enabling Drive watch sync.',
-    );
-  }
+  ensureDriveSyncConfigured();
 
   if (!env.googleDriveWebhookUrl) {
     throw new AppError(
       400,
       'Set GOOGLE_DRIVE_WEBHOOK_URL in the backend env file before enabling Drive watch sync.',
+    );
+  }
+}
+
+function ensureDriveSyncConfigured() {
+  if (!hasConfiguredDriveFolders()) {
+    throw new AppError(
+      400,
+      'Set GOOGLE_DRIVE_FOLDER_IDS in the backend env file before enabling Drive sync.',
     );
   }
 }
@@ -232,12 +237,32 @@ async function processDriveFileMetadata(metadata, { trigger = 'manual-import' } 
       modifiedTime: metadata.modifiedTime || downloaded.modifiedTime || null,
       dedupeKey,
     });
+    let notification = null;
+    let notificationError = null;
+
+    try {
+      notification = await notifyAnalyzedDocument({
+        payload,
+        source: 'google-drive',
+        trigger,
+        details: {
+          fileId,
+          folderId: folderId || downloaded.folderId || '',
+          sourceUrl: metadata.webViewLink || downloaded.sourceUrl || '',
+        },
+      });
+    } catch (error) {
+      notificationError = error.message;
+      console.error('Drive notification creation failed:', error.message);
+    }
 
     await markProcessedSource(dedupeKey, {
       connector: 'google-drive',
       trigger,
       fileId,
       contractId: payload.contract.id,
+      notificationId: notification?.id || null,
+      notificationError,
       folderId: folderId || downloaded.folderId || '',
       modifiedTime: metadata.modifiedTime || downloaded.modifiedTime || null,
       processedAt: new Date().toISOString(),
@@ -248,6 +273,8 @@ async function processDriveFileMetadata(metadata, { trigger = 'manual-import' } 
       fileId,
       sourceKey: dedupeKey,
       contractId: payload.contract.id,
+      notificationId: notification?.id || null,
+      notificationError,
       payload,
     };
   } catch (error) {
@@ -328,7 +355,7 @@ async function syncDriveChanges({ trigger = 'manual-sync' } = {}) {
   }
 
   activeSyncPromise = (async () => {
-    ensureDriveWatchConfigured();
+    ensureDriveSyncConfigured();
 
     const drive = await getDriveClient();
     const syncState = await getConnectorState(DRIVE_SYNC_STATE_KEY) || {};

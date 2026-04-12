@@ -9,13 +9,13 @@ const {
   saveGoogleTokens,
 } = require('./googleTokenStore.service');
 
-
 const GOOGLE_SCOPE_MAP = {
   drive: 'https://www.googleapis.com/auth/drive.readonly',
   gmail: 'https://www.googleapis.com/auth/gmail.readonly',
+  'gmail-send': 'https://www.googleapis.com/auth/gmail.send',
 };
 
-const DEFAULT_SCOPE_ALIASES = ['drive', 'gmail'];
+const DEFAULT_SCOPE_ALIASES = ['drive', 'gmail', 'gmail-send'];
 
 function ensureGoogleOAuthConfigured() {
   if (!featureFlags.googleConnectors) {
@@ -41,20 +41,36 @@ function normalizeScopes(scopeAliases = []) {
     ? scopeAliases
     : DEFAULT_SCOPE_ALIASES;
 
-  const scopes = requestedAliases
-    .map((item) => GOOGLE_SCOPE_MAP[String(item).trim().toLowerCase()])
-    .filter(Boolean);
+  return Array.from(new Set(
+    requestedAliases
+      .map((item) => {
+        const normalized = String(item || '').trim().toLowerCase();
+        return GOOGLE_SCOPE_MAP[normalized] || String(item || '').trim();
+      })
+      .filter(Boolean),
+  ));
+}
 
-  return scopes.length
-    ? Array.from(new Set(scopes))
-    : DEFAULT_SCOPE_ALIASES.map((alias) => GOOGLE_SCOPE_MAP[alias]);
+function attachTokenPersistence(oauth2Client, fallbackRefreshToken = '') {
+  oauth2Client.on('tokens', (tokens = {}) => {
+    if (!Object.keys(tokens).length) {
+      return;
+    }
+
+    void saveGoogleTokens({
+      ...tokens,
+      refresh_token: tokens.refresh_token || fallbackRefreshToken,
+    }).catch((error) => {
+      console.warn('Failed to persist refreshed Google tokens:', error.message);
+    });
+  });
+
+  return oauth2Client;
 }
 
 function createGoogleAuthUrl({ scopes = [], state = '' } = {}) {
   const oauth2Client = getOAuthBaseClient();
   const normalizedScopes = normalizeScopes(scopes);
-
-   
 
   return {
     redirectUri: env.googleRedirectUri,
@@ -68,47 +84,10 @@ function createGoogleAuthUrl({ scopes = [], state = '' } = {}) {
     }),
   };
 }
-const keysforenv =""
-
-function createOAuth2Client(){
-  function createOAuth2Client() {
-  console.log("GOOGLE_CLIENT_ID:", process.env.GOOGLE_CLIENT_ID);
-  console.log("GOOGLE_CLIENT_SECRET:", process.env.GOOGLE_CLIENT_SECRET);
-  console.log("GOOGLE_CALLBACK_URL:", process.env.GOOGLE_CALLBACK_URL);
-
-  if (
-    !process.env.GOOGLE_CLIENT_ID ||
-    !process.env.GOOGLE_CLIENT_SECRET ||
-    !process.env.GOOGLE_CALLBACK_URL
-  ) {
-    throw new Error("Google OAuth environment variables are missing");
-  }
-
-  return new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_CALLBACK_URL
-  );
-}
-}
-
-const createUrl =  ()=>{
-  const oauth2client = createOAuth2Client();
-  const url = oauth2client.generateAuthUrl({
-    access_type:"offline",
-    prompt: "consent",
-    scope:  GOOGLE_SCOPE_MAP,
-  });
-
-  return url;
-}
 
 async function getOAuthClient() {
-  const oauth2Client = getOAuthBaseClient();
   const storedTokens = await getStoredGoogleTokens();
   const refreshToken = env.googleRefreshToken || storedTokens?.refreshToken || '';
- 
-
 
   if (!refreshToken) {
     throw new AppError(
@@ -120,7 +99,9 @@ async function getOAuthClient() {
       },
     );
   }
-  
+
+  const oauth2Client = attachTokenPersistence(getOAuthBaseClient(), refreshToken);
+
   oauth2Client.setCredentials({
     refresh_token: refreshToken,
     access_token: storedTokens?.accessToken || undefined,
@@ -129,24 +110,18 @@ async function getOAuthClient() {
     token_type: storedTokens?.tokenType || undefined,
   });
 
-   console.log(oauth2Client);
   return oauth2Client;
 }
 
-console.log(keysforenv);
-
-
 async function exchangeGoogleAuthCode(code) {
-  const oauth2Client = getOAuthBaseClient();
+  const oauth2Client = attachTokenPersistence(getOAuthBaseClient());
   const { tokens } = await oauth2Client.getToken(code);
   const currentTokens = await getStoredGoogleTokens();
   const refreshToken = tokens.refresh_token || env.googleRefreshToken || currentTokens?.refreshToken || '';
-  console.log(refreshToken);
 
   if (!refreshToken) {
     throw new AppError(
       502,
-      
       'Google OAuth completed but no refresh token was returned. Re-run consent with prompt=consent or revoke the previous app grant and try again.',
     );
   }
@@ -155,7 +130,7 @@ async function exchangeGoogleAuthCode(code) {
     ...tokens,
     refresh_token: refreshToken,
   });
-    console.log(storedTokens);
+
   return {
     connected: true,
     tokenSource: 'local-store',
@@ -174,10 +149,11 @@ async function disconnectGoogleOAuth() {
 }
 
 module.exports = {
+  GOOGLE_SCOPE_MAP,
   createGoogleAuthUrl,
   disconnectGoogleOAuth,
   exchangeGoogleAuthCode,
   getGoogleConnectorStatus,
   getOAuthClient,
-  createUrl
+  normalizeScopes,
 };

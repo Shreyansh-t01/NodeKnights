@@ -66,6 +66,42 @@ function resolveIfPresent(value, fallback = '') {
   return path.isAbsolute(value) ? value : path.resolve(projectRoot, value);
 }
 
+function firstHttpUrl(value) {
+  const urls = String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => /^https?:\/\//i.test(item));
+
+  const preferred =
+    urls.find((item) => /^https:\/\//i.test(item) && !/localhost|127\.0\.0\.1/i.test(item))
+    || urls.find((item) => !/localhost|127\.0\.0\.1/i.test(item))
+    || urls.find((item) => /^https:\/\//i.test(item))
+    || urls[0];
+
+  return preferred || '';
+}
+
+function joinUrl(baseUrl, pathname) {
+  if (!baseUrl) {
+    return '';
+  }
+
+  return `${String(baseUrl).replace(/\/+$/, '')}/${String(pathname).replace(/^\/+/, '')}`;
+}
+
+function deriveWebhookUrl(redirectUri, apiPrefix) {
+  if (!redirectUri) {
+    return '';
+  }
+
+  try {
+    const url = new URL(redirectUri);
+    return joinUrl(url.origin, `${apiPrefix}/connectors/drive/notifications`);
+  } catch (error) {
+    return '';
+  }
+}
+
 const configuredGenAiProvider = (process.env.GENAI_PROVIDER || (process.env.GEMINI_API_KEY ? 'gemini' : 'template'))
   .trim()
   .toLowerCase();
@@ -78,12 +114,18 @@ const configuredGenAiApiKey = process.env.GEMINI_API_KEY || process.env.GENAI_AP
 const configuredGenAiModel = process.env.GEMINI_MODEL
   || process.env.GENAI_MODEL
   || (configuredGenAiProvider === 'gemini' ? 'gemini-2.5-flash' : '');
+const configuredApiPrefix = process.env.API_PREFIX || '/api';
+const configuredCorsOrigin = process.env.CORS_ORIGIN || '*';
+const configuredGoogleRedirectUri = process.env.GOOGLE_REDIRECT_URI || '';
+const configuredAppBaseUrl = process.env.APP_BASE_URL || firstHttpUrl(configuredCorsOrigin);
+const configuredDriveWebhookUrl = process.env.GOOGLE_DRIVE_WEBHOOK_URL
+  || deriveWebhookUrl(configuredGoogleRedirectUri, configuredApiPrefix);
 
 const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: asNumber(process.env.PORT, 3000),
-  apiPrefix: process.env.API_PREFIX || '/api',
-  corsOrigin: process.env.CORS_ORIGIN || '*',
+  apiPrefix: configuredApiPrefix,
+  corsOrigin: configuredCorsOrigin,
   maxUploadSizeMb: asNumber(process.env.MAX_UPLOAD_SIZE_MB, 20),
   tempStorageDir: resolveIfPresent(process.env.TEMP_STORAGE_DIR, path.resolve(projectRoot, 'tmp')),
   mlServiceUrl: process.env.ML_SERVICE_URL || 'http://127.0.0.1:8001',
@@ -98,17 +140,23 @@ const env = {
   supabaseStorageBucket: process.env.SUPABASE_STORAGE_BUCKET || '',
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-  googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || '',
+  googleRedirectUri: configuredGoogleRedirectUri,
   googleRefreshToken: process.env.GOOGLE_REFRESH_TOKEN || '',
   googleWorkspaceUser: process.env.GOOGLE_WORKSPACE_USER || 'me',
+  appBaseUrl: configuredAppBaseUrl,
   googleDriveFolderIds: asList(process.env.GOOGLE_DRIVE_FOLDER_IDS),
-  googleDriveWebhookUrl: process.env.GOOGLE_DRIVE_WEBHOOK_URL || '',
+  googleDriveWebhookUrl: configuredDriveWebhookUrl,
   googleDriveWatchEnabled: asBoolean(process.env.GOOGLE_DRIVE_WATCH_ENABLED, false),
   googleDriveWatchChannelToken: process.env.GOOGLE_DRIVE_WATCH_CHANNEL_TOKEN || '',
   googleDriveWatchExpirationMs: asNumber(process.env.GOOGLE_DRIVE_WATCH_EXPIRATION_MS, 604800000),
   googleDriveWatchRenewalLeadMs: asNumber(process.env.GOOGLE_DRIVE_WATCH_RENEWAL_LEAD_MS, 21600000),
   googleDriveWatchRenewalCheckMs: asNumber(process.env.GOOGLE_DRIVE_WATCH_RENEWAL_CHECK_MS, 3600000),
   gmailDefaultQuery: process.env.GMAIL_DEFAULT_QUERY || 'has:attachment filename:pdf newer_than:30d',
+  gmailPollEnabled: asBoolean(process.env.GMAIL_POLL_ENABLED, false),
+  gmailPollIntervalMs: asNumber(process.env.GMAIL_POLL_INTERVAL_MS, 300000),
+  gmailPollMaxResults: asNumber(process.env.GMAIL_POLL_MAX_RESULTS, 10),
+  notificationEmailEnabled: asBoolean(process.env.NOTIFICATION_EMAIL_ENABLED, true),
+  notificationEmailRecipients: asList(process.env.NOTIFICATION_EMAIL_RECIPIENTS),
   pineconeApiKey: process.env.PINECONE_API_KEY || '',
   pineconeIndexHost: process.env.PINECONE_INDEX_HOST || '',
   pineconeNamespace: process.env.PINECONE_NAMESPACE || 'contracts',

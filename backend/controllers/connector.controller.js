@@ -7,7 +7,11 @@ const {
   stopDriveChangesWatch,
   syncDriveChanges,
 } = require('../services/drive.service');
-const { importGmailAttachments } = require('../services/gmail.service');
+const {
+  getGmailPollStatus,
+  importGmailAttachments,
+  syncGmailAttachments,
+} = require('../services/gmail.service');
 
 const importFromDrive = asyncHandler(async (req, res) => {
   const results = await importDriveFiles(req.body || {});
@@ -75,12 +79,35 @@ const importFromGmail = asyncHandler(async (req, res) => {
   });
 });
 
+const getGmailPoll = asyncHandler(async (req, res) => {
+  res.json({
+    success: true,
+    data: await getGmailPollStatus(),
+  });
+});
+
+const syncGmailPoll = asyncHandler(async (req, res) => {
+  const result = await syncGmailAttachments({
+    trigger: 'manual-gmail-poll-sync',
+    query: req.body?.query,
+    maxResults: req.body?.maxResults,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'Gmail attachment sync processed successfully.',
+    data: result,
+  });
+});
+
 module.exports = {
   getDriveWatch,
+  getGmailPoll,
   importFromDrive,
   importFromGmail,
   receiveDriveNotification,
   startDriveWatch,
   stopDriveWatch,
+  syncGmailPoll,
   syncDriveWatch,
 };

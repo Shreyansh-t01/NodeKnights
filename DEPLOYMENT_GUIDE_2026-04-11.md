@@ -112,6 +112,7 @@ NODE_ENV=production
 PORT=3000
 API_PREFIX=/api
 CORS_ORIGIN=https://app.example.com
+APP_BASE_URL=https://app.example.com
 ML_SERVICE_URL=http://127.0.0.1:8001
 REQUIRE_PYTHON_ML_SERVICE=false
 STRICT_REMOTE_SERVICES=true
@@ -135,6 +136,10 @@ GOOGLE_DRIVE_FOLDER_IDS=your_drive_folder_id
 GOOGLE_DRIVE_WATCH_ENABLED=true
 GOOGLE_DRIVE_WEBHOOK_URL=https://api.example.com/api/connectors/drive/notifications
 GOOGLE_DRIVE_WATCH_CHANNEL_TOKEN=put-a-long-random-secret-here
+GMAIL_POLL_ENABLED=true
+GMAIL_POLL_INTERVAL_MS=300000
+NOTIFICATION_EMAIL_ENABLED=true
+NOTIFICATION_EMAIL_RECIPIENTS=team@example.com
 ```
 
 If you use same-domain routing, these can also be:
@@ -143,6 +148,12 @@ If you use same-domain routing, these can also be:
 GOOGLE_REDIRECT_URI=https://app.example.com/api/connectors/google/callback
 GOOGLE_DRIVE_WEBHOOK_URL=https://app.example.com/api/connectors/drive/notifications
 ```
+
+Notes:
+
+- if `APP_BASE_URL` is not set, the backend now falls back to the first hosted URL in `CORS_ORIGIN`
+- if `GOOGLE_DRIVE_WEBHOOK_URL` is not set, the backend now derives it from `GOOGLE_REDIRECT_URI`
+- Gmail notification emails need the Google connection to include `https://www.googleapis.com/auth/gmail.send`
 
 ### Step 3. Install backend dependencies
 
@@ -477,6 +488,9 @@ Before calling the deployment complete, verify all of these:
 
 - Google status route says connected
 - Drive watch route says active after start
+- Gmail polling route reports enabled if you want automatic email ingestion
+- a newly analyzed remote document creates an in-app notification
+- email notifications are delivered or clearly report a missing `gmail.send` scope
 - file upload in watched folder leads to new contract ingestion
 
 ## 14. Most common mistakes to avoid

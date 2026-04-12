@@ -1,6 +1,8 @@
 const { firestore, firestoreStatus, firebaseStatus } = require('../config/firebase');
 const { supabase, supabaseStatus } = require('../config/supabase');
 const { env, featureFlags } = require('../config/env');
+const { getDriveWatchStatus } = require('../services/drive.service');
+const { getGmailPollStatus } = require('../services/gmail.service');
 const { getGoogleConnectorStatus } = require('../services/googleAuth.service');
 
 function buildPineconeBaseUrl() {
@@ -257,8 +259,13 @@ async function getMlServiceStatus() {
 }
 
 async function getHealth(req, res) {
-  const mlServiceStatus = await getMlServiceStatus();
-  const googleStatus = await getGoogleConnectorStatus();
+  const [mlServiceStatus, googleStatus, driveStatus, gmailStatus] = await Promise.all([
+    getMlServiceStatus(),
+    getGoogleConnectorStatus(),
+    getDriveWatchStatus(),
+    getGmailPollStatus(),
+  ]);
+  const workspaceRecipientConfigured = String(env.googleWorkspaceUser || '').includes('@');
 
   res.json({
     success: true,
@@ -290,6 +297,14 @@ async function getHealth(req, res) {
         tokenSource: googleStatus.tokenSource,
         redirectUri: googleStatus.redirectUri,
         mode: featureFlags.googleConnectors ? 'oauth-browser-flow' : 'disabled',
+        drive: driveStatus,
+        gmail: gmailStatus,
+        notifications: {
+          enabled: env.notificationEmailEnabled,
+          transport: featureFlags.googleConnectors ? 'gmail-api' : 'disabled',
+          recipientsConfigured: env.notificationEmailRecipients.length > 0 || workspaceRecipientConfigured,
+          recipientCount: env.notificationEmailRecipients.length || (workspaceRecipientConfigured ? 1 : 0),
+        },
       },
       reasoning: {
         enabled: featureFlags.externalGenAi,

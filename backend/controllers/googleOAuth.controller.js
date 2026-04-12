@@ -5,7 +5,6 @@ const {
   disconnectGoogleOAuth,
   exchangeGoogleAuthCode,
   getGoogleConnectorStatus,
-  createUrl
 } = require('../services/googleAuth.service');
 
 function buildCallbackHtml({ title, message, details = [] }) {

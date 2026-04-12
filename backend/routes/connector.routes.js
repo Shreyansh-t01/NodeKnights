@@ -2,11 +2,13 @@ const { Router } = require('express');
 
 const {
   getDriveWatch,
+  getGmailPoll,
   importFromDrive,
   importFromGmail,
   receiveDriveNotification,
   startDriveWatch,
   stopDriveWatch,
+  syncGmailPoll,
   syncDriveWatch,
 } = require('../controllers/connector.controller');
 const {
@@ -28,6 +30,8 @@ router.post('/drive/watch/sync', syncDriveWatch);
 router.post('/drive/watch/stop', stopDriveWatch);
 router.post('/drive/notifications', receiveDriveNotification);
 router.post('/drive/import', importFromDrive);
+router.get('/gmail/poll', getGmailPoll);
+router.post('/gmail/poll/sync', syncGmailPoll);
 router.post('/gmail/import', importFromGmail);
 
 module.exports = router;
