@@ -7,6 +7,9 @@ const { generateStructuredObject, isGeminiEnabled } = require('./genAi.service')
 
 const rulebook = JSON.parse(fs.readFileSync(env.rulebookPath, 'utf-8'));
 
+// Cache for clause insights to avoid repeated API calls
+const clauseInsightCache = new Map();
+
 const contractOverviewSchema = {
   type: 'object',
   properties: {
@@ -16,7 +19,24 @@ const contractOverviewSchema = {
       type: 'array',
       items: { type: 'string' },
     },
-    clauseInsights: {
+  },
+  required: ['headline', 'summary', 'nextSteps'],
+};
+
+const clauseInsightSchema = {
+  type: 'object',
+  properties: {
+    whyItIsRisky: { type: 'string' },
+    comparison: { type: 'string' },
+    recommendedChange: { type: 'string' },
+  },
+  required: ['whyItIsRisky', 'comparison', 'recommendedChange'],
+};
+
+const batchClauseInsightSchema = {
+  type: 'object',
+  properties: {
+    insights: {
       type: 'array',
       items: {
         type: 'object',
@@ -30,17 +50,7 @@ const contractOverviewSchema = {
       },
     },
   },
-  required: ['headline', 'summary', 'nextSteps', 'clauseInsights'],
-};
-
-const clauseInsightSchema = {
-  type: 'object',
-  properties: {
-    whyItIsRisky: { type: 'string' },
-    comparison: { type: 'string' },
-    recommendedChange: { type: 'string' },
-  },
-  required: ['whyItIsRisky', 'comparison', 'recommendedChange'],
+  required: ['insights'],
 };
 
 const semanticAnswerSchema = {
@@ -235,7 +245,7 @@ function toSupportingMatches(matches = []) {
 }
 
 function toPromptMatches(matches = []) {
-  return matches.slice(0, 5).map((match) => {
+  return matches.slice(0, 3).map((match) => {
     const normalized = normalizePrecedentMatch(match);
 
     return {
@@ -243,8 +253,8 @@ function toPromptMatches(matches = []) {
       score: normalized.score,
       clauseType: normalized.clauseType,
       riskLabel: normalized.riskLabel,
-      clauseTextSummary: trimPromptText(normalized.clauseTextSummary, 260),
-      clauseTextFull: trimPromptText(normalized.clauseTextFull, 1000),
+      clauseTextSummary: trimPromptText(normalized.clauseTextSummary, 180),
+      clauseTextFull: trimPromptText(normalized.clauseTextFull, 420),
       contractTitle: normalized.title,
       position: match.position || match.metadata?.position || null,
       sectionHeading: normalized.sectionHeading,
@@ -255,7 +265,7 @@ function toPromptMatches(matches = []) {
 }
 
 function toPromptRuleMatches(matches = []) {
-  return matches.slice(0, 5).map((match) => {
+  return matches.slice(0, 3).map((match) => {
     const normalized = normalizeRuleMatch(match);
 
     return {
@@ -267,10 +277,10 @@ function toPromptRuleMatches(matches = []) {
       primaryClauseType: normalized.primaryClauseType,
       clauseTypes: normalized.clauseTypes,
       primaryConcern: normalized.primaryConcern,
-      benchmark: trimPromptText(normalized.benchmark, 400),
-      recommendedAction: trimPromptText(normalized.recommendedAction, 400),
-      textSummary: trimPromptText(normalized.textSummary, 320),
-      textFull: trimPromptText(normalized.textFull, 1000),
+      benchmark: trimPromptText(normalized.benchmark, 240),
+      recommendedAction: trimPromptText(normalized.recommendedAction, 240),
+      textSummary: trimPromptText(normalized.textSummary, 200),
+      textFull: trimPromptText(normalized.textFull, 420),
       jurisdiction: normalized.jurisdiction,
       league: normalized.league,
       sport: normalized.sport,
@@ -368,6 +378,38 @@ function buildTemplateSemanticAnswer({ query, matches, contract }) {
   };
 }
 
+function buildOverviewClauseContext(insight = {}) {
+  const topRule = Array.isArray(insight.ruleMatches) ? insight.ruleMatches[0] : null;
+
+  return {
+    clauseId: insight.clauseId,
+    clauseType: insight.clauseType,
+    riskLabel: insight.riskLabel,
+    currentClauseSummary: trimPromptText(
+      insight.currentClause?.clauseTextSummary
+      || insight.currentClause?.clauseText
+      || '',
+      180,
+    ),
+    bestPrecedentSummary: trimPromptText(
+      insight.precedentClause?.clauseTextSummary
+      || insight.precedentClause?.clauseText
+      || insight.precedentClause?.clauseTextFull
+      || '',
+      180,
+    ),
+    benchmarkSummary: trimPromptText(
+      topRule?.benchmark
+      || topRule?.textSummary
+      || topRule?.primaryConcern
+      || '',
+      220,
+    ),
+    whyItIsRisky: trimPromptText(insight.whyItIsRisky, 220),
+    recommendedChange: trimPromptText(insight.recommendedChange, 220),
+  };
+}
+
 function buildContractOverviewPrompt(contractBundle, fallback) {
   const { contract, risks } = contractBundle;
 
@@ -398,22 +440,13 @@ function buildContractOverviewPrompt(contractBundle, fallback) {
         severity: risk.severity,
         summary: risk.summary,
       })),
-      targetClauses: fallback.clauseInsights.map((insight) => ({
-        clauseId: insight.clauseId,
-        clauseType: insight.clauseType,
-        riskLabel: insight.riskLabel,
-        currentClause: insight.currentClause,
-        precedentClause: insight.precedentClause,
-        ruleMatches: toPromptRuleMatches(insight.ruleMatches || []),
-      })),
+      targetClauses: fallback.clauseInsights.map(buildOverviewClauseContext),
     }),
     '',
     'Requirements:',
     '- Keep the headline concise and action-oriented.',
-    '- Make the summary useful for a reviewer deciding what to inspect next.',
-    '- Provide 3 to 5 nextSteps.',
-    '- Return one clauseInsights item for each provided target clause.',
-    '- Each clauseInsights item must keep the same clauseId.',
+    '- Make the summary useful for a reviewer deciding what to inspect next in 2 to 4 sentences.',
+    '- Provide 3 to 5 short nextSteps.',
   ].join('\n');
 }
 
@@ -428,19 +461,56 @@ function buildClauseInsightPrompt(clause, reviewContext = {}) {
     'Do not invent facts beyond the provided context.',
     'Keep the explanation practical and actionable.',
     'When explaining the comparison, explicitly anchor it to the precedent and benchmark guidance in the context.',
+    'Keep whyItIsRisky, comparison, and recommendedChange to 1 to 2 sentences each.',
     'Return JSON only.',
     '',
     'Context:',
     serializePromptContext({
       currentClause: {
         ...currentClause,
-        clauseText: trimPromptText(currentClause.clauseText, 260),
-        clauseTextSummary: trimPromptText(currentClause.clauseTextSummary, 260),
-        clauseTextFull: trimPromptText(currentClause.clauseTextFull, 1100),
+        clauseText: trimPromptText(currentClause.clauseText, 200),
+        clauseTextSummary: trimPromptText(currentClause.clauseTextSummary, 200),
+        clauseTextFull: trimPromptText(currentClause.clauseTextFull, 700),
       },
       precedentMatches: toPromptMatches(precedentMatches),
       ruleMatches: toPromptRuleMatches(ruleMatches),
     }),
+  ].join('\n');
+}
+
+function buildBatchClauseInsightPrompt(clauses, reviewContexts = []) {
+  const clausesData = clauses.map((clause, index) => {
+    const reviewContext = reviewContexts[index] || {};
+    const currentClause = buildCurrentClausePayload(clause, reviewContext.currentClause || {});
+    const precedentMatches = (reviewContext.precedentMatches || []).map(normalizePrecedentMatch);
+    const ruleMatches = ensureRuleMatches(reviewContext.ruleMatches || [], clause.clauseType);
+
+    return {
+      clauseId: clause.id,
+      context: {
+        currentClause: {
+          ...currentClause,
+          clauseText: trimPromptText(currentClause.clauseText, 200),
+          clauseTextSummary: trimPromptText(currentClause.clauseTextSummary, 200),
+          clauseTextFull: trimPromptText(currentClause.clauseTextFull, 700),
+        },
+        precedentMatches: toPromptMatches(precedentMatches),
+        ruleMatches: toPromptRuleMatches(ruleMatches),
+      },
+    };
+  });
+
+  return [
+    'You are a legal contract review assistant.',
+    'Review the target clauses using only the clause data, precedent matches, and policy/rule matches below.',
+    'Do not invent facts beyond the provided context.',
+    'Keep the explanations practical and actionable.',
+    'When explaining the comparison, explicitly anchor it to the precedent and benchmark guidance in the context.',
+    'Keep each whyItIsRisky, comparison, and recommendedChange value to 1 to 2 sentences.',
+    'Return JSON only with an array of insights, each containing clauseId, whyItIsRisky, comparison, and recommendedChange.',
+    '',
+    'Clauses to analyze:',
+    JSON.stringify(clausesData, null, 2),
   ].join('\n');
 }
 
@@ -491,25 +561,12 @@ async function generateContractOverview(contractBundle) {
       label: 'contract overview',
     });
 
-    const generatedInsights = Array.isArray(generated?.clauseInsights) ? generated.clauseInsights : [];
-
     return attachInsightMeta({
       headline: asText(generated?.headline, fallback.headline),
       summary: asText(generated?.summary, fallback.summary),
       topRiskItems: fallback.topRiskItems,
       nextSteps: asStringArray(generated?.nextSteps, fallback.nextSteps, 5),
-      clauseInsights: fallback.clauseInsights.map((fallbackInsight, index) => {
-        const generatedInsight = generatedInsights.find((item) => item?.clauseId === fallbackInsight.clauseId)
-          || generatedInsights[index]
-          || {};
-
-        return {
-          ...fallbackInsight,
-          whyItIsRisky: asText(generatedInsight?.whyItIsRisky, fallbackInsight.whyItIsRisky),
-          comparison: asText(generatedInsight?.comparison, fallbackInsight.comparison),
-          recommendedChange: asText(generatedInsight?.recommendedChange, fallbackInsight.recommendedChange),
-        };
-      }),
+      clauseInsights: fallback.clauseInsights,
     });
   } catch (error) {
     console.warn('Gemini contract overview failed, using explicit template fallback:', error.message);
@@ -521,7 +578,65 @@ async function generateContractOverview(contractBundle) {
   }
 }
 
+async function generateBatchClauseInsights(clauses, reviewContexts = []) {
+  const fallbacks = clauses.map((clause, index) => buildTemplateClauseInsight(clause, reviewContexts[index] || {}));
+
+  if (!isGeminiEnabled()) {
+    return fallbacks.map((fallback, index) => attachInsightMeta(fallback, {
+      degraded: true,
+      provider: 'template-fallback',
+      geminiError: buildGeminiFailureInfo(
+        new AppError(503, 'Gemini is not configured for clause insights.', {
+          provider: env.genAiProvider,
+          model: env.genAiModel,
+        }),
+      ),
+    }));
+  }
+
+  try {
+    const generated = await generateStructuredObject({
+      prompt: buildBatchClauseInsightPrompt(clauses, reviewContexts),
+      responseSchema: batchClauseInsightSchema,
+      label: 'batch clause insights',
+    });
+
+    const generatedInsights = generated?.insights || [];
+
+    return fallbacks.map((fallback, index) => {
+      const generatedInsight = generatedInsights.find((item) => item?.clauseId === clauses[index].id) || {};
+
+      const result = attachInsightMeta({
+        ...fallback,
+        whyItIsRisky: asText(generatedInsight?.whyItIsRisky, fallback.whyItIsRisky),
+        comparison: asText(generatedInsight?.comparison, fallback.comparison),
+        recommendedChange: asText(generatedInsight?.recommendedChange, fallback.recommendedChange),
+      });
+
+      // Cache successful results
+      if (result.provider === 'gemini' && !result.degraded) {
+        clauseInsightCache.set(clauses[index].id, result);
+      }
+
+      return result;
+    });
+  } catch (error) {
+    console.warn('Gemini batch clause insights failed, using explicit template fallback:', error.message);
+    return fallbacks.map((fallback) => attachInsightMeta(fallback, {
+      degraded: true,
+      provider: 'template-fallback',
+      geminiError: buildGeminiFailureInfo(error),
+    }));
+  }
+}
+
 async function generateClauseInsight(clause, reviewContext = {}) {
+  const cacheKey = `${clause.id}`;
+  const cached = clauseInsightCache.get(cacheKey);
+  if (cached && cached.provider === 'gemini' && !cached.degraded) {
+    return cached;
+  }
+
   const fallback = buildTemplateClauseInsight(clause, reviewContext);
 
   if (!isGeminiEnabled()) {
@@ -544,12 +659,19 @@ async function generateClauseInsight(clause, reviewContext = {}) {
       label: 'clause insight',
     });
 
-    return attachInsightMeta({
+    const result = attachInsightMeta({
       ...fallback,
       whyItIsRisky: asText(generated?.whyItIsRisky, fallback.whyItIsRisky),
       comparison: asText(generated?.comparison, fallback.comparison),
       recommendedChange: asText(generated?.recommendedChange, fallback.recommendedChange),
     });
+
+    // Cache successful results
+    if (result.provider === 'gemini' && !result.degraded) {
+      clauseInsightCache.set(cacheKey, result);
+    }
+
+    return result;
   } catch (error) {
     console.warn('Gemini clause insight failed, using explicit template fallback:', error.message);
     return attachInsightMeta(fallback, {
@@ -603,5 +725,6 @@ async function buildSemanticAnswer({ query, matches, contract }) {
 module.exports = {
   buildSemanticAnswer,
   generateClauseInsight,
+  generateBatchClauseInsights,
   generateContractOverview,
 };

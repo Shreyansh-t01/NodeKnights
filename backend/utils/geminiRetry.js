@@ -90,7 +90,7 @@ function computeRetryDelayMs({
   explicitRetryMs = 0,
 }) {
   if (explicitRetryMs > 0) {
-    return Math.min(explicitRetryMs, maxMs);
+    return explicitRetryMs;
   }
 
   const exponent = Math.max(0, attempt - 1);

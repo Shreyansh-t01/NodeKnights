@@ -9,11 +9,12 @@ const { embedText, embedTexts } = require('./embedding.service');
 const {
   deleteContractBundle,
   saveContractBundle,
+  saveContractOverviewInsights,
   listContracts,
   getContractById,
 } = require('./contract.repository');
 const { deleteClauseVectorsForContract, upsertClauseVectors } = require('./vector.service');
-const { generateContractOverview, generateClauseInsight } = require('./insight.service');
+const { generateContractOverview, generateClauseInsight, generateBatchClauseInsights } = require('./insight.service');
 const {
   findComparableContractMatchesForClause,
   findPrecedentMatchesForClause,
@@ -108,14 +109,31 @@ async function buildAutomaticClauseInsights(contract, clauses = []) {
     .filter((clause) => clause.riskLabel === 'high')
     .slice(0, 5);
 
-  const insights = [];
-
-  for (const clause of targets) {
-    const reviewContext = await buildClauseReviewContext(contract, clause);
-    insights.push(await generateClauseInsight(clause, reviewContext));
+  if (targets.length === 0) {
+    return [];
   }
 
-  return insights;
+  // Build review contexts for all targets
+  const reviewContexts = await Promise.all(
+    targets.map((clause) => buildClauseReviewContext(contract, clause))
+  );
+
+  // Use batch generation for efficiency
+  return await generateBatchClauseInsights(targets, reviewContexts);
+}
+
+function isReusableGeminiOverview(insights) {
+  return Boolean(
+    insights
+      && insights.provider === 'gemini'
+      && !insights.degraded,
+  );
+}
+
+function getCachedContractOverview(contract = {}) {
+  const overview = contract.cachedInsights?.overview;
+
+  return isReusableGeminiOverview(overview) ? overview : null;
 }
 
 function describeArtifactStorage(artifact, label) {
@@ -211,6 +229,17 @@ async function ingestManualContract(file, options = {}) {
     risks,
     clauseInsights,
   });
+
+  if (isReusableGeminiOverview(insights)) {
+    contract.cachedInsights = {
+      ...(contract.cachedInsights || {}),
+      overview: insights,
+      generatedAt: new Date().toISOString(),
+      provider: insights.provider,
+      degraded: false,
+    };
+  }
+
   const vectorRecords = await createVectorRecords(contract, clauses);
   const vectorIndex = await upsertClauseVectors(vectorRecords, {
     namespace: env.pineconeContractNamespace,
@@ -263,15 +292,26 @@ async function buildContractInsights(contractId, clauseId) {
   const contractBundle = await getContractById(contractId);
 
   if (!clauseId) {
+    const cachedOverview = getCachedContractOverview(contractBundle.contract);
+
+    if (cachedOverview) {
+      return cachedOverview;
+    }
+
     const clauseInsights = await buildAutomaticClauseInsights(
       contractBundle.contract,
       contractBundle.clauses,
     );
-
-    return await generateContractOverview({
+    const overview = await generateContractOverview({
       ...contractBundle,
       clauseInsights,
     });
+
+    if (isReusableGeminiOverview(overview)) {
+      await saveContractOverviewInsights(contractId, overview);
+    }
+
+    return overview;
   }
 
   const clause = contractBundle.clauses.find((item) => item.id === clauseId);

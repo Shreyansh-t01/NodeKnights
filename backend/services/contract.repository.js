@@ -263,6 +263,81 @@ async function getContractById(contractId) {
   return getContractByIdLocal(contractId);
 }
 
+async function saveContractOverviewInsightsLocal(contractId, overviewInsights) {
+  const current = await readJsonFile(localStorePath, []);
+  const match = current.find((item) => item.contract.id === contractId);
+
+  if (!match) {
+    throw new AppError(404, `Contract not found: ${contractId}`);
+  }
+
+  const cachedInsights = {
+    ...(match.contract.cachedInsights || {}),
+    overview: overviewInsights,
+    generatedAt: new Date().toISOString(),
+    provider: overviewInsights?.provider || 'gemini',
+    degraded: Boolean(overviewInsights?.degraded),
+  };
+  const next = current.map((item) => (
+    item.contract.id === contractId
+      ? {
+        ...item,
+        contract: {
+          ...item.contract,
+          cachedInsights,
+        },
+      }
+      : item
+  ));
+
+  await writeJsonFile(localStorePath, next);
+
+  return cachedInsights;
+}
+
+async function saveContractOverviewInsightsFirebase(contractId, overviewInsights) {
+  const contractRef = firestore.collection('contracts').doc(contractId);
+  const contractDoc = await contractRef.get();
+
+  if (!contractDoc.exists) {
+    throw new AppError(404, `Contract not found: ${contractId}`);
+  }
+
+  const cachedInsights = {
+    ...(contractDoc.data()?.cachedInsights || {}),
+    overview: overviewInsights,
+    generatedAt: new Date().toISOString(),
+    provider: overviewInsights?.provider || 'gemini',
+    degraded: Boolean(overviewInsights?.degraded),
+  };
+
+  await contractRef.set({
+    cachedInsights,
+  }, { merge: true });
+
+  return cachedInsights;
+}
+
+async function saveContractOverviewInsights(contractId, overviewInsights) {
+  if (env.strictRemoteServices && (!firestoreStatus.enabled || !firestore)) {
+    throw buildFirestoreRequiredError('insight cache write', new Error('Firestore is not configured.'));
+  }
+
+  if (firestoreStatus.enabled && firestore) {
+    try {
+      return await saveContractOverviewInsightsFirebase(contractId, overviewInsights);
+    } catch (error) {
+      if (env.strictRemoteServices) {
+        throw buildFirestoreRequiredError('insight cache write', error);
+      }
+
+      console.warn('Falling back to local insight cache write:', error.message);
+    }
+  }
+
+  return saveContractOverviewInsightsLocal(contractId, overviewInsights);
+}
+
 async function deleteContractBundleLocal(contractId) {
   const current = await readJsonFile(localStorePath, []);
   const match = current.find((item) => item.contract.id === contractId);
@@ -338,5 +413,6 @@ module.exports = {
   findContractBySourceIdentity,
   getContractById,
   listContracts,
+  saveContractOverviewInsights,
   saveContractBundle,
 };

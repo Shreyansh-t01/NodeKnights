@@ -1,3 +1,5 @@
+const crypto = require('node:crypto');
+
 const AppError = require('../errors/AppError');
 const { env, featureFlags } = require('../config/env');
 const {
@@ -8,10 +10,8 @@ const {
   sleep,
 } = require('../utils/geminiRetry');
 
-const DEFAULT_MODEL_FALLBACKS = {
-  'gemini-2.5-flash': ['gemini-2.5-flash-lite'],
-  'gemini-2.5-flash-lite': ['gemini-2.5-flash'],
-};
+const PRIMARY_GEMINI_RESPONSE_MODEL = 'gemini-2.5-flash';
+const pendingStructuredRequests = new Map();
 
 function isGeminiEnabled() {
   return featureFlags.externalGenAi && env.genAiProvider === 'gemini';
@@ -22,13 +22,11 @@ function normalizeModelName(modelName) {
 }
 
 function getGeminiModelCandidates() {
-  const configuredModel = normalizeModelName(env.genAiModel);
-  const extraCandidates = Array.isArray(env.genAiModelCandidates)
-    ? env.genAiModelCandidates.map(normalizeModelName)
-    : [];
-  const defaultFallbacks = DEFAULT_MODEL_FALLBACKS[configuredModel] || [];
-
-  return [...new Set([configuredModel, ...extraCandidates, ...defaultFallbacks].filter(Boolean))];
+  return [...new Set([
+    normalizeModelName(env.genAiModel),
+    ...(Array.isArray(env.genAiModelCandidates) ? env.genAiModelCandidates.map(normalizeModelName) : []),
+    PRIMARY_GEMINI_RESPONSE_MODEL,
+  ].filter(Boolean))];
 }
 
 function buildGeminiUrl(modelName) {
@@ -36,16 +34,35 @@ function buildGeminiUrl(modelName) {
   return `${baseUrl}/models/${encodeURIComponent(modelName)}:generateContent`;
 }
 
-function buildGenerationConfig({ responseSchema, modelName, attempt }) {
+function buildPlainJsonPrompt(prompt, responseSchema) {
+  if (!responseSchema) {
+    return prompt;
+  }
+
+  return [
+    prompt,
+    '',
+    'Return valid JSON only.',
+    'Do not wrap the JSON in markdown fences or add any explanatory text.',
+    'Ensure the JSON is complete and parseable.',
+    'Required JSON schema:',
+    JSON.stringify(responseSchema, null, 2),
+  ].join('\n');
+}
+
+function buildGenerationConfig({ responseSchema, modelName, attempt, mode = 'schema' }) {
   const lowLatencyMode = attempt > 1 || String(modelName || '').includes('flash-lite');
   const generationConfig = {
     responseMimeType: 'application/json',
-    responseJsonSchema: responseSchema,
     temperature: lowLatencyMode ? Math.min(env.genAiTemperature, 0.1) : env.genAiTemperature,
     maxOutputTokens: lowLatencyMode
       ? Math.min(env.genAiMaxOutputTokens, 900)
       : env.genAiMaxOutputTokens,
   };
+
+  if (mode === 'schema' && responseSchema) {
+    generationConfig.responseJsonSchema = responseSchema;
+  }
 
   if (env.genAiThinkingBudget > 0 && !lowLatencyMode) {
     generationConfig.thinkingConfig = {
@@ -77,12 +94,67 @@ function extractResponseText(payload = {}) {
   });
 }
 
+function extractLikelyJsonText(rawText = '') {
+  const normalized = String(rawText || '').trim();
+
+  if (!normalized) {
+    return normalized;
+  }
+
+  const codeFenceMatch = normalized.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  const stripped = (codeFenceMatch ? codeFenceMatch[1] : normalized).trim();
+
+  const objectStart = stripped.indexOf('{');
+  const arrayStart = stripped.indexOf('[');
+
+  if (objectStart === -1 && arrayStart === -1) {
+    return stripped;
+  }
+
+  const startsWithObject = objectStart !== -1 && (arrayStart === -1 || objectStart < arrayStart);
+  const startIndex = startsWithObject ? objectStart : arrayStart;
+  const endIndex = stripped.lastIndexOf(startsWithObject ? '}' : ']');
+
+  return endIndex > startIndex
+    ? stripped.slice(startIndex, endIndex + 1).trim()
+    : stripped;
+}
+
 function isRetryableGeminiFailure(error) {
   return error instanceof AppError && isRetryableGeminiError(error);
 }
 
-async function runGeminiRequest({ prompt, responseSchema, label, modelName }) {
-  const maxAttempts = Math.max(1, env.genAiMaxRetries + 1);
+function shouldTryPlainJsonFallback(error) {
+  if (!(error instanceof AppError)) {
+    return false;
+  }
+
+  const status = Number(error.details?.status || error.statusCode || 0);
+
+  return error.message.includes('invalid JSON') || [500, 502, 503, 504].includes(status);
+}
+
+function shouldTryNextModel(error) {
+  if (!(error instanceof AppError)) {
+    return false;
+  }
+
+  const status = Number(error.details?.status || error.statusCode || 0);
+
+  return isRetryableGeminiFailure(error)
+    || error.message.includes('invalid JSON')
+    || [400, 403, 404, 429].includes(status);
+}
+
+async function runGeminiRequest({
+  prompt,
+  responseSchema,
+  label,
+  modelName,
+  mode = 'schema',
+  maxAttemptsOverride = null,
+}) {
+  const maxAttempts = Math.max(1, maxAttemptsOverride ?? (env.genAiMaxRetries + 1));
   let lastError = null;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -103,7 +175,9 @@ async function runGeminiRequest({ prompt, responseSchema, label, modelName }) {
               role: 'user',
               parts: [
                 {
-                  text: prompt,
+                  text: mode === 'json-prompt'
+                    ? buildPlainJsonPrompt(prompt, responseSchema)
+                    : prompt,
                 },
               ],
             },
@@ -112,6 +186,7 @@ async function runGeminiRequest({ prompt, responseSchema, label, modelName }) {
             responseSchema,
             modelName,
             attempt,
+            mode,
           }),
         }),
       });
@@ -127,23 +202,28 @@ async function runGeminiRequest({ prompt, responseSchema, label, modelName }) {
           retryDelayMs: extractRetryDelayMs(payload, response.headers),
           model: modelName,
           attempt,
+          mode,
         });
       }
 
       const payload = await response.json();
       const rawText = extractResponseText(payload);
+      const parsedText = extractLikelyJsonText(rawText);
 
       try {
         return {
           model: modelName,
-          value: JSON.parse(rawText),
+          value: JSON.parse(parsedText),
         };
       } catch (error) {
         throw new AppError(502, `Gemini ${label} returned invalid JSON.`, {
           model: modelName,
           originalError: error.message,
           rawText: rawText.slice(0, 2000),
+          parsedText: parsedText.slice(0, 2000),
+          finishReason: payload.candidates?.[0]?.finishReason || null,
           attempt,
+          mode,
         });
       }
     } catch (error) {
@@ -152,12 +232,14 @@ async function runGeminiRequest({ prompt, responseSchema, label, modelName }) {
           timeoutMs: env.genAiTimeoutMs,
           model: modelName,
           attempt,
+          mode,
         })
         : error instanceof AppError
           ? error
           : new AppError(502, `Gemini ${label} network request failed.`, {
             model: modelName,
             attempt,
+            mode,
             originalError: error.message,
           });
 
@@ -179,14 +261,7 @@ async function runGeminiRequest({ prompt, responseSchema, label, modelName }) {
   throw lastError;
 }
 
-async function generateStructuredObject({ prompt, responseSchema, label = 'response' }) {
-  if (!isGeminiEnabled()) {
-    throw new AppError(503, 'Gemini is not configured for this environment.', {
-      provider: env.genAiProvider,
-      model: env.genAiModel,
-    });
-  }
-
+async function generateStructuredObjectInternal({ prompt, responseSchema, label = 'response' }) {
   const attemptedModels = [];
   let lastError = null;
 
@@ -199,26 +274,82 @@ async function generateStructuredObject({ prompt, responseSchema, label = 'respo
         responseSchema,
         label,
         modelName,
+        mode: 'schema',
       });
 
       return result.value;
     } catch (error) {
       lastError = error;
+    }
 
-      if (!isRetryableGeminiFailure(error)) {
-        throw error;
+    if (shouldTryPlainJsonFallback(lastError)) {
+      try {
+        const result = await runGeminiRequest({
+          prompt,
+          responseSchema,
+          label,
+          modelName,
+          mode: 'json-prompt',
+          maxAttemptsOverride: 1,
+        });
+
+        return result.value;
+      } catch (error) {
+        lastError = error;
       }
+    }
+
+    if (!shouldTryNextModel(lastError)) {
+      break;
     }
   }
 
   if (lastError instanceof AppError) {
     lastError.details = {
-      ...lastError.details,
+      ...(lastError.details || {}),
       attemptedModels,
     };
   }
 
   throw lastError;
+}
+
+function buildRequestKey({ prompt, responseSchema, label }) {
+  return crypto
+    .createHash('sha256')
+    .update(JSON.stringify({
+      prompt,
+      responseSchema,
+      label,
+      models: getGeminiModelCandidates(),
+    }))
+    .digest('hex');
+}
+
+async function generateStructuredObject({ prompt, responseSchema, label = 'response' }) {
+  if (!isGeminiEnabled()) {
+    throw new AppError(503, 'Gemini is not configured for this environment.', {
+      provider: env.genAiProvider,
+      model: env.genAiModel,
+    });
+  }
+
+  const requestKey = buildRequestKey({ prompt, responseSchema, label });
+
+  if (pendingStructuredRequests.has(requestKey)) {
+    return pendingStructuredRequests.get(requestKey);
+  }
+
+  const pendingRequest = generateStructuredObjectInternal({
+    prompt,
+    responseSchema,
+    label,
+  }).finally(() => {
+    pendingStructuredRequests.delete(requestKey);
+  });
+
+  pendingStructuredRequests.set(requestKey, pendingRequest);
+  return pendingRequest;
 }
 
 module.exports = {
