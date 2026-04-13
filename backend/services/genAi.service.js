@@ -1,5 +1,17 @@
 const AppError = require('../errors/AppError');
 const { env, featureFlags } = require('../config/env');
+const {
+  computeRetryDelayMs,
+  extractRetryDelayMs,
+  isRetryableGeminiError,
+  safeJsonParse,
+  sleep,
+} = require('../utils/geminiRetry');
+
+const DEFAULT_MODEL_FALLBACKS = {
+  'gemini-2.5-flash': ['gemini-2.5-flash-lite'],
+  'gemini-2.5-flash-lite': ['gemini-2.5-flash'],
+};
 
 function isGeminiEnabled() {
   return featureFlags.externalGenAi && env.genAiProvider === 'gemini';
@@ -14,13 +26,34 @@ function getGeminiModelCandidates() {
   const extraCandidates = Array.isArray(env.genAiModelCandidates)
     ? env.genAiModelCandidates.map(normalizeModelName)
     : [];
+  const defaultFallbacks = DEFAULT_MODEL_FALLBACKS[configuredModel] || [];
 
-  return [...new Set([configuredModel, ...extraCandidates].filter(Boolean))];
+  return [...new Set([configuredModel, ...extraCandidates, ...defaultFallbacks].filter(Boolean))];
 }
 
 function buildGeminiUrl(modelName) {
   const baseUrl = env.genAiBaseUrl.replace(/\/+$/, '');
   return `${baseUrl}/models/${encodeURIComponent(modelName)}:generateContent`;
+}
+
+function buildGenerationConfig({ responseSchema, modelName, attempt }) {
+  const lowLatencyMode = attempt > 1 || String(modelName || '').includes('flash-lite');
+  const generationConfig = {
+    responseMimeType: 'application/json',
+    responseJsonSchema: responseSchema,
+    temperature: lowLatencyMode ? Math.min(env.genAiTemperature, 0.1) : env.genAiTemperature,
+    maxOutputTokens: lowLatencyMode
+      ? Math.min(env.genAiMaxOutputTokens, 900)
+      : env.genAiMaxOutputTokens,
+  };
+
+  if (env.genAiThinkingBudget > 0 && !lowLatencyMode) {
+    generationConfig.thinkingConfig = {
+      thinkingBudget: env.genAiThinkingBudget,
+    };
+  }
+
+  return generationConfig;
 }
 
 function extractResponseText(payload = {}) {
@@ -45,84 +78,105 @@ function extractResponseText(payload = {}) {
 }
 
 function isRetryableGeminiFailure(error) {
-  if (!(error instanceof AppError)) {
-    return false;
-  }
-
-  return [404, 429, 500, 502, 503].includes(error.details?.status);
+  return error instanceof AppError && isRetryableGeminiError(error);
 }
 
 async function runGeminiRequest({ prompt, responseSchema, label, modelName }) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), env.genAiTimeoutMs);
+  const maxAttempts = Math.max(1, env.genAiMaxRetries + 1);
+  let lastError = null;
 
-  try {
-    const response = await fetch(buildGeminiUrl(modelName), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': env.genAiApiKey,
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              {
-                text: prompt,
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseJsonSchema: responseSchema,
-          temperature: env.genAiTemperature,
-          maxOutputTokens: env.genAiMaxOutputTokens,
-          thinkingConfig: {
-            thinkingBudget: env.genAiThinkingBudget,
-          },
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const message = await response.text();
-      throw new AppError(502, `Gemini ${label} request failed.`, {
-        status: response.status,
-        response: message,
-        model: modelName,
-      });
-    }
-
-    const payload = await response.json();
-    const rawText = extractResponseText(payload);
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), env.genAiTimeoutMs);
 
     try {
-      return {
-        model: modelName,
-        value: JSON.parse(rawText),
-      };
-    } catch (error) {
-      throw new AppError(502, `Gemini ${label} returned invalid JSON.`, {
-        model: modelName,
-        originalError: error.message,
-        rawText: rawText.slice(0, 2000),
+      const response = await fetch(buildGeminiUrl(modelName), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': env.genAiApiKey,
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                {
+                  text: prompt,
+                },
+              ],
+            },
+          ],
+          generationConfig: buildGenerationConfig({
+            responseSchema,
+            modelName,
+            attempt,
+          }),
+        }),
       });
-    }
-  } catch (error) {
-    if (error.name === 'AbortError') {
-      throw new AppError(504, `Gemini ${label} request timed out.`, {
-        timeoutMs: env.genAiTimeoutMs,
-        model: modelName,
-      });
-    }
 
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
+      if (!response.ok) {
+        const bodyText = await response.text();
+        const payload = safeJsonParse(bodyText);
+
+        throw new AppError(502, `Gemini ${label} request failed.`, {
+          status: response.status,
+          response: bodyText,
+          payload,
+          retryDelayMs: extractRetryDelayMs(payload, response.headers),
+          model: modelName,
+          attempt,
+        });
+      }
+
+      const payload = await response.json();
+      const rawText = extractResponseText(payload);
+
+      try {
+        return {
+          model: modelName,
+          value: JSON.parse(rawText),
+        };
+      } catch (error) {
+        throw new AppError(502, `Gemini ${label} returned invalid JSON.`, {
+          model: modelName,
+          originalError: error.message,
+          rawText: rawText.slice(0, 2000),
+          attempt,
+        });
+      }
+    } catch (error) {
+      lastError = error.name === 'AbortError'
+        ? new AppError(504, `Gemini ${label} request timed out.`, {
+          timeoutMs: env.genAiTimeoutMs,
+          model: modelName,
+          attempt,
+        })
+        : error instanceof AppError
+          ? error
+          : new AppError(502, `Gemini ${label} network request failed.`, {
+            model: modelName,
+            attempt,
+            originalError: error.message,
+          });
+
+      if (!isRetryableGeminiFailure(lastError) || attempt >= maxAttempts) {
+        throw lastError;
+      }
+
+      await sleep(computeRetryDelayMs({
+        attempt,
+        baseMs: env.genAiRetryBaseMs,
+        maxMs: env.genAiRetryMaxMs,
+        explicitRetryMs: lastError.details?.retryDelayMs || 0,
+      }));
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
+
+  throw lastError;
 }
 
 async function generateStructuredObject({ prompt, responseSchema, label = 'response' }) {

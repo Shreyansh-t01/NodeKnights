@@ -61,6 +61,9 @@ export const api = {
   }),
   getContracts: () => request('/contracts'),
   getContractById: (contractId) => request(`/contracts/${contractId}`),
+  deleteContract: (contractId) => request(`/contracts/${contractId}`, {
+    method: 'DELETE',
+  }),
   getContractInsights: (contractId, clauseId) => request(
     clauseId
       ? `/contracts/${contractId}/insights?clauseId=${encodeURIComponent(clauseId)}`

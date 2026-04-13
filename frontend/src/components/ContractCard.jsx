@@ -1,12 +1,14 @@
 import StatusPill from './StatusPill';
 
-function ContractCard({ contract, isActive, onSelect }) {
+function ContractCard({
+  contract,
+  isActive,
+  onSelect,
+  onDelete,
+  deletePending = false,
+}) {
   return (
-    <button
-      type="button"
-      className={`panel contract-card ${isActive ? 'contract-card-active' : ''}`}
-      onClick={() => onSelect(contract.id)}
-    >
+    <article className={`panel contract-card ${isActive ? 'contract-card-active' : ''}`}>
       <div className="panel-header">
         <div>
           <p className="eyebrow">{contract.source}</p>
@@ -21,12 +23,33 @@ function ContractCard({ contract, isActive, onSelect }) {
       <p className="contract-meta">
         Dates: {contract.dates.length ? contract.dates.join(', ') : 'Awaiting extraction'}
       </p>
-      <div className="risk-strip">
-        <span>Low {contract.riskCounts.low ?? 0}</span>
-        <span>Medium {contract.riskCounts.medium ?? 0}</span>
-        <span>High {contract.riskCounts.high ?? 0}</span>
+      <div className="contract-card-footer">
+        <div className="risk-strip">
+          <span>Low {contract.riskCounts.low ?? 0}</span>
+          <span>Medium {contract.riskCounts.medium ?? 0}</span>
+          <span>High {contract.riskCounts.high ?? 0}</span>
+        </div>
+
+        <div className="contract-card-actions">
+          <button
+            type="button"
+            className="contract-card-open"
+            onClick={() => onSelect(contract.id)}
+            disabled={deletePending}
+          >
+            Open Contract
+          </button>
+          <button
+            type="button"
+            className="contract-card-delete"
+            onClick={() => onDelete(contract.id)}
+            disabled={deletePending}
+          >
+            {deletePending ? 'Deleting...' : 'Delete Document'}
+          </button>
+        </div>
       </div>
-    </button>
+    </article>
   );
 }
 

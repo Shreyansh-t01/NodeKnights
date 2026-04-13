@@ -34,7 +34,7 @@ function SearchWorkbench({
             value={query}
             disabled={disabled}
             onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="Why is the termination clause risky and how should we rewrite it?"
+            placeholder="type"
           />
           <button type="submit" disabled={pending || disabled}>
             {pending ? 'Searching...' : 'Run Search'}

@@ -366,6 +366,7 @@ function App() {
   const [selectedDocumentId, setSelectedDocumentId] = useState(null);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [deletingContractId, setDeletingContractId] = useState('');
   const [uploadError, setUploadError] = useState('');
   const [notifications, setNotifications] = useState([]);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
@@ -934,6 +935,72 @@ function App() {
     }
   }
 
+  async function handleDeleteContract(contractId) {
+    const contractToDelete = contracts.find((contract) => contract.id === contractId) || null;
+
+    if (!contractToDelete || deletingContractId === contractId) {
+      return;
+    }
+
+    const shouldDelete = window.confirm(
+      `Delete "${contractToDelete.title}" from the system? This removes its stored file, extracted text, review data, and semantic index.`,
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    setDeletingContractId(contractId);
+
+    try {
+      const response = await api.deleteContract(contractId);
+      const remainingContracts = contracts.filter((contract) => contract.id !== contractId);
+      const nextSelectedId = (
+        selectedContractId === contractId
+          ? (remainingContracts[0]?.id || null)
+          : selectedContractId
+      );
+      const nextSelectedSummary = remainingContracts.find((contract) => contract.id === nextSelectedId) || null;
+      const nextSelectedContract = (
+        nextSelectedSummary && selectedContract?.id === nextSelectedSummary.id
+          ? selectedContract
+          : nextSelectedSummary
+      );
+      const nextNotifications = notifications.filter((notification) => notification.contractId !== contractId);
+
+      startTransition(() => {
+        setContracts(remainingContracts);
+        setSelectedContractId(nextSelectedId);
+        setSelectedContract(nextSelectedContract || null);
+        setSearchResult(buildEmptySearchResult(query));
+        setSearchError('');
+        setInsightsError('');
+        setDocumentError('');
+
+        if (selectedContractId === contractId) {
+          setContractInsights(nextSelectedSummary ? buildEmptyInsights(nextSelectedSummary) : buildEmptyInsights());
+        }
+
+        setDocumentResults((current) => current.filter((document) => document.id !== contractId));
+
+        if (selectedDocumentId === contractId) {
+          setSelectedDocumentId(null);
+        }
+
+        setNotifications(nextNotifications);
+        setNotificationUnreadCount(nextNotifications.filter((notification) => !notification.readAt).length);
+      });
+
+      if (Array.isArray(response.data?.warnings) && response.data.warnings.length) {
+        console.warn('Contract deleted with cleanup warnings:', response.data.warnings.join(' | '));
+      }
+    } catch (error) {
+      window.alert(error.message || 'The document could not be deleted.');
+    } finally {
+      setDeletingContractId('');
+    }
+  }
+
   async function handleMarkNotificationsRead() {
     if (!notificationUnreadCount) {
       return;
@@ -1006,6 +1073,8 @@ function App() {
     contracts,
     selectedContractId,
     selectedContract,
+    deletingContractId,
+    onDeleteContract: handleDeleteContract,
     onSelectContract: handleSelectContract,
   };
 
@@ -1072,10 +1141,8 @@ function App() {
         bootMode={bootMode}
         health={health}
         metrics={metrics}
-        contracts={contracts}
-        selectedContractId={selectedContractId}
-        onSelectContract={handleSelectContract}
         onNavigate={navigate}
+        {...pageProps}
       />
     );
   }

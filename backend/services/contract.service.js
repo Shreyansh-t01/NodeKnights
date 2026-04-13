@@ -2,18 +2,25 @@ const { v4: uuidv4 } = require('uuid');
 
 const { env } = require('../config/env');
 const AppError = require('../errors/AppError');
-const { uploadRawDocument, uploadExtractedText } = require('./storage.service');
+const { uploadRawDocument, uploadExtractedText, deleteStoredArtifacts } = require('./storage.service');
 const { extractTextFromDocument } = require('./documentExtraction.service');
 const { analyzeContractText } = require('./mlAnalysis.service');
-const { embedTexts } = require('./embedding.service');
-const { saveContractBundle, listContracts, getContractById } = require('./contract.repository');
-const { upsertClauseVectors } = require('./vector.service');
+const { embedText, embedTexts } = require('./embedding.service');
+const {
+  deleteContractBundle,
+  saveContractBundle,
+  listContracts,
+  getContractById,
+} = require('./contract.repository');
+const { deleteClauseVectorsForContract, upsertClauseVectors } = require('./vector.service');
 const { generateContractOverview, generateClauseInsight } = require('./insight.service');
 const {
   findComparableContractMatchesForClause,
   findPrecedentMatchesForClause,
 } = require('./precedent.service');
 const { findRelevantKnowledge } = require('./knowledge.service');
+const { markProcessedSource } = require('./connectorState.service');
+const { deleteNotificationsByContractId } = require('./notification.repository');
 const {
   buildClauseRecords,
   buildContractMetadata,
@@ -68,10 +75,23 @@ function buildCurrentClauseContext(contract, clause) {
 }
 
 async function buildClauseReviewContext(contract, clause) {
+  const searchText = clause.clauseTextFull || clause.clauseText || '';
+  let retrievalVector = null;
+
+  if (searchText) {
+    try {
+      retrievalVector = (await embedText(searchText, {
+        taskType: 'RETRIEVAL_QUERY',
+      })).values;
+    } catch (error) {
+      console.warn('Clause retrieval embedding failed, continuing without shared embedding cache:', error.message);
+    }
+  }
+
   const [precedentMatches, comparisonMatches, ruleMatches] = await Promise.all([
-    findPrecedentMatchesForClause({ clause, topK: 3 }),
-    findComparableContractMatchesForClause({ clause, topK: 3 }),
-    findRelevantKnowledge({ clause, topK: 4 }),
+    findPrecedentMatchesForClause({ clause, topK: 3, vector: retrievalVector, queryText: searchText }),
+    findComparableContractMatchesForClause({ clause, topK: 3, vector: retrievalVector, queryText: searchText }),
+    findRelevantKnowledge({ clause, topK: 4, vector: retrievalVector, queryText: searchText }),
   ]);
   const effectiveMatches = precedentMatches.length ? precedentMatches : comparisonMatches;
 
@@ -88,12 +108,14 @@ async function buildAutomaticClauseInsights(contract, clauses = []) {
     .filter((clause) => clause.riskLabel === 'high')
     .slice(0, 5);
 
-  return Promise.all(
-    targets.map(async (clause) => {
-      const reviewContext = await buildClauseReviewContext(contract, clause);
-      return generateClauseInsight(clause, reviewContext);
-    }),
-  );
+  const insights = [];
+
+  for (const clause of targets) {
+    const reviewContext = await buildClauseReviewContext(contract, clause);
+    insights.push(await generateClauseInsight(clause, reviewContext));
+  }
+
+  return insights;
 }
 
 function describeArtifactStorage(artifact, label) {
@@ -182,14 +204,16 @@ async function ingestManualContract(file, options = {}) {
     pipeline,
   });
 
-  const vectorRecords = await createVectorRecords(contract, clauses);
-  const vectorIndex = await upsertClauseVectors(vectorRecords, {
-    namespace: env.pineconeContractNamespace,
-  });
-  const persistence = await saveContractBundle({
+  const clauseInsights = await buildAutomaticClauseInsights(contract, clauses);
+  const insights = await generateContractOverview({
     contract,
     clauses,
     risks,
+    clauseInsights,
+  });
+  const vectorRecords = await createVectorRecords(contract, clauses);
+  const vectorIndex = await upsertClauseVectors(vectorRecords, {
+    namespace: env.pineconeContractNamespace,
   });
 
   pipeline.push(
@@ -197,7 +221,7 @@ async function ingestManualContract(file, options = {}) {
       key: 'firestore',
       label: 'Structured contract store',
       status: 'completed',
-      detail: `Saved via ${persistence.mode}.`,
+      detail: 'Saving structured contract bundle.',
     },
     {
       key: 'vector',
@@ -206,20 +230,12 @@ async function ingestManualContract(file, options = {}) {
       detail: `Indexed ${vectorIndex.count} clause vectors via ${vectorIndex.mode}.`,
     },
   );
-
-  await saveContractBundle({
+  const persistence = await saveContractBundle({
     contract,
     clauses,
     risks,
   });
-
-  const clauseInsights = await buildAutomaticClauseInsights(contract, clauses);
-  const insights = await generateContractOverview({
-    contract,
-    clauses,
-    risks,
-    clauseInsights,
-  });
+  pipeline[pipeline.length - 2].detail = `Saved via ${persistence.mode}.`;
 
   return {
     contract,
@@ -269,9 +285,64 @@ async function buildContractInsights(contractId, clauseId) {
   return await generateClauseInsight(clause, reviewContext);
 }
 
+async function deleteContractRecord(contractId) {
+  const bundle = await getContractById(contractId);
+  const persistence = await deleteContractBundle(contractId);
+  const sourceContext = bundle.contract.sourceContext || {};
+  const cleanupTasks = [
+    deleteClauseVectorsForContract(contractId, {
+      namespace: env.pineconeContractNamespace,
+    }),
+    deleteStoredArtifacts(bundle.contract.artifacts || {}),
+    deleteNotificationsByContractId(contractId),
+  ];
+
+  if (sourceContext.dedupeKey) {
+    cleanupTasks.push(markProcessedSource(sourceContext.dedupeKey, {
+      connector: bundle.contract.source,
+      contractId: null,
+      deletedContractId: contractId,
+      deletedAt: new Date().toISOString(),
+      externalId: sourceContext.externalId || '',
+      messageId: sourceContext.messageId || '',
+      attachmentId: sourceContext.attachmentId || '',
+      folderId: sourceContext.folderId || '',
+      modifiedTime: sourceContext.modifiedTime || null,
+      status: 'deleted',
+    }));
+  }
+
+  const cleanupResults = await Promise.allSettled(cleanupTasks);
+  const warnings = cleanupResults
+    .filter((result) => result.status === 'rejected')
+    .map((result) => result.reason?.message || 'Unknown cleanup error');
+
+  if (warnings.length) {
+    console.warn(`Contract ${contractId} deleted with cleanup warnings:`, warnings.join(' | '));
+  }
+
+  return {
+    contractId,
+    deleted: true,
+    warnings,
+    diagnostics: {
+      persistence,
+      cleanup: cleanupResults.map((result) => (
+        result.status === 'fulfilled'
+          ? result.value
+          : {
+            status: 'failed',
+            reason: result.reason?.message || 'Unknown cleanup error',
+          }
+      )),
+    },
+  };
+}
+
 module.exports = {
   buildContractInsights,
   createVectorRecords,
+  deleteContractRecord,
   getContractDetails,
   ingestManualContract,
   listContractSummaries,

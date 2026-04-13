@@ -4,6 +4,7 @@ const { google } = require('googleapis');
 const AppError = require('../errors/AppError');
 const { env, featureFlags } = require('../config/env');
 const { ingestManualContract } = require('./contract.service');
+const { findContractBySourceIdentity } = require('./contract.repository');
 const { getOAuthClient } = require('./googleAuth.service');
 const { notifyAnalyzedDocument } = require('./notification.service');
 const {
@@ -28,6 +29,21 @@ const SUPPORTED_MIME_TYPES = new Set([
 
 let renewalTimer = null;
 let activeSyncPromise = null;
+
+function buildDriveRequestOptions(options = {}) {
+  return {
+    supportsAllDrives: true,
+    ...options,
+  };
+}
+
+function buildDriveListOptions(options = {}) {
+  return buildDriveRequestOptions({
+    includeItemsFromAllDrives: true,
+    corpora: 'allDrives',
+    ...options,
+  });
+}
 
 function createDriveClient(auth) {
   return google.drive({
@@ -119,24 +135,24 @@ function ensureDriveSyncConfigured() {
 
 async function getDriveFileMetadata(fileId) {
   const drive = await getDriveClient();
-  const response = await drive.files.get({
+  const response = await drive.files.get(buildDriveRequestOptions({
     fileId,
     fields: 'id, name, mimeType, webViewLink, modifiedTime, parents, trashed',
-  });
+  }));
 
   return response.data;
 }
 
 async function listFilesInFolder(folderId, limit = 5) {
   const drive = await getDriveClient();
-  const response = await drive.files.list({
+  const response = await drive.files.list(buildDriveListOptions({
     q: `'${folderId}' in parents and trashed = false`,
     pageSize: limit,
     orderBy: 'modifiedTime desc',
     fields: 'files(id, name, mimeType, webViewLink, modifiedTime, parents, trashed)',
-  });
+  }));
 
-  return (response.data.files || []).filter((file) => isSupportedDriveFile(file));
+  return response.data.files || [];
 }
 
 async function downloadDriveFile(fileId, knownMetadata = null) {
@@ -149,10 +165,10 @@ async function downloadDriveFile(fileId, knownMetadata = null) {
 
   if (metadata.mimeType === 'application/vnd.google-apps.document') {
     const exportResponse = await drive.files.export(
-      {
+      buildDriveRequestOptions({
         fileId,
         mimeType: 'application/pdf',
-      },
+      }),
       {
         responseType: 'arraybuffer',
       },
@@ -170,10 +186,10 @@ async function downloadDriveFile(fileId, knownMetadata = null) {
   }
 
   const fileResponse = await drive.files.get(
-    {
+    buildDriveRequestOptions({
       fileId,
       alt: 'media',
-    },
+    }),
     {
       responseType: 'arraybuffer',
     },
@@ -224,6 +240,33 @@ async function processDriveFileMetadata(metadata, { trigger = 'manual-import' } 
       fileId,
       sourceKey: dedupeKey,
       contractId: existing.contractId || null,
+    };
+  }
+
+  const existingContract = await findContractBySourceIdentity({
+    source: 'google-drive',
+    externalId: fileId,
+    dedupeKey,
+  });
+
+  if (existingContract) {
+    await markProcessedSource(dedupeKey, {
+      connector: 'google-drive',
+      trigger,
+      fileId,
+      contractId: existingContract.id,
+      folderId,
+      modifiedTime: metadata?.modifiedTime || null,
+      processedAt: existingContract.updatedAt || existingContract.createdAt || new Date().toISOString(),
+      restoredFromExistingContract: true,
+    });
+
+    return {
+      status: 'skipped',
+      reason: 'already-imported',
+      fileId,
+      sourceKey: dedupeKey,
+      contractId: existingContract.id,
     };
   }
 
@@ -283,18 +326,66 @@ async function processDriveFileMetadata(metadata, { trigger = 'manual-import' } 
       fileId,
       sourceKey: dedupeKey,
       reason: error.message,
+      details: error.details || null,
+      statusCode: error.statusCode || null,
     };
   }
 }
 
 async function importDriveFiles({ fileId, folderId, limit = 5 }) {
+  function summarizeOutcomes(outcomes = [], context = {}) {
+    const payloads = [];
+    let importedCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+
+    const results = outcomes.map((outcome) => {
+      if (outcome.status === 'imported') {
+        importedCount += 1;
+        if (outcome.payload) {
+          payloads.push(outcome.payload);
+        }
+      } else if (outcome.status === 'failed') {
+        failedCount += 1;
+      } else {
+        skippedCount += 1;
+      }
+
+      return {
+        ...outcome,
+        payload: undefined,
+      };
+    });
+
+    return {
+      trigger: 'manual-drive-import',
+      fileId: context.fileId || '',
+      folderId: context.folderId || '',
+      scannedFileCount: context.scannedFileCount || 0,
+      importedCount,
+      skippedCount,
+      failedCount,
+      payloads,
+      results,
+      message: (
+        results.length
+          ? null
+          : 'No files were found in the target Drive folder. Check the folder ID, file types, and whether the files are direct children of that folder.'
+      ),
+    };
+  }
+
   if (fileId) {
     const metadata = await getDriveFileMetadata(fileId);
     const outcome = await processDriveFileMetadata(metadata, {
       trigger: 'manual-drive-import',
     });
 
-    return outcome.status === 'imported' ? [outcome.payload] : [];
+    return summarizeOutcomes([outcome], {
+      fileId,
+      folderId: resolveDriveFolderId(metadata),
+      scannedFileCount: 1,
+    });
   }
 
   const targetFolderId = folderId || env.googleDriveFolderIds[0];
@@ -306,25 +397,31 @@ async function importDriveFiles({ fileId, folderId, limit = 5 }) {
   const files = await listFilesInFolder(targetFolderId, limit);
 
   if (!files.length) {
-    return [];
+    return summarizeOutcomes([], {
+      folderId: targetFolderId,
+      scannedFileCount: 0,
+    });
   }
 
-  const outcomes = await Promise.all(
-    files.map((driveFile) => processDriveFileMetadata(driveFile, {
-      trigger: 'manual-drive-import',
-    })),
-  );
+  const outcomes = [];
 
-  return outcomes
-    .filter((item) => item.status === 'imported')
-    .map((item) => item.payload);
+  for (const driveFile of files) {
+    outcomes.push(await processDriveFileMetadata(driveFile, {
+      trigger: 'manual-drive-import',
+    }));
+  }
+
+  return summarizeOutcomes(outcomes, {
+    folderId: targetFolderId,
+    scannedFileCount: files.length,
+  });
 }
 
 async function getDriveStartPageToken(drive = null) {
   const client = drive || await getDriveClient();
-  const response = await client.changes.getStartPageToken({
+  const response = await client.changes.getStartPageToken(buildDriveRequestOptions({
     fields: 'startPageToken',
-  });
+  }));
 
   return response.data.startPageToken || '';
 }
@@ -399,6 +496,7 @@ async function syncDriveChanges({ trigger = 'manual-sync' } = {}) {
         const response = await drive.changes.list({
           pageToken: nextPageToken,
           spaces: 'drive',
+          supportsAllDrives: true,
           fields: 'changes(fileId,removed,file(id,name,mimeType,webViewLink,modifiedTime,parents,trashed)),nextPageToken,newStartPageToken',
         });
 
@@ -525,6 +623,7 @@ async function registerDriveChangesWatch({ forceRenew = false } = {}) {
 
   const response = await drive.changes.watch({
     pageToken,
+    supportsAllDrives: true,
     requestBody: {
       id: channelId,
       type: 'web_hook',

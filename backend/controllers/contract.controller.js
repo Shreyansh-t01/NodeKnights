@@ -4,6 +4,7 @@ const {
   listContractSummaries,
   getContractDetails,
   buildContractInsights,
+  deleteContractRecord,
 } = require('../services/contract.service');
 
 const uploadContract = asyncHandler(async (req, res) => {
@@ -49,7 +50,18 @@ const getInsights = asyncHandler(async (req, res) => {
   });
 });
 
+const deleteContract = asyncHandler(async (req, res) => {
+  const result = await deleteContractRecord(req.params.contractId);
+
+  res.json({
+    success: true,
+    message: 'Contract deleted successfully.',
+    data: result,
+  });
+});
+
 module.exports = {
+  deleteContract,
   getContract,
   getInsights,
   listContracts,

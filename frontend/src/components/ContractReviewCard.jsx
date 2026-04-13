@@ -32,6 +32,8 @@ function ContractReviewCard({
   selectedContract,
   onToggleExpand,
   onOpenInsights,
+  onDelete,
+  deletePending = false,
 }) {
   const [openClauseId, setOpenClauseId] = useState(null);
 
@@ -79,11 +81,29 @@ function ContractReviewCard({
         </div>
 
         <div className="contract-review-actions">
-          <button type="button" className="contract-review-toggle" onClick={onToggleExpand}>
+          <button
+            type="button"
+            className="contract-review-toggle"
+            onClick={onToggleExpand}
+            disabled={deletePending}
+          >
             {isExpanded ? 'Hide Clause Review' : 'View Clause Review'}
           </button>
-          <button type="button" className="contract-review-toggle contract-review-insights" onClick={onOpenInsights}>
+          <button
+            type="button"
+            className="contract-review-toggle contract-review-insights"
+            onClick={onOpenInsights}
+            disabled={deletePending}
+          >
             Get Insights
+          </button>
+          <button
+            type="button"
+            className="contract-review-toggle contract-review-delete"
+            onClick={onDelete}
+            disabled={deletePending}
+          >
+            {deletePending ? 'Deleting...' : 'Delete Document'}
           </button>
         </div>
       </div>

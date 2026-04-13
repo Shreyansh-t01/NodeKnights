@@ -9,6 +9,8 @@ function OverviewPage({
   contracts,
   selectedContractId,
   onSelectContract,
+  onDeleteContract,
+  deletingContractId,
   onNavigate,
 }) {
   const modeLabel = bootMode === 'live'
@@ -77,6 +79,8 @@ function OverviewPage({
                 key={contract.id}
                 contract={contract}
                 isActive={contract.id === selectedContractId}
+                deletePending={deletingContractId === contract.id}
+                onDelete={onDeleteContract}
                 onSelect={(contractId) => {
                   onSelectContract(contractId);
                   onNavigate('/contracts');

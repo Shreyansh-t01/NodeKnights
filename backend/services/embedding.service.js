@@ -1,5 +1,13 @@
 const AppError = require('../errors/AppError');
 const { env, featureFlags } = require('../config/env');
+const { buildDeterministicEmbeddingValues } = require('../utils/deterministicEmbedding');
+const {
+  computeRetryDelayMs,
+  extractRetryDelayMs,
+  isRetryableGeminiError,
+  safeJsonParse,
+  sleep,
+} = require('../utils/geminiRetry');
 
 function buildEmbeddingModelName() {
   const model = String(env.embeddingModel || '').trim();
@@ -55,54 +63,121 @@ async function parseErrorResponse(response) {
   if (contentType.includes('application/json')) {
     try {
       const payload = await response.json();
-      return payload.error?.message || payload.message || JSON.stringify(payload);
+      return {
+        message: payload.error?.message || payload.message || JSON.stringify(payload),
+        payload,
+        retryDelayMs: extractRetryDelayMs(payload, response.headers),
+      };
     } catch (error) {
-      return `Request failed with status ${response.status}`;
+      return {
+        message: `Request failed with status ${response.status}`,
+        payload: null,
+        retryDelayMs: 0,
+      };
     }
   }
 
   const message = await response.text();
-  return message || `Request failed with status ${response.status}`;
+  const payload = safeJsonParse(message);
+
+  return {
+    message: message || `Request failed with status ${response.status}`,
+    payload,
+    retryDelayMs: extractRetryDelayMs(payload, response.headers),
+  };
+}
+
+function shouldUseLocalEmbeddingFallback(error) {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  if (!(error instanceof AppError)) {
+    return /fetch failed/i.test(error.message || '');
+  }
+
+  if ([503, 504].includes(error.statusCode)) {
+    return true;
+  }
+
+  return isRetryableGeminiError(error) || error.message.includes('not configured');
+}
+
+function buildLocalEmbeddingResult(text, options = {}) {
+  return {
+    provider: 'local-fallback',
+    model: `deterministic-hash-${env.embeddingDimension}`,
+    taskType: options.taskType || 'TASK_TYPE_UNSPECIFIED',
+    values: buildDeterministicEmbeddingValues(text, env.embeddingDimension),
+  };
 }
 
 async function postEmbeddingRequest(url, body, label) {
   ensureEmbeddingsConfigured();
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), env.genAiTimeoutMs);
+  const maxAttempts = Math.max(1, env.genAiMaxRetries + 1);
+  let lastError = null;
 
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': env.genAiApiKey,
-      },
-      signal: controller.signal,
-      body: JSON.stringify(body),
-    });
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), env.genAiTimeoutMs);
 
-    if (!response.ok) {
-      throw new AppError(502, `Gemini ${label} request failed.`, {
-        status: response.status,
-        model: env.embeddingModel,
-        response: await parseErrorResponse(response),
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': env.genAiApiKey,
+        },
+        signal: controller.signal,
+        body: JSON.stringify(body),
       });
-    }
 
-    return await response.json();
-  } catch (error) {
-    if (error.name === 'AbortError') {
-      throw new AppError(504, `Gemini ${label} request timed out.`, {
-        timeoutMs: env.genAiTimeoutMs,
-        model: env.embeddingModel,
-      });
-    }
+      if (!response.ok) {
+        const parsedError = await parseErrorResponse(response);
 
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
+        throw new AppError(502, `Gemini ${label} request failed.`, {
+          status: response.status,
+          model: env.embeddingModel,
+          response: parsedError.message,
+          payload: parsedError.payload,
+          retryDelayMs: parsedError.retryDelayMs,
+          attempt,
+        });
+      }
+
+      return await response.json();
+    } catch (error) {
+      lastError = error.name === 'AbortError'
+        ? new AppError(504, `Gemini ${label} request timed out.`, {
+          timeoutMs: env.genAiTimeoutMs,
+          model: env.embeddingModel,
+          attempt,
+        })
+        : error instanceof AppError
+          ? error
+          : new AppError(502, `Gemini ${label} network request failed.`, {
+            model: env.embeddingModel,
+            attempt,
+            originalError: error.message,
+          });
+
+      if (!isRetryableGeminiError(lastError) || attempt >= maxAttempts) {
+        throw lastError;
+      }
+
+      await sleep(computeRetryDelayMs({
+        attempt,
+        baseMs: env.genAiRetryBaseMs,
+        maxMs: env.genAiRetryMaxMs,
+        explicitRetryMs: lastError.details?.retryDelayMs || 0,
+      }));
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
+
+  throw lastError;
 }
 
 function extractEmbeddingValues(payload, label) {
@@ -124,22 +199,31 @@ async function embedText(text, options = {}) {
     throw new AppError(400, 'Text is required for embedding.');
   }
 
-  const payload = await postEmbeddingRequest(
-    buildEmbeddingUrl('embedContent'),
-    buildEmbedRequest({
-      text: normalizedText,
-      taskType: options.taskType,
-      title: options.title,
-    }),
-    'embedding',
-  );
+  try {
+    const payload = await postEmbeddingRequest(
+      buildEmbeddingUrl('embedContent'),
+      buildEmbedRequest({
+        text: normalizedText,
+        taskType: options.taskType,
+        title: options.title,
+      }),
+      'embedding',
+    );
 
-  return {
-    provider: 'gemini',
-    model: env.embeddingModel,
-    taskType: options.taskType || 'TASK_TYPE_UNSPECIFIED',
-    values: extractEmbeddingValues(payload, 'embedding'),
-  };
+    return {
+      provider: 'gemini',
+      model: env.embeddingModel,
+      taskType: options.taskType || 'TASK_TYPE_UNSPECIFIED',
+      values: extractEmbeddingValues(payload, 'embedding'),
+    };
+  } catch (error) {
+    if (!shouldUseLocalEmbeddingFallback(error)) {
+      throw error;
+    }
+
+    console.warn('Gemini embedding failed, using deterministic local fallback:', error.message);
+    return buildLocalEmbeddingResult(normalizedText, options);
+  }
 }
 
 async function embedTexts(entries = [], options = {}) {
@@ -171,44 +255,54 @@ async function embedTexts(entries = [], options = {}) {
   }
 
   const modelName = buildEmbeddingModelName();
-  const payload = await postEmbeddingRequest(
-    buildEmbeddingUrl('batchEmbedContents'),
-    {
-      requests: normalizedEntries.map((entry) => ({
-        model: modelName,
-        ...buildEmbedRequest(entry),
-      })),
-    },
-    'batch embedding',
-  );
 
-  const embeddings = Array.isArray(payload?.embeddings) ? payload.embeddings : [];
+  try {
+    const payload = await postEmbeddingRequest(
+      buildEmbeddingUrl('batchEmbedContents'),
+      {
+        requests: normalizedEntries.map((entry) => ({
+          model: modelName,
+          ...buildEmbedRequest(entry),
+        })),
+      },
+      'batch embedding',
+    );
 
-  if (embeddings.length !== normalizedEntries.length) {
-    throw new AppError(502, 'Gemini batch embedding returned an unexpected number of vectors.', {
-      requested: normalizedEntries.length,
-      returned: embeddings.length,
-      model: env.embeddingModel,
-    });
-  }
+    const embeddings = Array.isArray(payload?.embeddings) ? payload.embeddings : [];
 
-  return embeddings.map((item, index) => {
-    const values = Array.isArray(item?.values) ? item.values : [];
-
-    if (!values.length) {
-      throw new AppError(502, 'Gemini batch embedding returned an empty vector.', {
-        index,
+    if (embeddings.length !== normalizedEntries.length) {
+      throw new AppError(502, 'Gemini batch embedding returned an unexpected number of vectors.', {
+        requested: normalizedEntries.length,
+        returned: embeddings.length,
         model: env.embeddingModel,
       });
     }
 
-    return {
-      provider: 'gemini',
-      model: env.embeddingModel,
-      taskType: normalizedEntries[index].taskType || 'TASK_TYPE_UNSPECIFIED',
-      values,
-    };
-  });
+    return embeddings.map((item, index) => {
+      const values = Array.isArray(item?.values) ? item.values : [];
+
+      if (!values.length) {
+        throw new AppError(502, 'Gemini batch embedding returned an empty vector.', {
+          index,
+          model: env.embeddingModel,
+        });
+      }
+
+      return {
+        provider: 'gemini',
+        model: env.embeddingModel,
+        taskType: normalizedEntries[index].taskType || 'TASK_TYPE_UNSPECIFIED',
+        values,
+      };
+    });
+  } catch (error) {
+    if (!shouldUseLocalEmbeddingFallback(error)) {
+      throw error;
+    }
+
+    console.warn('Gemini batch embedding failed, using deterministic local fallback:', error.message);
+    return normalizedEntries.map((entry) => buildLocalEmbeddingResult(entry.text, entry));
+  }
 }
 
 module.exports = {

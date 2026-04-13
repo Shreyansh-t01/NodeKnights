@@ -169,6 +169,97 @@ async function upsertClauseVectors(records, options = {}) {
   return upsertLocalVectors(records, namespace);
 }
 
+async function deleteLocalVectorsByFilter(filters = {}, namespace) {
+  const resolvedNamespace = resolveNamespace(namespace);
+  const current = await readJsonFile(localVectorStorePath, []);
+  let deletedCount = 0;
+
+  const next = current.filter((item) => {
+    const shouldDelete = (
+      normalizeLocalNamespace(item) === resolvedNamespace
+      && matchesMetadataFilters(item.metadata || {}, filters)
+    );
+
+    if (shouldDelete) {
+      deletedCount += 1;
+      return false;
+    }
+
+    return true;
+  });
+
+  await writeJsonFile(localVectorStorePath, next);
+
+  return {
+    mode: 'local-vector-store',
+    namespace: resolvedNamespace,
+    deletedCount,
+    location: localVectorStorePath,
+  };
+}
+
+async function deletePineconeVectorsByFilter(filters = {}, namespace) {
+  const resolvedNamespace = resolveNamespace(namespace);
+  const filter = buildPineconeFilter(filters);
+
+  if (!filter) {
+    throw new AppError(400, 'A vector deletion filter is required.');
+  }
+
+  const response = await fetch(`${pineconeBaseUrl()}/vectors/delete`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Api-Key': env.pineconeApiKey,
+    },
+    body: JSON.stringify({
+      namespace: resolvedNamespace,
+      filter,
+    }),
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(`Pinecone delete failed with ${response.status}: ${message}`);
+  }
+
+  return {
+    mode: 'pinecone',
+    namespace: resolvedNamespace,
+    deletedCount: null,
+    filter,
+  };
+}
+
+async function deleteClauseVectorsForContract(contractId, options = {}) {
+  if (!contractId) {
+    throw new AppError(400, 'A contract ID is required to delete clause vectors.');
+  }
+
+  const namespace = resolveNamespace(options.namespace);
+  const filters = {
+    contractId,
+  };
+
+  if (env.strictRemoteServices && !featureFlags.pinecone) {
+    throw buildPineconeRequiredError('delete', new Error('Pinecone is not configured.'));
+  }
+
+  if (featureFlags.pinecone) {
+    try {
+      return await deletePineconeVectorsByFilter(filters, namespace);
+    } catch (error) {
+      if (env.strictRemoteServices) {
+        throw buildPineconeRequiredError('delete', error);
+      }
+
+      console.warn('Falling back to local vector delete:', error.message);
+    }
+  }
+
+  return deleteLocalVectorsByFilter(filters, namespace);
+}
+
 function tokenize(text = '') {
   return text
     .toLowerCase()
@@ -319,6 +410,7 @@ async function querySimilarClauses({
 }
 
 module.exports = {
+  deleteClauseVectorsForContract,
   querySimilarClauses,
   upsertClauseVectors,
 };

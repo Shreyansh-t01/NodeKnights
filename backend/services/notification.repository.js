@@ -75,6 +75,20 @@ async function markAllNotificationsReadLocal() {
   };
 }
 
+async function deleteNotificationsByContractIdLocal(contractId) {
+  const current = await readLocalNotifications();
+  const next = current.filter((item) => item.contractId !== contractId);
+  const deletedCount = current.length - next.length;
+
+  if (deletedCount) {
+    await writeLocalNotifications(next);
+  }
+
+  return {
+    deletedCount,
+  };
+}
+
 async function saveNotificationFirebase(notification) {
   await firestore
     .collection(NOTIFICATION_COLLECTION)
@@ -122,6 +136,31 @@ async function markAllNotificationsReadFirebase() {
   };
 }
 
+async function deleteNotificationsByContractIdFirebase(contractId) {
+  const snapshot = await firestore
+    .collection(NOTIFICATION_COLLECTION)
+    .where('contractId', '==', contractId)
+    .get();
+
+  if (snapshot.empty) {
+    return {
+      deletedCount: 0,
+    };
+  }
+
+  const batch = firestore.batch();
+
+  snapshot.docs.forEach((document) => {
+    batch.delete(document.ref);
+  });
+
+  await batch.commit();
+
+  return {
+    deletedCount: snapshot.size,
+  };
+}
+
 async function saveNotification(notification) {
   if (firestoreStatus.enabled && firestore) {
     try {
@@ -159,6 +198,17 @@ async function markAllNotificationsRead() {
 }
 
 module.exports = {
+  deleteNotificationsByContractId: async (contractId) => {
+    if (firestoreStatus.enabled && firestore) {
+      try {
+        return await deleteNotificationsByContractIdFirebase(contractId);
+      } catch (error) {
+        console.warn('Falling back to local notification delete:', error.message);
+      }
+    }
+
+    return deleteNotificationsByContractIdLocal(contractId);
+  },
   listNotifications,
   markAllNotificationsRead,
   saveNotification,

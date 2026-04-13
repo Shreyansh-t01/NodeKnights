@@ -70,6 +70,104 @@ async function saveContractBundle(bundle) {
   return saveContractBundleLocal(bundle);
 }
 
+function matchesSourceIdentity(contract = {}, identity = {}) {
+  const sourceContext = contract.sourceContext || {};
+
+  if (identity.source && contract.source !== identity.source) {
+    return false;
+  }
+
+  if (identity.dedupeKey && sourceContext.dedupeKey === identity.dedupeKey) {
+    return true;
+  }
+
+  if (
+    identity.messageId
+    && identity.attachmentId
+    && sourceContext.messageId === identity.messageId
+    && sourceContext.attachmentId === identity.attachmentId
+  ) {
+    return true;
+  }
+
+  if (identity.externalId && sourceContext.externalId === identity.externalId) {
+    return true;
+  }
+
+  return false;
+}
+
+async function findContractBySourceIdentityLocal(identity = {}) {
+  const current = await readJsonFile(localStorePath, []);
+  const match = current.find((item) => matchesSourceIdentity(item.contract, identity));
+
+  return match?.contract || null;
+}
+
+async function findContractBySourceIdentityFirebase(identity = {}) {
+  const queries = [];
+
+  if (identity.dedupeKey) {
+    queries.push(
+      firestore
+        .collection('contracts')
+        .where('sourceContext.dedupeKey', '==', identity.dedupeKey)
+        .limit(1),
+    );
+  }
+
+  if (identity.messageId) {
+    queries.push(
+      firestore
+        .collection('contracts')
+        .where('sourceContext.messageId', '==', identity.messageId)
+        .limit(5),
+    );
+  }
+
+  if (identity.externalId) {
+    queries.push(
+      firestore
+        .collection('contracts')
+        .where('sourceContext.externalId', '==', identity.externalId)
+        .limit(5),
+    );
+  }
+
+  for (const query of queries) {
+    const snapshot = await query.get();
+    const match = snapshot.docs
+      .map((document) => document.data())
+      .find((contract) => matchesSourceIdentity(contract, identity));
+
+    if (match) {
+      return match;
+    }
+  }
+
+  return null;
+}
+
+async function findContractBySourceIdentity(identity = {}) {
+  if (env.strictRemoteServices && (!firestoreStatus.enabled || !firestore)) {
+    throw buildFirestoreRequiredError('source identity lookup', new Error('Firestore is not configured.'));
+  }
+
+  if (firestoreStatus.enabled && firestore) {
+    try {
+      return await findContractBySourceIdentityFirebase(identity);
+    } catch (error) {
+      if (env.strictRemoteServices) {
+        throw buildFirestoreRequiredError('source identity lookup', error);
+      }
+
+      console.warn('Falling back to local source identity lookup:', error.message);
+    }
+  }
+
+  return findContractBySourceIdentityLocal(identity);
+}
+
 async function listContractsLocal() {
   const current = await readJsonFile(localStorePath, []);
 
@@ -165,7 +263,79 @@ async function getContractById(contractId) {
   return getContractByIdLocal(contractId);
 }
 
+async function deleteContractBundleLocal(contractId) {
+  const current = await readJsonFile(localStorePath, []);
+  const match = current.find((item) => item.contract.id === contractId);
+
+  if (!match) {
+    throw new AppError(404, `Contract not found: ${contractId}`);
+  }
+
+  const next = current.filter((item) => item.contract.id !== contractId);
+  await writeJsonFile(localStorePath, next);
+
+  return {
+    mode: 'local-json',
+    location: localStorePath,
+    deletedCounts: {
+      contracts: 1,
+      clauses: match.clauses.length,
+      risks: match.risks.length,
+    },
+  };
+}
+
+async function deleteContractBundleFirebase(contractId) {
+  const contractRef = firestore.collection('contracts').doc(contractId);
+  const contractDoc = await contractRef.get();
+
+  if (!contractDoc.exists) {
+    throw new AppError(404, `Contract not found: ${contractId}`);
+  }
+
+  const [clausesSnapshot, risksSnapshot] = await Promise.all([
+    contractRef.collection('clauses').get(),
+    contractRef.collection('risks').get(),
+  ]);
+  const batch = firestore.batch();
+
+  clausesSnapshot.docs.forEach((document) => {
+    batch.delete(document.ref);
+  });
+
+  risksSnapshot.docs.forEach((document) => {
+    batch.delete(document.ref);
+  });
+
+  batch.delete(contractRef);
+  await batch.commit();
+
+  return {
+    mode: 'firebase',
+    location: `contracts/${contractId}`,
+    deletedCounts: {
+      contracts: 1,
+      clauses: clausesSnapshot.size,
+      risks: risksSnapshot.size,
+    },
+  };
+}
+
+async function deleteContractBundle(contractId) {
+  if (env.strictRemoteServices && (!firestoreStatus.enabled || !firestore)) {
+    throw buildFirestoreRequiredError('delete', new Error('Firestore is not configured.'));
+  }
+
+  if (firestoreStatus.enabled && firestore) {
+    return deleteContractBundleFirebase(contractId);
+  }
+
+  return deleteContractBundleLocal(contractId);
+}
+
 module.exports = {
+  deleteContractBundle,
+  findContractBySourceIdentity,
   getContractById,
   listContracts,
   saveContractBundle,

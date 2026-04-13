@@ -63,6 +63,39 @@ async function markProcessedSourceLocal(sourceKey, payload = {}) {
   return current.processedSources[sourceKey];
 }
 
+async function deleteProcessedSourceLocal(sourceKey) {
+  const current = await readLocalState();
+  const existing = current.processedSources[sourceKey] || null;
+
+  if (existing) {
+    delete current.processedSources[sourceKey];
+    await writeLocalState(current);
+  }
+
+  return existing;
+}
+
+async function deleteProcessedSourcesByContractIdLocal(contractId) {
+  const current = await readLocalState();
+  const removed = [];
+
+  Object.entries(current.processedSources).forEach(([sourceKey, value]) => {
+    if (value?.contractId === contractId) {
+      removed.push(value);
+      delete current.processedSources[sourceKey];
+    }
+  });
+
+  if (removed.length) {
+    await writeLocalState(current);
+  }
+
+  return {
+    deletedCount: removed.length,
+    items: removed,
+  };
+}
+
 async function getConnectorState(key) {
   if (firestoreStatus.enabled && firestore) {
     try {
@@ -132,7 +165,68 @@ async function markProcessedSource(sourceKey, payload = {}) {
   return markProcessedSourceLocal(sourceKey, nextValue);
 }
 
+async function deleteProcessedSource(sourceKey) {
+  const documentId = encodeDocumentId(sourceKey);
+
+  if (firestoreStatus.enabled && firestore) {
+    try {
+      const ref = firestore.collection(PROCESSED_SOURCE_COLLECTION).doc(documentId);
+      const snapshot = await ref.get();
+
+      if (!snapshot.exists) {
+        return null;
+      }
+
+      const existing = snapshot.data();
+      await ref.delete();
+      return existing;
+    } catch (error) {
+      console.warn('Falling back to local processed-source delete:', error.message);
+    }
+  }
+
+  return deleteProcessedSourceLocal(sourceKey);
+}
+
+async function deleteProcessedSourcesByContractId(contractId) {
+  if (firestoreStatus.enabled && firestore) {
+    try {
+      const snapshot = await firestore
+        .collection(PROCESSED_SOURCE_COLLECTION)
+        .where('contractId', '==', contractId)
+        .get();
+
+      if (snapshot.empty) {
+        return {
+          deletedCount: 0,
+          items: [],
+        };
+      }
+
+      const batch = firestore.batch();
+      const items = snapshot.docs.map((document) => document.data());
+
+      snapshot.docs.forEach((document) => {
+        batch.delete(document.ref);
+      });
+
+      await batch.commit();
+
+      return {
+        deletedCount: snapshot.size,
+        items,
+      };
+    } catch (error) {
+      console.warn('Falling back to local processed-source bulk delete:', error.message);
+    }
+  }
+
+  return deleteProcessedSourcesByContractIdLocal(contractId);
+}
+
 module.exports = {
+  deleteProcessedSource,
+  deleteProcessedSourcesByContractId,
   getConnectorState,
   getProcessedSource,
   markProcessedSource,

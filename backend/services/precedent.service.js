@@ -309,22 +309,24 @@ async function ingestPrecedentDocument(file, options = {}) {
   };
 }
 
-async function findPrecedentMatchesForClause({ clause, topK = 3 }) {
-  const searchText = asText(clause?.clauseTextFull || clause?.clauseText);
+async function findPrecedentMatchesForClause({ clause, topK = 3, vector = null, queryText = '' }) {
+  const searchText = asText(queryText || clause?.clauseTextFull || clause?.clauseText);
 
   if (!searchText || !featureFlags.pinecone) {
     return [];
   }
 
   try {
-    const embedding = await embedText(searchText, {
-      taskType: 'RETRIEVAL_QUERY',
-    });
+    const embeddingValues = Array.isArray(vector) && vector.length
+      ? vector
+      : (await embedText(searchText, {
+        taskType: 'RETRIEVAL_QUERY',
+      })).values;
     const clauseType = normalizeClauseType(clause?.clauseType || 'other');
 
     const primaryMatches = clauseType !== 'other'
       ? await querySimilarClauses({
-        vector: embedding.values,
+        vector: embeddingValues,
         topK,
         namespace: env.pineconePrecedentNamespace,
         filters: {
@@ -336,7 +338,7 @@ async function findPrecedentMatchesForClause({ clause, topK = 3 }) {
 
     const fallbackMatches = primaryMatches.length < topK
       ? await querySimilarClauses({
-        vector: embedding.values,
+        vector: embeddingValues,
         topK,
         namespace: env.pineconePrecedentNamespace,
         queryText: searchText,
@@ -350,21 +352,23 @@ async function findPrecedentMatchesForClause({ clause, topK = 3 }) {
   }
 }
 
-async function findComparableContractMatchesForClause({ clause, topK = 3 }) {
-  const searchText = asText(clause?.clauseTextFull || clause?.clauseText);
+async function findComparableContractMatchesForClause({ clause, topK = 3, vector = null, queryText = '' }) {
+  const searchText = asText(queryText || clause?.clauseTextFull || clause?.clauseText);
 
   if (!searchText || !featureFlags.pinecone) {
     return [];
   }
 
   try {
-    const embedding = await embedText(searchText, {
-      taskType: 'RETRIEVAL_QUERY',
-    });
+    const embeddingValues = Array.isArray(vector) && vector.length
+      ? vector
+      : (await embedText(searchText, {
+        taskType: 'RETRIEVAL_QUERY',
+      })).values;
     const clauseType = normalizeClauseType(clause?.clauseType || 'other');
 
     const primaryMatches = await querySimilarClauses({
-      vector: embedding.values,
+      vector: embeddingValues,
       topK,
       namespace: env.pineconeContractNamespace,
       filters: {

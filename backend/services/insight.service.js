@@ -77,6 +77,37 @@ function asStringArray(value, fallback = [], maxItems = 5) {
   return normalized.length ? normalized : fallback;
 }
 
+function trimPromptText(value, maxLength = 1200) {
+  const normalized = typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
+
+  if (!normalized || normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, maxLength - 3).trim()}...`;
+}
+
+function buildGeminiFailureInfo(error, source = 'gemini') {
+  return {
+    source,
+    message: error?.message || 'Gemini is unavailable.',
+    statusCode: error?.statusCode || null,
+    details: error?.details || null,
+  };
+}
+
+function attachInsightMeta(payload, options = {}) {
+  const degraded = Boolean(options.degraded);
+  const provider = options.provider || (degraded ? 'template-fallback' : 'gemini');
+
+  return {
+    ...payload,
+    provider,
+    degraded,
+    geminiError: options.geminiError || null,
+  };
+}
+
 function serializePromptContext(value) {
   return JSON.stringify(value, null, 2);
 }
@@ -212,8 +243,8 @@ function toPromptMatches(matches = []) {
       score: normalized.score,
       clauseType: normalized.clauseType,
       riskLabel: normalized.riskLabel,
-      clauseTextSummary: normalized.clauseTextSummary,
-      clauseTextFull: normalized.clauseTextFull,
+      clauseTextSummary: trimPromptText(normalized.clauseTextSummary, 260),
+      clauseTextFull: trimPromptText(normalized.clauseTextFull, 1000),
       contractTitle: normalized.title,
       position: match.position || match.metadata?.position || null,
       sectionHeading: normalized.sectionHeading,
@@ -236,10 +267,10 @@ function toPromptRuleMatches(matches = []) {
       primaryClauseType: normalized.primaryClauseType,
       clauseTypes: normalized.clauseTypes,
       primaryConcern: normalized.primaryConcern,
-      benchmark: normalized.benchmark,
-      recommendedAction: normalized.recommendedAction,
-      textSummary: normalized.textSummary,
-      textFull: normalized.textFull,
+      benchmark: trimPromptText(normalized.benchmark, 400),
+      recommendedAction: trimPromptText(normalized.recommendedAction, 400),
+      textSummary: trimPromptText(normalized.textSummary, 320),
+      textFull: trimPromptText(normalized.textFull, 1000),
       jurisdiction: normalized.jurisdiction,
       league: normalized.league,
       sport: normalized.sport,
@@ -401,7 +432,12 @@ function buildClauseInsightPrompt(clause, reviewContext = {}) {
     '',
     'Context:',
     serializePromptContext({
-      currentClause,
+      currentClause: {
+        ...currentClause,
+        clauseText: trimPromptText(currentClause.clauseText, 260),
+        clauseTextSummary: trimPromptText(currentClause.clauseTextSummary, 260),
+        clauseTextFull: trimPromptText(currentClause.clauseTextFull, 1100),
+      },
       precedentMatches: toPromptMatches(precedentMatches),
       ruleMatches: toPromptRuleMatches(ruleMatches),
     }),
@@ -411,9 +447,9 @@ function buildClauseInsightPrompt(clause, reviewContext = {}) {
 function buildSemanticAnswerPrompt({ query, matches, contract }) {
   return [
     'You are a legal contract search assistant.',
-    'Answer the user query using only the retrieved matches below.',
+    'Answer the user query keeping in mind the retrieved matches below.',
     'Do not invent missing clauses or unsupported advice.',
-    'Keep the answer concise, grounded, and actionable.',
+    'Keep the answer concise, grounded, actionable, and genuine.',
     'Return JSON only.',
     '',
     'Context:',
@@ -432,24 +468,20 @@ function buildSemanticAnswerPrompt({ query, matches, contract }) {
   ].join('\n');
 }
 
-function ensureGeminiReady(featureLabel) {
-  if (!env.strictRemoteServices || isGeminiEnabled()) {
-    return;
-  }
-
-  throw new AppError(503, `Gemini is required for ${featureLabel} but is not configured.`, {
-    provider: 'gemini',
-    model: env.genAiModel,
-  });
-}
-
 async function generateContractOverview(contractBundle) {
   const fallback = buildTemplateContractOverview(contractBundle);
 
-  ensureGeminiReady('contract insights');
-
   if (!isGeminiEnabled()) {
-    return fallback;
+    return attachInsightMeta(fallback, {
+      degraded: true,
+      provider: 'template-fallback',
+      geminiError: buildGeminiFailureInfo(
+        new AppError(503, 'Gemini is not configured for contract insights.', {
+          provider: env.genAiProvider,
+          model: env.genAiModel,
+        }),
+      ),
+    });
   }
 
   try {
@@ -461,7 +493,7 @@ async function generateContractOverview(contractBundle) {
 
     const generatedInsights = Array.isArray(generated?.clauseInsights) ? generated.clauseInsights : [];
 
-    return {
+    return attachInsightMeta({
       headline: asText(generated?.headline, fallback.headline),
       summary: asText(generated?.summary, fallback.summary),
       topRiskItems: fallback.topRiskItems,
@@ -478,24 +510,31 @@ async function generateContractOverview(contractBundle) {
           recommendedChange: asText(generatedInsight?.recommendedChange, fallbackInsight.recommendedChange),
         };
       }),
-    };
+    });
   } catch (error) {
-    if (env.strictRemoteServices) {
-      throw error;
-    }
-
-    console.warn('Gemini contract overview failed, using template fallback:', error.message);
-    return fallback;
+    console.warn('Gemini contract overview failed, using explicit template fallback:', error.message);
+    return attachInsightMeta(fallback, {
+      degraded: true,
+      provider: 'template-fallback',
+      geminiError: buildGeminiFailureInfo(error),
+    });
   }
 }
 
 async function generateClauseInsight(clause, reviewContext = {}) {
   const fallback = buildTemplateClauseInsight(clause, reviewContext);
 
-  ensureGeminiReady('clause insights');
-
   if (!isGeminiEnabled()) {
-    return fallback;
+    return attachInsightMeta(fallback, {
+      degraded: true,
+      provider: 'template-fallback',
+      geminiError: buildGeminiFailureInfo(
+        new AppError(503, 'Gemini is not configured for clause insights.', {
+          provider: env.genAiProvider,
+          model: env.genAiModel,
+        }),
+      ),
+    });
   }
 
   try {
@@ -505,29 +544,38 @@ async function generateClauseInsight(clause, reviewContext = {}) {
       label: 'clause insight',
     });
 
-    return {
+    return attachInsightMeta({
       ...fallback,
       whyItIsRisky: asText(generated?.whyItIsRisky, fallback.whyItIsRisky),
       comparison: asText(generated?.comparison, fallback.comparison),
       recommendedChange: asText(generated?.recommendedChange, fallback.recommendedChange),
-    };
+    });
   } catch (error) {
-    if (env.strictRemoteServices) {
-      throw error;
-    }
-
-    console.warn('Gemini clause insight failed, using template fallback:', error.message);
-    return fallback;
+    console.warn('Gemini clause insight failed, using explicit template fallback:', error.message);
+    return attachInsightMeta(fallback, {
+      degraded: true,
+      provider: 'template-fallback',
+      geminiError: buildGeminiFailureInfo(error),
+    });
   }
 }
 
 async function buildSemanticAnswer({ query, matches, contract }) {
   const fallback = buildTemplateSemanticAnswer({ query, matches, contract });
 
-  ensureGeminiReady('semantic answers');
-
   if (!matches.length || !isGeminiEnabled()) {
-    return fallback;
+    return attachInsightMeta(fallback, {
+      degraded: !matches.length ? false : true,
+      provider: !matches.length ? 'retrieval-only' : 'template-fallback',
+      geminiError: !matches.length
+        ? null
+        : buildGeminiFailureInfo(
+          new AppError(503, 'Gemini is not configured for semantic answers.', {
+            provider: env.genAiProvider,
+            model: env.genAiModel,
+          }),
+        ),
+    });
   }
 
   try {
@@ -537,18 +585,18 @@ async function buildSemanticAnswer({ query, matches, contract }) {
       label: 'semantic answer',
     });
 
-    return {
+    return attachInsightMeta({
       answer: asText(generated?.answer, fallback.answer),
       supportingMatches: fallback.supportingMatches,
       recommendations: asStringArray(generated?.recommendations, fallback.recommendations, 5),
-    };
+    });
   } catch (error) {
-    if (env.strictRemoteServices) {
-      throw error;
-    }
-
-    console.warn('Gemini semantic answer failed, using template fallback:', error.message);
-    return fallback;
+    console.warn('Gemini semantic answer failed, using explicit template fallback:', error.message);
+    return attachInsightMeta(fallback, {
+      degraded: true,
+      provider: 'template-fallback',
+      geminiError: buildGeminiFailureInfo(error),
+    });
   }
 }
 

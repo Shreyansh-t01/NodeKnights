@@ -373,38 +373,40 @@ async function ingestKnowledgeDocument(file, options = {}) {
   };
 }
 
-async function findRelevantKnowledge({ clause, topK = 4 }) {
-  const clauseText = asText(clause?.clauseTextFull || clause?.clauseText);
+async function findRelevantKnowledge({ clause, topK = 4, vector = null, queryText = '' }) {
+  const clauseText = asText(queryText || clause?.clauseTextFull || clause?.clauseText);
 
   if (!clauseText || !featureFlags.pinecone) {
     return [];
   }
 
   try {
-    const queryText = `${normalizeClauseType(clause?.clauseType || 'other').replace(/_/g, ' ')} ${clauseText}`.trim();
-    const embedding = await embedText(queryText, {
-      taskType: 'RETRIEVAL_QUERY',
-    });
+    const effectiveQueryText = `${normalizeClauseType(clause?.clauseType || 'other').replace(/_/g, ' ')} ${clauseText}`.trim();
+    const embeddingValues = Array.isArray(vector) && vector.length
+      ? vector
+      : (await embedText(effectiveQueryText, {
+        taskType: 'RETRIEVAL_QUERY',
+      })).values;
     const primaryClauseType = normalizeClauseType(clause?.clauseType || 'other');
 
     const targetedMatches = primaryClauseType !== 'other'
       ? await querySimilarClauses({
-        vector: embedding.values,
+        vector: embeddingValues,
         topK,
         namespace: env.pineconeKnowledgeNamespace,
         filters: {
           primaryClauseType,
         },
-        queryText,
+        queryText: effectiveQueryText,
       })
       : [];
 
     const fallbackMatches = targetedMatches.length < topK
       ? await querySimilarClauses({
-        vector: embedding.values,
+        vector: embeddingValues,
         topK,
         namespace: env.pineconeKnowledgeNamespace,
-        queryText,
+        queryText: effectiveQueryText,
       })
       : [];
 

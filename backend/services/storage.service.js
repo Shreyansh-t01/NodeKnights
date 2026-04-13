@@ -15,6 +15,24 @@ async function saveLocally(targetPath, content, encoding) {
   await fs.writeFile(targetPath, content, encoding);
 }
 
+async function pruneEmptyParentDirectories(filePath) {
+  const stopPath = path.resolve(env.tempStorageDir);
+  let currentPath = path.dirname(filePath);
+
+  while (currentPath.startsWith(stopPath) && currentPath !== stopPath) {
+    try {
+      await fs.rmdir(currentPath);
+      currentPath = path.dirname(currentPath);
+    } catch (error) {
+      if (error.code === 'ENOENT' || error.code === 'ENOTEMPTY') {
+        return;
+      }
+
+      throw error;
+    }
+  }
+}
+
 function buildDisabledArtifact(assetType, reason = 'Artifact storage is disabled.') {
   return {
     mode: 'disabled',
@@ -187,7 +205,105 @@ async function uploadExtractedText({ contractId, text, source }) {
   });
 }
 
+async function deleteSupabaseArtifact(artifact) {
+  if (!supabaseStatus.enabled || !supabase) {
+    if (env.strictRemoteServices) {
+      throw buildSupabaseRequiredError('Supabase Storage is required for artifact deletion but is not configured.', {
+        assetType: artifact?.assetType || 'artifact',
+        target: artifact?.path || null,
+      });
+    }
+
+    return {
+      assetType: artifact?.assetType || 'artifact',
+      mode: 'supabase',
+      path: artifact?.path || null,
+      status: 'skipped',
+      reason: 'Supabase Storage is not configured.',
+    };
+  }
+
+  const bucket = artifact.bucket || env.supabaseStorageBucket;
+  const { error } = await supabase
+    .storage
+    .from(bucket)
+    .remove([artifact.path]);
+
+  if (error) {
+    throw new Error(error.message || `Supabase delete failed for ${artifact.path}`);
+  }
+
+  return {
+    assetType: artifact.assetType || 'artifact',
+    mode: 'supabase',
+    path: artifact.path,
+    status: 'deleted',
+  };
+}
+
+async function deleteLocalArtifact(artifact) {
+  await fs.rm(artifact.path, {
+    force: true,
+  });
+  await pruneEmptyParentDirectories(artifact.path);
+
+  return {
+    assetType: artifact.assetType || 'artifact',
+    mode: 'local',
+    path: artifact.path,
+    status: 'deleted',
+  };
+}
+
+async function deleteArtifact(artifact) {
+  if (!artifact || artifact.mode === 'disabled') {
+    return {
+      assetType: artifact?.assetType || 'artifact',
+      mode: artifact?.mode || 'disabled',
+      path: artifact?.path || null,
+      status: 'skipped',
+      reason: artifact?.reason || 'Artifact storage is disabled.',
+    };
+  }
+
+  if (!artifact.path) {
+    return {
+      assetType: artifact.assetType || 'artifact',
+      mode: artifact.mode,
+      path: null,
+      status: 'skipped',
+      reason: 'Stored artifact path is missing.',
+    };
+  }
+
+  if (artifact.mode === 'supabase') {
+    return deleteSupabaseArtifact(artifact);
+  }
+
+  if (artifact.mode === 'local') {
+    return deleteLocalArtifact(artifact);
+  }
+
+  throw new AppError(409, `Unsupported artifact storage mode: ${artifact.mode}`);
+}
+
+async function deleteStoredArtifacts(artifacts = {}) {
+  const targets = [artifacts.rawDocument, artifacts.extractedText];
+  const results = [];
+
+  for (const artifact of targets) {
+    results.push(await deleteArtifact(artifact));
+  }
+
+  return {
+    deletedCount: results.filter((item) => item.status === 'deleted').length,
+    skippedCount: results.filter((item) => item.status === 'skipped').length,
+    results,
+  };
+}
+
 module.exports = {
+  deleteStoredArtifacts,
   uploadRawDocument,
   uploadExtractedText,
 };

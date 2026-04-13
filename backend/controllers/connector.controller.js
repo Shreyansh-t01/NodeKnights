@@ -14,12 +14,17 @@ const {
 } = require('../services/gmail.service');
 
 const importFromDrive = asyncHandler(async (req, res) => {
-  const results = await importDriveFiles(req.body || {});
+  const result = await importDriveFiles(req.body || {});
 
-  res.status(201).json({
+  res.status(result.importedCount > 0 ? 201 : 200).json({
     success: true,
-    count: results.length,
-    data: results,
+    count: result.importedCount,
+    scannedFileCount: result.scannedFileCount,
+    skippedCount: result.skippedCount,
+    failedCount: result.failedCount,
+    message: result.message,
+    data: result.payloads,
+    results: result.results,
   });
 });
 
