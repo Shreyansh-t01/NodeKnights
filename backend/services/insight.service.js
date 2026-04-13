@@ -87,6 +87,33 @@ function asStringArray(value, fallback = [], maxItems = 5) {
   return normalized.length ? normalized : fallback;
 }
 
+function compactText(value, fallback, maxLength = 240) {
+  const resolved = asText(value, fallback);
+  const normalized = typeof resolved === 'string' ? resolved.replace(/\s+/g, ' ').trim() : '';
+
+  if (!normalized || normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  const candidate = normalized.slice(0, maxLength + 1);
+  const boundary = Math.max(
+    candidate.lastIndexOf('. '),
+    candidate.lastIndexOf('; '),
+    candidate.lastIndexOf(', '),
+    candidate.lastIndexOf(' '),
+  );
+  const safeBoundary = boundary > Math.floor(maxLength * 0.6) ? boundary : maxLength;
+
+  return `${candidate.slice(0, safeBoundary).trim()}...`;
+}
+
+function compactStringArray(value, fallback = [], maxItems = 3, maxLength = 120) {
+  return asStringArray(value, fallback, maxItems)
+    .map((item) => compactText(item, '', maxLength))
+    .filter(Boolean)
+    .slice(0, maxItems);
+}
+
 function trimPromptText(value, maxLength = 1200) {
   const normalized = typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
 
@@ -245,7 +272,7 @@ function toSupportingMatches(matches = []) {
 }
 
 function toPromptMatches(matches = []) {
-  return matches.slice(0, 3).map((match) => {
+  return matches.slice(0, 2).map((match) => {
     const normalized = normalizePrecedentMatch(match);
 
     return {
@@ -253,8 +280,8 @@ function toPromptMatches(matches = []) {
       score: normalized.score,
       clauseType: normalized.clauseType,
       riskLabel: normalized.riskLabel,
-      clauseTextSummary: trimPromptText(normalized.clauseTextSummary, 180),
-      clauseTextFull: trimPromptText(normalized.clauseTextFull, 420),
+      clauseTextSummary: trimPromptText(normalized.clauseTextSummary, 140),
+      clauseTextFull: trimPromptText(normalized.clauseTextFull, 260),
       contractTitle: normalized.title,
       position: match.position || match.metadata?.position || null,
       sectionHeading: normalized.sectionHeading,
@@ -265,7 +292,7 @@ function toPromptMatches(matches = []) {
 }
 
 function toPromptRuleMatches(matches = []) {
-  return matches.slice(0, 3).map((match) => {
+  return matches.slice(0, 2).map((match) => {
     const normalized = normalizeRuleMatch(match);
 
     return {
@@ -277,10 +304,10 @@ function toPromptRuleMatches(matches = []) {
       primaryClauseType: normalized.primaryClauseType,
       clauseTypes: normalized.clauseTypes,
       primaryConcern: normalized.primaryConcern,
-      benchmark: trimPromptText(normalized.benchmark, 240),
-      recommendedAction: trimPromptText(normalized.recommendedAction, 240),
-      textSummary: trimPromptText(normalized.textSummary, 200),
-      textFull: trimPromptText(normalized.textFull, 420),
+      benchmark: trimPromptText(normalized.benchmark, 160),
+      recommendedAction: trimPromptText(normalized.recommendedAction, 160),
+      textSummary: trimPromptText(normalized.textSummary, 140),
+      textFull: trimPromptText(normalized.textFull, 260),
       jurisdiction: normalized.jurisdiction,
       league: normalized.league,
       sport: normalized.sport,
@@ -389,24 +416,24 @@ function buildOverviewClauseContext(insight = {}) {
       insight.currentClause?.clauseTextSummary
       || insight.currentClause?.clauseText
       || '',
-      180,
+      120,
     ),
     bestPrecedentSummary: trimPromptText(
       insight.precedentClause?.clauseTextSummary
       || insight.precedentClause?.clauseText
       || insight.precedentClause?.clauseTextFull
       || '',
-      180,
+      120,
     ),
     benchmarkSummary: trimPromptText(
       topRule?.benchmark
       || topRule?.textSummary
       || topRule?.primaryConcern
       || '',
-      220,
+      140,
     ),
-    whyItIsRisky: trimPromptText(insight.whyItIsRisky, 220),
-    recommendedChange: trimPromptText(insight.recommendedChange, 220),
+    whyItIsRisky: trimPromptText(insight.whyItIsRisky, 140),
+    recommendedChange: trimPromptText(insight.recommendedChange, 140),
   };
 }
 
@@ -418,6 +445,7 @@ function buildContractOverviewPrompt(contractBundle, fallback) {
     'Generate grounded, context-based, actionable insights using only the provided JSON context.',
     'Do not invent clauses, parties, obligations, money values, or legal facts that are not present in the context.',
     'Be direct and practical for a business reviewer.',
+    'Keep everything brief and to the point.',
     'Return JSON only.',
     '',
     'Context:',
@@ -428,25 +456,25 @@ function buildContractOverviewPrompt(contractBundle, fallback) {
         status: contract.status,
         summary: contract.metadata.summary,
         contractType: contract.metadata.contractType,
-        parties: contract.metadata.parties,
-        dates: contract.metadata.dates,
-        monetaryValues: contract.metadata.monetaryValues,
-        clauseTypes: contract.metadata.clauseTypes,
+        parties: (contract.metadata.parties || []).slice(0, 3),
+        dates: (contract.metadata.dates || []).slice(0, 3),
+        monetaryValues: (contract.metadata.monetaryValues || []).slice(0, 3),
+        clauseTypes: (contract.metadata.clauseTypes || []).slice(0, 5),
         riskCounts: contract.metadata.riskCounts,
-        textPreview: contract.textPreview,
+        textPreview: trimPromptText(contract.textPreview, 220),
       },
-      topRisks: risks.slice(0, 5).map((risk) => ({
+      topRisks: risks.slice(0, 3).map((risk) => ({
         title: risk.title,
         severity: risk.severity,
-        summary: risk.summary,
+        summary: trimPromptText(risk.summary, 140),
       })),
-      targetClauses: fallback.clauseInsights.map(buildOverviewClauseContext),
+      targetClauses: fallback.clauseInsights.slice(0, 4).map(buildOverviewClauseContext),
     }),
     '',
     'Requirements:',
-    '- Keep the headline concise and action-oriented.',
-    '- Make the summary useful for a reviewer deciding what to inspect next in 2 to 4 sentences.',
-    '- Provide 3 to 5 short nextSteps.',
+    '- Headline: one short sentence.',
+    '- Summary: max 2 short sentences.',
+    '- NextSteps: exactly 3 short actions.',
   ].join('\n');
 }
 
@@ -461,16 +489,16 @@ function buildClauseInsightPrompt(clause, reviewContext = {}) {
     'Do not invent facts beyond the provided context.',
     'Keep the explanation practical and actionable.',
     'When explaining the comparison, explicitly anchor it to the precedent and benchmark guidance in the context.',
-    'Keep whyItIsRisky, comparison, and recommendedChange to 1 to 2 sentences each.',
+    'Each of whyItIsRisky, comparison, and recommendedChange must be one short sentence.',
     'Return JSON only.',
     '',
     'Context:',
     serializePromptContext({
       currentClause: {
         ...currentClause,
-        clauseText: trimPromptText(currentClause.clauseText, 200),
-        clauseTextSummary: trimPromptText(currentClause.clauseTextSummary, 200),
-        clauseTextFull: trimPromptText(currentClause.clauseTextFull, 700),
+        clauseText: trimPromptText(currentClause.clauseText, 140),
+        clauseTextSummary: trimPromptText(currentClause.clauseTextSummary, 140),
+        clauseTextFull: trimPromptText(currentClause.clauseTextFull, 320),
       },
       precedentMatches: toPromptMatches(precedentMatches),
       ruleMatches: toPromptRuleMatches(ruleMatches),
@@ -490,9 +518,9 @@ function buildBatchClauseInsightPrompt(clauses, reviewContexts = []) {
       context: {
         currentClause: {
           ...currentClause,
-          clauseText: trimPromptText(currentClause.clauseText, 200),
-          clauseTextSummary: trimPromptText(currentClause.clauseTextSummary, 200),
-          clauseTextFull: trimPromptText(currentClause.clauseTextFull, 700),
+          clauseText: trimPromptText(currentClause.clauseText, 140),
+          clauseTextSummary: trimPromptText(currentClause.clauseTextSummary, 140),
+          clauseTextFull: trimPromptText(currentClause.clauseTextFull, 320),
         },
         precedentMatches: toPromptMatches(precedentMatches),
         ruleMatches: toPromptRuleMatches(ruleMatches),
@@ -506,7 +534,7 @@ function buildBatchClauseInsightPrompt(clauses, reviewContexts = []) {
     'Do not invent facts beyond the provided context.',
     'Keep the explanations practical and actionable.',
     'When explaining the comparison, explicitly anchor it to the precedent and benchmark guidance in the context.',
-    'Keep each whyItIsRisky, comparison, and recommendedChange value to 1 to 2 sentences.',
+    'Each whyItIsRisky, comparison, and recommendedChange value must be one short sentence.',
     'Return JSON only with an array of insights, each containing clauseId, whyItIsRisky, comparison, and recommendedChange.',
     '',
     'Clauses to analyze:',
@@ -520,6 +548,7 @@ function buildSemanticAnswerPrompt({ query, matches, contract }) {
     'Answer the user query keeping in mind the retrieved matches below.',
     'Do not invent missing clauses or unsupported advice.',
     'Keep the answer concise, grounded, actionable, and genuine.',
+    'Return only the minimum useful detail.',
     'Return JSON only.',
     '',
     'Context:',
@@ -530,11 +559,15 @@ function buildSemanticAnswerPrompt({ query, matches, contract }) {
           id: contract.id,
           title: contract.title,
           contractType: contract.metadata?.contractType || '',
-          summary: contract.metadata?.summary || '',
+          summary: trimPromptText(contract.metadata?.summary || '', 120),
         }
         : null,
       matches: toPromptMatches(matches),
     }),
+    '',
+    'Requirements:',
+    '- Answer: max 2 short sentences.',
+    '- Recommendations: 1 or 2 short actions.',
   ].join('\n');
 }
 
@@ -562,10 +595,10 @@ async function generateContractOverview(contractBundle) {
     });
 
     return attachInsightMeta({
-      headline: asText(generated?.headline, fallback.headline),
-      summary: asText(generated?.summary, fallback.summary),
+      headline: compactText(generated?.headline, fallback.headline, 100),
+      summary: compactText(generated?.summary, fallback.summary, 260),
       topRiskItems: fallback.topRiskItems,
-      nextSteps: asStringArray(generated?.nextSteps, fallback.nextSteps, 5),
+      nextSteps: compactStringArray(generated?.nextSteps, fallback.nextSteps, 3, 90),
       clauseInsights: fallback.clauseInsights,
     });
   } catch (error) {
@@ -608,9 +641,9 @@ async function generateBatchClauseInsights(clauses, reviewContexts = []) {
 
       const result = attachInsightMeta({
         ...fallback,
-        whyItIsRisky: asText(generatedInsight?.whyItIsRisky, fallback.whyItIsRisky),
-        comparison: asText(generatedInsight?.comparison, fallback.comparison),
-        recommendedChange: asText(generatedInsight?.recommendedChange, fallback.recommendedChange),
+        whyItIsRisky: compactText(generatedInsight?.whyItIsRisky, fallback.whyItIsRisky, 180),
+        comparison: compactText(generatedInsight?.comparison, fallback.comparison, 220),
+        recommendedChange: compactText(generatedInsight?.recommendedChange, fallback.recommendedChange, 180),
       });
 
       // Cache successful results
@@ -661,9 +694,9 @@ async function generateClauseInsight(clause, reviewContext = {}) {
 
     const result = attachInsightMeta({
       ...fallback,
-      whyItIsRisky: asText(generated?.whyItIsRisky, fallback.whyItIsRisky),
-      comparison: asText(generated?.comparison, fallback.comparison),
-      recommendedChange: asText(generated?.recommendedChange, fallback.recommendedChange),
+      whyItIsRisky: compactText(generated?.whyItIsRisky, fallback.whyItIsRisky, 180),
+      comparison: compactText(generated?.comparison, fallback.comparison, 220),
+      recommendedChange: compactText(generated?.recommendedChange, fallback.recommendedChange, 180),
     });
 
     // Cache successful results
@@ -708,9 +741,9 @@ async function buildSemanticAnswer({ query, matches, contract }) {
     });
 
     return attachInsightMeta({
-      answer: asText(generated?.answer, fallback.answer),
+      answer: compactText(generated?.answer, fallback.answer, 260),
       supportingMatches: fallback.supportingMatches,
-      recommendations: asStringArray(generated?.recommendations, fallback.recommendations, 5),
+      recommendations: compactStringArray(generated?.recommendations, fallback.recommendations, 2, 100),
     });
   } catch (error) {
     console.warn('Gemini semantic answer failed, using explicit template fallback:', error.message);

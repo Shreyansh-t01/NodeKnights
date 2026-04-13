@@ -1,7 +1,9 @@
 const crypto = require('node:crypto');
+const path = require('node:path');
 
 const AppError = require('../errors/AppError');
 const { env, featureFlags } = require('../config/env');
+const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 const {
   computeRetryDelayMs,
   extractRetryDelayMs,
@@ -11,7 +13,18 @@ const {
 } = require('../utils/geminiRetry');
 
 const PRIMARY_GEMINI_RESPONSE_MODEL = 'gemini-2.5-flash';
+const DEFAULT_GEMINI_RESPONSE_MODELS = [
+  PRIMARY_GEMINI_RESPONSE_MODEL,
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+];
+const GEMINI_RESPONSE_CACHE_LIMIT = 300;
+const geminiResponseCachePath = path.join(env.tempStorageDir, 'local-store', 'gemini-response-cache.json');
 const pendingStructuredRequests = new Map();
+const completedStructuredRequests = new Map();
+let geminiResponseCacheLoaded = false;
+let geminiResponseCacheLoadPromise = null;
+let geminiResponseCachePersistChain = Promise.resolve();
 
 function isGeminiEnabled() {
   return featureFlags.externalGenAi && env.genAiProvider === 'gemini';
@@ -25,8 +38,83 @@ function getGeminiModelCandidates() {
   return [...new Set([
     normalizeModelName(env.genAiModel),
     ...(Array.isArray(env.genAiModelCandidates) ? env.genAiModelCandidates.map(normalizeModelName) : []),
-    PRIMARY_GEMINI_RESPONSE_MODEL,
+    ...DEFAULT_GEMINI_RESPONSE_MODELS,
   ].filter(Boolean))];
+}
+
+async function ensureGeminiResponseCacheLoaded() {
+  if (geminiResponseCacheLoaded) {
+    return;
+  }
+
+  if (!geminiResponseCacheLoadPromise) {
+    geminiResponseCacheLoadPromise = readJsonFile(geminiResponseCachePath, { entries: [] })
+      .then((payload) => {
+        const entries = Array.isArray(payload?.entries) ? payload.entries : [];
+
+        completedStructuredRequests.clear();
+        entries.forEach((entry) => {
+          if (entry?.key && entry?.value !== undefined) {
+            completedStructuredRequests.set(entry.key, entry);
+          }
+        });
+
+        geminiResponseCacheLoaded = true;
+      })
+      .catch((error) => {
+        console.warn('Gemini response cache load failed, continuing without persisted cache:', error.message);
+        completedStructuredRequests.clear();
+        geminiResponseCacheLoaded = true;
+      })
+      .finally(() => {
+        geminiResponseCacheLoadPromise = null;
+      });
+  }
+
+  await geminiResponseCacheLoadPromise;
+}
+
+async function persistGeminiResponseCache() {
+  const entries = [...completedStructuredRequests.values()]
+    .sort((left, right) => new Date(right.cachedAt || 0) - new Date(left.cachedAt || 0))
+    .slice(0, GEMINI_RESPONSE_CACHE_LIMIT);
+
+  completedStructuredRequests.clear();
+  entries.forEach((entry) => {
+    completedStructuredRequests.set(entry.key, entry);
+  });
+
+  await writeJsonFile(geminiResponseCachePath, { entries });
+}
+
+function queueGeminiResponseCachePersist() {
+  geminiResponseCachePersistChain = geminiResponseCachePersistChain
+    .catch(() => undefined)
+    .then(() => persistGeminiResponseCache());
+
+  return geminiResponseCachePersistChain;
+}
+
+async function getCompletedStructuredRequest(requestKey) {
+  await ensureGeminiResponseCacheLoaded();
+  return completedStructuredRequests.get(requestKey)?.value;
+}
+
+async function setCompletedStructuredRequest(requestKey, payload = {}) {
+  await ensureGeminiResponseCacheLoaded();
+
+  completedStructuredRequests.set(requestKey, {
+    key: requestKey,
+    value: payload.value,
+    label: payload.label || 'response',
+    cachedAt: new Date().toISOString(),
+  });
+
+  try {
+    await queueGeminiResponseCachePersist();
+  } catch (error) {
+    console.warn('Gemini response cache persist failed, continuing with in-memory cache only:', error.message);
+  }
 }
 
 function buildGeminiUrl(modelName) {
@@ -146,6 +234,20 @@ function shouldTryNextModel(error) {
     || [400, 403, 404, 429].includes(status);
 }
 
+function shouldRetrySameModel(error) {
+  if (!(error instanceof AppError) || !isRetryableGeminiFailure(error)) {
+    return false;
+  }
+
+  const status = Number(error.details?.status || error.statusCode || 0);
+
+  if ([429, 503].includes(status)) {
+    return false;
+  }
+
+  return true;
+}
+
 async function runGeminiRequest({
   prompt,
   responseSchema,
@@ -156,10 +258,14 @@ async function runGeminiRequest({
 }) {
   const maxAttempts = Math.max(1, maxAttemptsOverride ?? (env.genAiMaxRetries + 1));
   let lastError = null;
+  const requestTimeoutMs = Math.min(
+    env.genAiTimeoutMs,
+    mode === 'json-prompt' ? 10000 : 15000,
+  );
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), env.genAiTimeoutMs);
+    const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
 
     try {
       const response = await fetch(buildGeminiUrl(modelName), {
@@ -229,7 +335,7 @@ async function runGeminiRequest({
     } catch (error) {
       lastError = error.name === 'AbortError'
         ? new AppError(504, `Gemini ${label} request timed out.`, {
-          timeoutMs: env.genAiTimeoutMs,
+          timeoutMs: requestTimeoutMs,
           model: modelName,
           attempt,
           mode,
@@ -243,7 +349,7 @@ async function runGeminiRequest({
             originalError: error.message,
           });
 
-      if (!isRetryableGeminiFailure(lastError) || attempt >= maxAttempts) {
+      if (!shouldRetrySameModel(lastError) || attempt >= maxAttempts) {
         throw lastError;
       }
 
@@ -335,6 +441,11 @@ async function generateStructuredObject({ prompt, responseSchema, label = 'respo
   }
 
   const requestKey = buildRequestKey({ prompt, responseSchema, label });
+  const cachedResponse = await getCompletedStructuredRequest(requestKey);
+
+  if (cachedResponse !== undefined) {
+    return cachedResponse;
+  }
 
   if (pendingStructuredRequests.has(requestKey)) {
     return pendingStructuredRequests.get(requestKey);
@@ -344,6 +455,13 @@ async function generateStructuredObject({ prompt, responseSchema, label = 'respo
     prompt,
     responseSchema,
     label,
+  }).then(async (value) => {
+    await setCompletedStructuredRequest(requestKey, {
+      label,
+      value,
+    });
+
+    return value;
   }).finally(() => {
     pendingStructuredRequests.delete(requestKey);
   });

@@ -695,7 +695,7 @@ function App() {
     return () => {
       ignore = true;
     };
-  }, [bootMode, contracts, safePath, selectedContract, selectedContractId]);
+  }, [safePath, selectedContractId, selectedContract?.updatedAt]);
 
   useEffect(() => {
     if (!documentResults.length) {

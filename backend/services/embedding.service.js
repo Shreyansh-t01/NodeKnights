@@ -1,6 +1,10 @@
+const crypto = require('node:crypto');
+const path = require('node:path');
+
 const AppError = require('../errors/AppError');
 const { env, featureFlags } = require('../config/env');
 const { buildDeterministicEmbeddingValues } = require('../utils/deterministicEmbedding');
+const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 const {
   computeRetryDelayMs,
   extractRetryDelayMs,
@@ -8,6 +12,13 @@ const {
   safeJsonParse,
   sleep,
 } = require('../utils/geminiRetry');
+
+const EMBEDDING_CACHE_LIMIT = 1000;
+const embeddingCachePath = path.join(env.tempStorageDir, 'local-store', 'embedding-cache.json');
+const embeddingCache = new Map();
+let embeddingCacheLoaded = false;
+let embeddingCacheLoadPromise = null;
+let embeddingCachePersistChain = Promise.resolve();
 
 function buildEmbeddingModelName() {
   const model = String(env.embeddingModel || '').trim();
@@ -21,6 +32,98 @@ function buildEmbeddingUrl(methodName) {
 
 function normalizeText(value) {
   return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
+}
+
+async function ensureEmbeddingCacheLoaded() {
+  if (embeddingCacheLoaded) {
+    return;
+  }
+
+  if (!embeddingCacheLoadPromise) {
+    embeddingCacheLoadPromise = readJsonFile(embeddingCachePath, { entries: [] })
+      .then((payload) => {
+        const entries = Array.isArray(payload?.entries) ? payload.entries : [];
+
+        embeddingCache.clear();
+        entries.forEach((entry) => {
+          if (entry?.key && Array.isArray(entry?.value?.values)) {
+            embeddingCache.set(entry.key, entry);
+          }
+        });
+
+        embeddingCacheLoaded = true;
+      })
+      .catch((error) => {
+        console.warn('Embedding cache load failed, continuing without persisted cache:', error.message);
+        embeddingCache.clear();
+        embeddingCacheLoaded = true;
+      })
+      .finally(() => {
+        embeddingCacheLoadPromise = null;
+      });
+  }
+
+  await embeddingCacheLoadPromise;
+}
+
+async function persistEmbeddingCache() {
+  const entries = [...embeddingCache.values()]
+    .sort((left, right) => new Date(right.cachedAt || 0) - new Date(left.cachedAt || 0))
+    .slice(0, EMBEDDING_CACHE_LIMIT);
+
+  embeddingCache.clear();
+  entries.forEach((entry) => {
+    embeddingCache.set(entry.key, entry);
+  });
+
+  await writeJsonFile(embeddingCachePath, { entries });
+}
+
+function queueEmbeddingCachePersist() {
+  embeddingCachePersistChain = embeddingCachePersistChain
+    .catch(() => undefined)
+    .then(() => persistEmbeddingCache());
+
+  return embeddingCachePersistChain;
+}
+
+function buildEmbeddingCacheKey(text, options = {}) {
+  return crypto
+    .createHash('sha256')
+    .update(JSON.stringify({
+      model: env.embeddingModel,
+      dimension: env.embeddingDimension,
+      taskType: options.taskType || 'TASK_TYPE_UNSPECIFIED',
+      title: normalizeText(options.title),
+      text: normalizeText(text),
+    }))
+    .digest('hex');
+}
+
+async function getCachedEmbedding(text, options = {}) {
+  await ensureEmbeddingCacheLoaded();
+  const key = buildEmbeddingCacheKey(text, options);
+  return embeddingCache.get(key)?.value || null;
+}
+
+async function setCachedEmbedding(text, options = {}, value) {
+  if (!Array.isArray(value?.values) || !value.values.length) {
+    return;
+  }
+
+  await ensureEmbeddingCacheLoaded();
+
+  embeddingCache.set(buildEmbeddingCacheKey(text, options), {
+    key: buildEmbeddingCacheKey(text, options),
+    value,
+    cachedAt: new Date().toISOString(),
+  });
+
+  try {
+    await queueEmbeddingCachePersist();
+  } catch (error) {
+    console.warn('Embedding cache persist failed, continuing with in-memory cache only:', error.message);
+  }
 }
 
 function ensureEmbeddingsConfigured() {
@@ -112,6 +215,17 @@ function buildLocalEmbeddingResult(text, options = {}) {
   };
 }
 
+function chunkEntries(entries = [], chunkSize = 20) {
+  const normalizedChunkSize = Math.max(1, Number(chunkSize) || 1);
+  const chunks = [];
+
+  for (let index = 0; index < entries.length; index += normalizedChunkSize) {
+    chunks.push(entries.slice(index, index + normalizedChunkSize));
+  }
+
+  return chunks;
+}
+
 async function postEmbeddingRequest(url, body, label) {
   ensureEmbeddingsConfigured();
 
@@ -199,6 +313,12 @@ async function embedText(text, options = {}) {
     throw new AppError(400, 'Text is required for embedding.');
   }
 
+  const cachedEmbedding = await getCachedEmbedding(normalizedText, options);
+
+  if (cachedEmbedding) {
+    return cachedEmbedding;
+  }
+
   try {
     const payload = await postEmbeddingRequest(
       buildEmbeddingUrl('embedContent'),
@@ -210,12 +330,15 @@ async function embedText(text, options = {}) {
       'embedding',
     );
 
-    return {
+    const result = {
       provider: 'gemini',
       model: env.embeddingModel,
       taskType: options.taskType || 'TASK_TYPE_UNSPECIFIED',
       values: extractEmbeddingValues(payload, 'embedding'),
     };
+
+    await setCachedEmbedding(normalizedText, options, result);
+    return result;
   } catch (error) {
     if (!shouldUseLocalEmbeddingFallback(error)) {
       throw error;
@@ -249,59 +372,95 @@ async function embedTexts(entries = [], options = {}) {
     return [];
   }
 
-  if (normalizedEntries.length === 1) {
-    const embedding = await embedText(normalizedEntries[0].text, normalizedEntries[0]);
-    return [embedding];
+  const resolvedResults = new Array(normalizedEntries.length);
+  const missingEntries = [];
+
+  for (let index = 0; index < normalizedEntries.length; index += 1) {
+    const entry = normalizedEntries[index];
+    const cachedEmbedding = await getCachedEmbedding(entry.text, entry);
+
+    if (cachedEmbedding) {
+      resolvedResults[index] = cachedEmbedding;
+    } else {
+      missingEntries.push({ index, entry });
+    }
+  }
+
+  if (!missingEntries.length) {
+    return resolvedResults;
   }
 
   const modelName = buildEmbeddingModelName();
+  const batches = chunkEntries(missingEntries, env.embeddingBatchSize);
 
   try {
-    const payload = await postEmbeddingRequest(
-      buildEmbeddingUrl('batchEmbedContents'),
-      {
-        requests: normalizedEntries.map((entry) => ({
-          model: modelName,
-          ...buildEmbedRequest(entry),
-        })),
-      },
-      'batch embedding',
-    );
+    for (const batch of batches) {
+      if (batch.length === 1) {
+        const singleResult = await embedText(batch[0].entry.text, batch[0].entry);
+        resolvedResults[batch[0].index] = singleResult;
+        continue;
+      }
 
-    const embeddings = Array.isArray(payload?.embeddings) ? payload.embeddings : [];
+      const payload = await postEmbeddingRequest(
+        buildEmbeddingUrl('batchEmbedContents'),
+        {
+          requests: batch.map(({ entry }) => ({
+            model: modelName,
+            ...buildEmbedRequest(entry),
+          })),
+        },
+        'batch embedding',
+      );
 
-    if (embeddings.length !== normalizedEntries.length) {
-      throw new AppError(502, 'Gemini batch embedding returned an unexpected number of vectors.', {
-        requested: normalizedEntries.length,
-        returned: embeddings.length,
-        model: env.embeddingModel,
-      });
-    }
+      const embeddings = Array.isArray(payload?.embeddings) ? payload.embeddings : [];
 
-    return embeddings.map((item, index) => {
-      const values = Array.isArray(item?.values) ? item.values : [];
-
-      if (!values.length) {
-        throw new AppError(502, 'Gemini batch embedding returned an empty vector.', {
-          index,
+      if (embeddings.length !== batch.length) {
+        throw new AppError(502, 'Gemini batch embedding returned an unexpected number of vectors.', {
+          requested: batch.length,
+          returned: embeddings.length,
           model: env.embeddingModel,
         });
       }
 
-      return {
-        provider: 'gemini',
-        model: env.embeddingModel,
-        taskType: normalizedEntries[index].taskType || 'TASK_TYPE_UNSPECIFIED',
-        values,
-      };
-    });
+      const batchResults = embeddings.map((item, batchIndex) => {
+        const values = Array.isArray(item?.values) ? item.values : [];
+
+        if (!values.length) {
+          throw new AppError(502, 'Gemini batch embedding returned an empty vector.', {
+            index: batchIndex,
+            model: env.embeddingModel,
+          });
+        }
+
+        return {
+          provider: 'gemini',
+          model: env.embeddingModel,
+          taskType: batch[batchIndex].entry.taskType || 'TASK_TYPE_UNSPECIFIED',
+          values,
+        };
+      });
+
+      await Promise.all(batchResults.map((result, batchIndex) => setCachedEmbedding(
+        batch[batchIndex].entry.text,
+        batch[batchIndex].entry,
+        result,
+      )));
+
+      batch.forEach(({ index }, batchIndex) => {
+        resolvedResults[index] = batchResults[batchIndex];
+      });
+    }
+
+    return resolvedResults;
   } catch (error) {
     if (!shouldUseLocalEmbeddingFallback(error)) {
       throw error;
     }
 
     console.warn('Gemini batch embedding failed, using deterministic local fallback:', error.message);
-    return normalizedEntries.map((entry) => buildLocalEmbeddingResult(entry.text, entry));
+    return normalizedEntries.map((entry, index) => (
+      resolvedResults[index] || buildLocalEmbeddingResult(entry.text, entry)
+    ));
   }
 }
 

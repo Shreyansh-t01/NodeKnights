@@ -271,12 +271,46 @@ async function saveContractOverviewInsightsLocal(contractId, overviewInsights) {
     throw new AppError(404, `Contract not found: ${contractId}`);
   }
 
-  const cachedInsights = {
-    ...(match.contract.cachedInsights || {}),
+  return saveContractCachedInsightsLocal(contractId, {
     overview: overviewInsights,
     generatedAt: new Date().toISOString(),
     provider: overviewInsights?.provider || 'gemini',
     degraded: Boolean(overviewInsights?.degraded),
+  }, current, match);
+}
+
+async function saveContractOverviewInsightsFirebase(contractId, overviewInsights) {
+  const contractRef = firestore.collection('contracts').doc(contractId);
+  const contractDoc = await contractRef.get();
+
+  if (!contractDoc.exists) {
+    throw new AppError(404, `Contract not found: ${contractId}`);
+  }
+
+  return saveContractCachedInsightsFirebase(contractId, {
+    overview: overviewInsights,
+    generatedAt: new Date().toISOString(),
+    provider: overviewInsights?.provider || 'gemini',
+    degraded: Boolean(overviewInsights?.degraded),
+  }, contractRef, contractDoc);
+}
+
+async function saveContractCachedInsightsLocal(
+  contractId,
+  cachedInsightsPatch,
+  currentContracts = null,
+  existingMatch = null,
+) {
+  const current = currentContracts || await readJsonFile(localStorePath, []);
+  const match = existingMatch || current.find((item) => item.contract.id === contractId);
+
+  if (!match) {
+    throw new AppError(404, `Contract not found: ${contractId}`);
+  }
+
+  const cachedInsights = {
+    ...(match.contract.cachedInsights || {}),
+    ...(cachedInsightsPatch || {}),
   };
   const next = current.map((item) => (
     item.contract.id === contractId
@@ -295,9 +329,14 @@ async function saveContractOverviewInsightsLocal(contractId, overviewInsights) {
   return cachedInsights;
 }
 
-async function saveContractOverviewInsightsFirebase(contractId, overviewInsights) {
-  const contractRef = firestore.collection('contracts').doc(contractId);
-  const contractDoc = await contractRef.get();
+async function saveContractCachedInsightsFirebase(
+  contractId,
+  cachedInsightsPatch,
+  contractRefOverride = null,
+  contractDocOverride = null,
+) {
+  const contractRef = contractRefOverride || firestore.collection('contracts').doc(contractId);
+  const contractDoc = contractDocOverride || await contractRef.get();
 
   if (!contractDoc.exists) {
     throw new AppError(404, `Contract not found: ${contractId}`);
@@ -305,10 +344,7 @@ async function saveContractOverviewInsightsFirebase(contractId, overviewInsights
 
   const cachedInsights = {
     ...(contractDoc.data()?.cachedInsights || {}),
-    overview: overviewInsights,
-    generatedAt: new Date().toISOString(),
-    provider: overviewInsights?.provider || 'gemini',
-    degraded: Boolean(overviewInsights?.degraded),
+    ...(cachedInsightsPatch || {}),
   };
 
   await contractRef.set({
@@ -316,6 +352,26 @@ async function saveContractOverviewInsightsFirebase(contractId, overviewInsights
   }, { merge: true });
 
   return cachedInsights;
+}
+
+async function saveContractCachedInsights(contractId, cachedInsightsPatch) {
+  if (env.strictRemoteServices && (!firestoreStatus.enabled || !firestore)) {
+    throw buildFirestoreRequiredError('insight cache write', new Error('Firestore is not configured.'));
+  }
+
+  if (firestoreStatus.enabled && firestore) {
+    try {
+      return await saveContractCachedInsightsFirebase(contractId, cachedInsightsPatch);
+    } catch (error) {
+      if (env.strictRemoteServices) {
+        throw buildFirestoreRequiredError('insight cache write', error);
+      }
+
+      console.warn('Falling back to local insight cache write:', error.message);
+    }
+  }
+
+  return saveContractCachedInsightsLocal(contractId, cachedInsightsPatch);
 }
 
 async function saveContractOverviewInsights(contractId, overviewInsights) {
@@ -413,6 +469,7 @@ module.exports = {
   findContractBySourceIdentity,
   getContractById,
   listContracts,
+  saveContractCachedInsights,
   saveContractOverviewInsights,
   saveContractBundle,
 };

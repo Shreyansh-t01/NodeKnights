@@ -9,6 +9,7 @@ const { embedText, embedTexts } = require('./embedding.service');
 const {
   deleteContractBundle,
   saveContractBundle,
+  saveContractCachedInsights,
   saveContractOverviewInsights,
   listContracts,
   getContractById,
@@ -28,6 +29,8 @@ const {
   buildContractRecord,
   buildRiskRecords,
 } = require('./contract.helpers');
+
+const pendingContractInsightRequests = new Map();
 
 async function createVectorRecords(contract, clauses) {
   const embeddings = await embedTexts(
@@ -113,13 +116,34 @@ async function buildAutomaticClauseInsights(contract, clauses = []) {
     return [];
   }
 
-  // Build review contexts for all targets
-  const reviewContexts = await Promise.all(
-    targets.map((clause) => buildClauseReviewContext(contract, clause))
-  );
+  const cachedClauseInsights = contract.cachedInsights?.clauses || {};
+  const resultsByClauseId = new Map();
+  const missingTargets = [];
 
-  // Use batch generation for efficiency
-  return await generateBatchClauseInsights(targets, reviewContexts);
+  targets.forEach((clause) => {
+    const cachedInsight = cachedClauseInsights[clause.id];
+
+    if (isReusableGeminiClauseInsight(cachedInsight)) {
+      resultsByClauseId.set(clause.id, cachedInsight);
+    } else {
+      missingTargets.push(clause);
+    }
+  });
+
+  if (missingTargets.length) {
+    const reviewContexts = await Promise.all(
+      missingTargets.map((clause) => buildClauseReviewContext(contract, clause)),
+    );
+    const generatedInsights = await generateBatchClauseInsights(missingTargets, reviewContexts);
+
+    generatedInsights.forEach((insight, index) => {
+      resultsByClauseId.set(missingTargets[index].id, insight);
+    });
+  }
+
+  return targets
+    .map((clause) => resultsByClauseId.get(clause.id))
+    .filter(Boolean);
 }
 
 function isReusableGeminiOverview(insights) {
@@ -130,10 +154,52 @@ function isReusableGeminiOverview(insights) {
   );
 }
 
+function isReusableGeminiClauseInsight(insight) {
+  return Boolean(
+    insight
+      && insight.provider === 'gemini'
+      && !insight.degraded
+      && insight.clauseId,
+  );
+}
+
 function getCachedContractOverview(contract = {}) {
   const overview = contract.cachedInsights?.overview;
 
   return isReusableGeminiOverview(overview) ? overview : null;
+}
+
+function getCachedClauseInsight(contract = {}, clauseId = '') {
+  const cachedInsight = contract.cachedInsights?.clauses?.[clauseId];
+
+  return isReusableGeminiClauseInsight(cachedInsight) ? cachedInsight : null;
+}
+
+function buildReusableClauseInsightsPatch(clauseInsights = []) {
+  const clauses = clauseInsights.reduce((accumulator, insight) => {
+    if (isReusableGeminiClauseInsight(insight)) {
+      accumulator[insight.clauseId] = insight;
+    }
+
+    return accumulator;
+  }, {});
+
+  return Object.keys(clauses).length ? { clauses } : {};
+}
+
+function buildContractInsightCachePatch({ overview = null, clauseInsights = [] } = {}) {
+  const patch = {
+    ...buildReusableClauseInsightsPatch(clauseInsights),
+  };
+
+  if (isReusableGeminiOverview(overview)) {
+    patch.overview = overview;
+    patch.generatedAt = new Date().toISOString();
+    patch.provider = overview.provider;
+    patch.degraded = false;
+  }
+
+  return patch;
 }
 
 function describeArtifactStorage(artifact, label) {
@@ -230,13 +296,15 @@ async function ingestManualContract(file, options = {}) {
     clauseInsights,
   });
 
-  if (isReusableGeminiOverview(insights)) {
+  const cachedInsightsPatch = buildContractInsightCachePatch({
+    overview: insights,
+    clauseInsights,
+  });
+
+  if (Object.keys(cachedInsightsPatch).length) {
     contract.cachedInsights = {
       ...(contract.cachedInsights || {}),
-      overview: insights,
-      generatedAt: new Date().toISOString(),
-      provider: insights.provider,
-      degraded: false,
+      ...cachedInsightsPatch,
     };
   }
 
@@ -288,7 +356,7 @@ async function getContractDetails(contractId) {
   return getContractById(contractId);
 }
 
-async function buildContractInsights(contractId, clauseId) {
+async function buildContractInsightsInternal(contractId, clauseId) {
   const contractBundle = await getContractById(contractId);
 
   if (!clauseId) {
@@ -307,7 +375,14 @@ async function buildContractInsights(contractId, clauseId) {
       clauseInsights,
     });
 
-    if (isReusableGeminiOverview(overview)) {
+    const cachedInsightsPatch = buildContractInsightCachePatch({
+      overview,
+      clauseInsights,
+    });
+
+    if (Object.keys(cachedInsightsPatch).length) {
+      await saveContractCachedInsights(contractId, cachedInsightsPatch);
+    } else if (isReusableGeminiOverview(overview)) {
       await saveContractOverviewInsights(contractId, overview);
     }
 
@@ -320,9 +395,42 @@ async function buildContractInsights(contractId, clauseId) {
     throw new AppError(404, `Clause not found: ${clauseId}`);
   }
 
+  const cachedClauseInsight = getCachedClauseInsight(contractBundle.contract, clauseId);
+
+  if (cachedClauseInsight) {
+    return cachedClauseInsight;
+  }
+
   const reviewContext = await buildClauseReviewContext(contractBundle.contract, clause);
 
-  return await generateClauseInsight(clause, reviewContext);
+  const insight = await generateClauseInsight(clause, reviewContext);
+
+  if (isReusableGeminiClauseInsight(insight)) {
+    await saveContractCachedInsights(contractId, {
+      clauses: {
+        ...(contractBundle.contract.cachedInsights?.clauses || {}),
+        [clauseId]: insight,
+      },
+    });
+  }
+
+  return insight;
+}
+
+async function buildContractInsights(contractId, clauseId) {
+  const requestKey = `${contractId}:${clauseId || 'overview'}`;
+
+  if (pendingContractInsightRequests.has(requestKey)) {
+    return pendingContractInsightRequests.get(requestKey);
+  }
+
+  const pendingRequest = buildContractInsightsInternal(contractId, clauseId)
+    .finally(() => {
+      pendingContractInsightRequests.delete(requestKey);
+    });
+
+  pendingContractInsightRequests.set(requestKey, pendingRequest);
+  return pendingRequest;
 }
 
 async function deleteContractRecord(contractId) {
