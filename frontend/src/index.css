@@ -644,6 +644,11 @@ input {
   margin: 0 0 0.55rem;
 }
 
+.contract-insight-note {
+  margin: 0;
+  color: #8c4d02;
+}
+
 .risk-strip {
   display: flex;
   gap: 0.65rem;

@@ -3,10 +3,18 @@ const path = require('node:path');
 const { firestore, firestoreStatus } = require('../config/firebase');
 const { env } = require('../config/env');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
+const { withRemoteServiceTimeout } = require('../utils/remoteServiceTimeout');
 
 const localStorePath = path.join(env.tempStorageDir, 'local-store', 'notifications.json');
 const NOTIFICATION_COLLECTION = '_notifications';
 const MAX_LOCAL_NOTIFICATIONS = 250;
+
+function withFirestoreTimeout(operation, task) {
+  return withRemoteServiceTimeout(`Firestore notification ${operation}`, task, {
+    service: 'firestore',
+    operation: `notification-${operation}`,
+  });
+}
 
 function sortNotifications(items = []) {
   return [...items].sort((left, right) => (
@@ -90,75 +98,83 @@ async function deleteNotificationsByContractIdLocal(contractId) {
 }
 
 async function saveNotificationFirebase(notification) {
-  await firestore
-    .collection(NOTIFICATION_COLLECTION)
-    .doc(notification.id)
-    .set(notification, { merge: true });
+  return withFirestoreTimeout('save', async () => {
+    await firestore
+      .collection(NOTIFICATION_COLLECTION)
+      .doc(notification.id)
+      .set(notification, { merge: true });
 
-  return notification;
+    return notification;
+  });
 }
 
 async function listNotificationsFirebase({ limit = 20 } = {}) {
-  const snapshot = await firestore
-    .collection(NOTIFICATION_COLLECTION)
-    .orderBy('createdAt', 'desc')
-    .get();
+  return withFirestoreTimeout('list', async () => {
+    const snapshot = await firestore
+      .collection(NOTIFICATION_COLLECTION)
+      .orderBy('createdAt', 'desc')
+      .get();
 
-  const items = snapshot.docs.map((document) => document.data());
+    const items = snapshot.docs.map((document) => document.data());
 
-  return {
-    items: items.slice(0, limit),
-    unreadCount: countUnreadNotifications(items),
-  };
+    return {
+      items: items.slice(0, limit),
+      unreadCount: countUnreadNotifications(items),
+    };
+  });
 }
 
 async function markAllNotificationsReadFirebase() {
-  const snapshot = await firestore
-    .collection(NOTIFICATION_COLLECTION)
-    .where('readAt', '==', null)
-    .get();
+  return withFirestoreTimeout('mark-read', async () => {
+    const snapshot = await firestore
+      .collection(NOTIFICATION_COLLECTION)
+      .where('readAt', '==', null)
+      .get();
 
-  const readAt = new Date().toISOString();
-  const batch = firestore.batch();
+    const readAt = new Date().toISOString();
+    const batch = firestore.batch();
 
-  snapshot.docs.forEach((document) => {
-    batch.set(document.ref, {
+    snapshot.docs.forEach((document) => {
+      batch.set(document.ref, {
+        readAt,
+        updatedAt: readAt,
+      }, { merge: true });
+    });
+
+    await batch.commit();
+
+    return {
+      updatedCount: snapshot.size,
       readAt,
-      updatedAt: readAt,
-    }, { merge: true });
+    };
   });
-
-  await batch.commit();
-
-  return {
-    updatedCount: snapshot.size,
-    readAt,
-  };
 }
 
 async function deleteNotificationsByContractIdFirebase(contractId) {
-  const snapshot = await firestore
-    .collection(NOTIFICATION_COLLECTION)
-    .where('contractId', '==', contractId)
-    .get();
+  return withFirestoreTimeout('delete', async () => {
+    const snapshot = await firestore
+      .collection(NOTIFICATION_COLLECTION)
+      .where('contractId', '==', contractId)
+      .get();
 
-  if (snapshot.empty) {
+    if (snapshot.empty) {
+      return {
+        deletedCount: 0,
+      };
+    }
+
+    const batch = firestore.batch();
+
+    snapshot.docs.forEach((document) => {
+      batch.delete(document.ref);
+    });
+
+    await batch.commit();
+
     return {
-      deletedCount: 0,
+      deletedCount: snapshot.size,
     };
-  }
-
-  const batch = firestore.batch();
-
-  snapshot.docs.forEach((document) => {
-    batch.delete(document.ref);
   });
-
-  await batch.commit();
-
-  return {
-    deletedCount: snapshot.size,
-  };
 }
 
 async function saveNotification(notification) {

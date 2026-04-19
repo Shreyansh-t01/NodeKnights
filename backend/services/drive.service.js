@@ -103,6 +103,18 @@ function buildDriveDedupeKey(file = {}) {
   return `drive:${file.id || file.fileId || ''}:${file.modifiedTime || 'unknown'}`;
 }
 
+function shouldSkipProcessedDriveSource(existing = null) {
+  if (!existing) {
+    return false;
+  }
+
+  if (existing.status === 'deleted') {
+    return false;
+  }
+
+  return Boolean(existing.contractId);
+}
+
 function normalizeHeaderMap(headers = {}) {
   const normalized = {};
 
@@ -233,7 +245,7 @@ async function processDriveFileMetadata(metadata, { trigger = 'manual-import' } 
   });
   const existing = await getProcessedSource(dedupeKey);
 
-  if (existing) {
+  if (shouldSkipProcessedDriveSource(existing)) {
     return {
       status: 'skipped',
       reason: 'already-processed',
@@ -268,6 +280,10 @@ async function processDriveFileMetadata(metadata, { trigger = 'manual-import' } 
       sourceKey: dedupeKey,
       contractId: existingContract.id,
     };
+  }
+
+  if (existing && !existingContract) {
+    console.warn(`Drive source ${dedupeKey} had stale processed-state metadata and will be reprocessed.`);
   }
 
   try {

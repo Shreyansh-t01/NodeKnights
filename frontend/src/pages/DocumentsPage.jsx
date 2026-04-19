@@ -78,6 +78,16 @@ function DocumentViewer({ document, viewerUrl, downloadUrl }) {
     );
   }
 
+  if (!viewerUrl) {
+    return (
+      <div className="document-viewer-shell">
+        <p className="empty-state">
+          Loading document preview...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="document-viewer-shell">
       <div className="document-actions">

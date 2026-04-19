@@ -4,8 +4,16 @@ const { firestore, firestoreStatus } = require('../config/firebase');
 const { env } = require('../config/env');
 const AppError = require('../errors/AppError');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
+const { withRemoteServiceTimeout } = require('../utils/remoteServiceTimeout');
 
 const localStorePath = path.join(env.tempStorageDir, 'local-store', 'contracts.json');
+
+function withFirestoreTimeout(operation, task) {
+  return withRemoteServiceTimeout(`Firestore ${operation}`, task, {
+    service: 'firestore',
+    operation,
+  });
+}
 
 function buildFirestoreRequiredError(operation, error) {
   return new AppError(503, `Firestore ${operation} failed and local fallback is disabled.`, {
@@ -29,25 +37,27 @@ async function saveContractBundleLocal(bundle) {
 }
 
 async function saveContractBundleFirebase(bundle) {
-  const contractRef = firestore.collection('contracts').doc(bundle.contract.id);
-  const batch = firestore.batch();
+  return withFirestoreTimeout('persistence', async () => {
+    const contractRef = firestore.collection('contracts').doc(bundle.contract.id);
+    const batch = firestore.batch();
 
-  batch.set(contractRef, bundle.contract);
+    batch.set(contractRef, bundle.contract);
 
-  bundle.clauses.forEach((clause) => {
-    batch.set(contractRef.collection('clauses').doc(clause.id), clause);
+    bundle.clauses.forEach((clause) => {
+      batch.set(contractRef.collection('clauses').doc(clause.id), clause);
+    });
+
+    bundle.risks.forEach((risk) => {
+      batch.set(contractRef.collection('risks').doc(risk.id), risk);
+    });
+
+    await batch.commit();
+
+    return {
+      mode: 'firebase',
+      location: `contracts/${bundle.contract.id}`,
+    };
   });
-
-  bundle.risks.forEach((risk) => {
-    batch.set(contractRef.collection('risks').doc(risk.id), risk);
-  });
-
-  await batch.commit();
-
-  return {
-    mode: 'firebase',
-    location: `contracts/${bundle.contract.id}`,
-  };
 }
 
 async function saveContractBundle(bundle) {
@@ -105,47 +115,49 @@ async function findContractBySourceIdentityLocal(identity = {}) {
 }
 
 async function findContractBySourceIdentityFirebase(identity = {}) {
-  const queries = [];
+  return withFirestoreTimeout('source identity lookup', async () => {
+    const queries = [];
 
-  if (identity.dedupeKey) {
-    queries.push(
-      firestore
-        .collection('contracts')
-        .where('sourceContext.dedupeKey', '==', identity.dedupeKey)
-        .limit(1),
-    );
-  }
-
-  if (identity.messageId) {
-    queries.push(
-      firestore
-        .collection('contracts')
-        .where('sourceContext.messageId', '==', identity.messageId)
-        .limit(5),
-    );
-  }
-
-  if (identity.externalId) {
-    queries.push(
-      firestore
-        .collection('contracts')
-        .where('sourceContext.externalId', '==', identity.externalId)
-        .limit(5),
-    );
-  }
-
-  for (const query of queries) {
-    const snapshot = await query.get();
-    const match = snapshot.docs
-      .map((document) => document.data())
-      .find((contract) => matchesSourceIdentity(contract, identity));
-
-    if (match) {
-      return match;
+    if (identity.dedupeKey) {
+      queries.push(
+        firestore
+          .collection('contracts')
+          .where('sourceContext.dedupeKey', '==', identity.dedupeKey)
+          .limit(1),
+      );
     }
-  }
 
-  return null;
+    if (identity.messageId) {
+      queries.push(
+        firestore
+          .collection('contracts')
+          .where('sourceContext.messageId', '==', identity.messageId)
+          .limit(5),
+      );
+    }
+
+    if (identity.externalId) {
+      queries.push(
+        firestore
+          .collection('contracts')
+          .where('sourceContext.externalId', '==', identity.externalId)
+          .limit(5),
+      );
+    }
+
+    for (const query of queries) {
+      const snapshot = await query.get();
+      const match = snapshot.docs
+        .map((document) => document.data())
+        .find((contract) => matchesSourceIdentity(contract, identity));
+
+      if (match) {
+        return match;
+      }
+    }
+
+    return null;
+  });
 }
 
 async function findContractBySourceIdentity(identity = {}) {
@@ -177,11 +189,13 @@ async function listContractsLocal() {
 }
 
 async function listContractsFirebase() {
-  const snapshot = await firestore.collection('contracts').get();
+  return withFirestoreTimeout('list', async () => {
+    const snapshot = await firestore.collection('contracts').get();
 
-  return snapshot.docs
-    .map((document) => document.data())
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return snapshot.docs
+      .map((document) => document.data())
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  });
 }
 
 async function listContracts() {
@@ -216,27 +230,29 @@ async function getContractByIdLocal(contractId) {
 }
 
 async function getContractByIdFirebase(contractId) {
-  const contractRef = firestore.collection('contracts').doc(contractId);
-  const contractDoc = await contractRef.get();
+  return withFirestoreTimeout('read', async () => {
+    const contractRef = firestore.collection('contracts').doc(contractId);
+    const contractDoc = await contractRef.get();
 
-  if (!contractDoc.exists) {
-    throw new AppError(404, `Contract not found: ${contractId}`);
-  }
+    if (!contractDoc.exists) {
+      throw new AppError(404, `Contract not found: ${contractId}`);
+    }
 
-  const [clausesSnapshot, risksSnapshot] = await Promise.all([
-    contractRef.collection('clauses').get(),
-    contractRef.collection('risks').get(),
-  ]);
+    const [clausesSnapshot, risksSnapshot] = await Promise.all([
+      contractRef.collection('clauses').get(),
+      contractRef.collection('risks').get(),
+    ]);
 
-  return {
-    contract: contractDoc.data(),
-    clauses: clausesSnapshot.docs
-      .map((document) => document.data())
-      .sort((a, b) => a.position - b.position),
-    risks: risksSnapshot.docs
-      .map((document) => document.data())
-      .sort((a, b) => b.score - a.score),
-  };
+    return {
+      contract: contractDoc.data(),
+      clauses: clausesSnapshot.docs
+        .map((document) => document.data())
+        .sort((a, b) => a.position - b.position),
+      risks: risksSnapshot.docs
+        .map((document) => document.data())
+        .sort((a, b) => b.score - a.score),
+    };
+  });
 }
 
 async function getContractById(contractId) {
@@ -280,19 +296,21 @@ async function saveContractOverviewInsightsLocal(contractId, overviewInsights) {
 }
 
 async function saveContractOverviewInsightsFirebase(contractId, overviewInsights) {
-  const contractRef = firestore.collection('contracts').doc(contractId);
-  const contractDoc = await contractRef.get();
+  return withFirestoreTimeout('insight cache write', async () => {
+    const contractRef = firestore.collection('contracts').doc(contractId);
+    const contractDoc = await contractRef.get();
 
-  if (!contractDoc.exists) {
-    throw new AppError(404, `Contract not found: ${contractId}`);
-  }
+    if (!contractDoc.exists) {
+      throw new AppError(404, `Contract not found: ${contractId}`);
+    }
 
-  return saveContractCachedInsightsFirebase(contractId, {
-    overview: overviewInsights,
-    generatedAt: new Date().toISOString(),
-    provider: overviewInsights?.provider || 'gemini',
-    degraded: Boolean(overviewInsights?.degraded),
-  }, contractRef, contractDoc);
+    return saveContractCachedInsightsFirebase(contractId, {
+      overview: overviewInsights,
+      generatedAt: new Date().toISOString(),
+      provider: overviewInsights?.provider || 'gemini',
+      degraded: Boolean(overviewInsights?.degraded),
+    }, contractRef, contractDoc);
+  });
 }
 
 async function saveContractCachedInsightsLocal(
@@ -335,23 +353,25 @@ async function saveContractCachedInsightsFirebase(
   contractRefOverride = null,
   contractDocOverride = null,
 ) {
-  const contractRef = contractRefOverride || firestore.collection('contracts').doc(contractId);
-  const contractDoc = contractDocOverride || await contractRef.get();
+  return withFirestoreTimeout('insight cache write', async () => {
+    const contractRef = contractRefOverride || firestore.collection('contracts').doc(contractId);
+    const contractDoc = contractDocOverride || await contractRef.get();
 
-  if (!contractDoc.exists) {
-    throw new AppError(404, `Contract not found: ${contractId}`);
-  }
+    if (!contractDoc.exists) {
+      throw new AppError(404, `Contract not found: ${contractId}`);
+    }
 
-  const cachedInsights = {
-    ...(contractDoc.data()?.cachedInsights || {}),
-    ...(cachedInsightsPatch || {}),
-  };
+    const cachedInsights = {
+      ...(contractDoc.data()?.cachedInsights || {}),
+      ...(cachedInsightsPatch || {}),
+    };
 
-  await contractRef.set({
-    cachedInsights,
-  }, { merge: true });
+    await contractRef.set({
+      cachedInsights,
+    }, { merge: true });
 
-  return cachedInsights;
+    return cachedInsights;
+  });
 }
 
 async function saveContractCachedInsights(contractId, cachedInsightsPatch) {
@@ -417,39 +437,41 @@ async function deleteContractBundleLocal(contractId) {
 }
 
 async function deleteContractBundleFirebase(contractId) {
-  const contractRef = firestore.collection('contracts').doc(contractId);
-  const contractDoc = await contractRef.get();
+  return withFirestoreTimeout('delete', async () => {
+    const contractRef = firestore.collection('contracts').doc(contractId);
+    const contractDoc = await contractRef.get();
 
-  if (!contractDoc.exists) {
-    throw new AppError(404, `Contract not found: ${contractId}`);
-  }
+    if (!contractDoc.exists) {
+      throw new AppError(404, `Contract not found: ${contractId}`);
+    }
 
-  const [clausesSnapshot, risksSnapshot] = await Promise.all([
-    contractRef.collection('clauses').get(),
-    contractRef.collection('risks').get(),
-  ]);
-  const batch = firestore.batch();
+    const [clausesSnapshot, risksSnapshot] = await Promise.all([
+      contractRef.collection('clauses').get(),
+      contractRef.collection('risks').get(),
+    ]);
+    const batch = firestore.batch();
 
-  clausesSnapshot.docs.forEach((document) => {
-    batch.delete(document.ref);
+    clausesSnapshot.docs.forEach((document) => {
+      batch.delete(document.ref);
+    });
+
+    risksSnapshot.docs.forEach((document) => {
+      batch.delete(document.ref);
+    });
+
+    batch.delete(contractRef);
+    await batch.commit();
+
+    return {
+      mode: 'firebase',
+      location: `contracts/${contractId}`,
+      deletedCounts: {
+        contracts: 1,
+        clauses: clausesSnapshot.size,
+        risks: risksSnapshot.size,
+      },
+    };
   });
-
-  risksSnapshot.docs.forEach((document) => {
-    batch.delete(document.ref);
-  });
-
-  batch.delete(contractRef);
-  await batch.commit();
-
-  return {
-    mode: 'firebase',
-    location: `contracts/${contractId}`,
-    deletedCounts: {
-      contracts: 1,
-      clauses: clausesSnapshot.size,
-      risks: risksSnapshot.size,
-    },
-  };
 }
 
 async function deleteContractBundle(contractId) {

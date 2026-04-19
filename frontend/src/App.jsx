@@ -61,7 +61,25 @@ function normalizeContractDetail(bundle) {
   };
 }
 
-function buildEmptyInsights(contract = null) {
+function getContractPipelineStep(contract = null, key = '') {
+  return (contract?.pipeline || []).find((step) => step.key === key) || null;
+}
+
+function getContractInsightNotice(contract = null, insights = null) {
+  const insightStep = getContractPipelineStep(contract, 'insights');
+
+  if (insightStep && ['warning', 'failed'].includes(insightStep.status)) {
+    return insightStep.detail || 'Gemini insights are not generated yet for this contract.';
+  }
+
+  if (insights?.degraded && insights?.geminiError) {
+    return 'Gemini insights are not generated yet for this contract.';
+  }
+
+  return '';
+}
+
+function buildEmptyInsights(contract = null, options = {}) {
   if (!contract) {
     return {
       headline: 'Upload a contract to generate AI insights.',
@@ -72,14 +90,22 @@ function buildEmptyInsights(contract = null) {
     };
   }
 
+  const unavailableMessage = options.message || getContractInsightNotice(contract);
+
   return {
     headline: `${contract.title} is ready for review.`,
-    summary: 'No live insight response is available yet for this contract.',
+    summary: unavailableMessage || 'No live insight response is available yet for this contract.',
     topRiskItems: [],
-    nextSteps: [
-      'Refresh this view after processing completes.',
-      'Run semantic search to inspect clause language manually.',
-    ],
+    nextSteps: unavailableMessage
+      ? [
+        'Review the extracted clauses from the contract card.',
+        'Retry Gemini insights later for this contract.',
+        'Use semantic search or manual review in the meantime.',
+      ]
+      : [
+        'Refresh this view after processing completes.',
+        'Run semantic search to inspect clause language manually.',
+      ],
     clauseInsights: [],
   };
 }
@@ -371,8 +397,8 @@ function App() {
   const [notifications, setNotifications] = useState([]);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [selectedDocumentViewerUrl, setSelectedDocumentViewerUrl] = useState('');
-  const viewerObjectUrlRef = useRef('');
+  const [selectedDocumentViewerUrl, setSelectedDocumentViewerUrl] = useState(null);
+  const viewerObjectUrlRef = useRef(null);
   const deferredQuery = useDeferredValue(query);
   const deferredDocumentQuery = useDeferredValue(documentQuery);
 
@@ -765,10 +791,10 @@ function App() {
       if (!selectedDocument?.id || !selectedDocument?.available) {
         if (viewerObjectUrlRef.current) {
           URL.revokeObjectURL(viewerObjectUrlRef.current);
-          viewerObjectUrlRef.current = '';
+          viewerObjectUrlRef.current = null;
         }
 
-        setSelectedDocumentViewerUrl('');
+        setSelectedDocumentViewerUrl(null);
         return;
       }
 
@@ -799,10 +825,10 @@ function App() {
         if (!ignore) {
           if (viewerObjectUrlRef.current) {
             URL.revokeObjectURL(viewerObjectUrlRef.current);
-            viewerObjectUrlRef.current = '';
+            viewerObjectUrlRef.current = null;
           }
 
-          setSelectedDocumentViewerUrl('');
+          setSelectedDocumentViewerUrl(null);
         }
       }
     }
@@ -821,7 +847,7 @@ function App() {
     return () => {
       if (viewerObjectUrlRef.current) {
         URL.revokeObjectURL(viewerObjectUrlRef.current);
-        viewerObjectUrlRef.current = '';
+        viewerObjectUrlRef.current = null;
       }
     };
   }, []);

@@ -202,6 +202,51 @@ function buildContractInsightCachePatch({ overview = null, clauseInsights = [] }
   return patch;
 }
 
+function getGeminiUnavailableMessage(reason = '') {
+  const suffix = reason ? ` ${reason}` : '';
+  return `Gemini insights are not generated yet for this contract. The contract was saved and extracted data is available for review.${suffix}`.trim();
+}
+
+function buildInsightUnavailableOverview(contract, reason = '') {
+  return {
+    headline: `${contract?.title || 'Contract'} is available for review.`,
+    summary: getGeminiUnavailableMessage(reason),
+    topRiskItems: [],
+    nextSteps: [
+      'Review the extracted clause board from the contract card.',
+      'Retry AI insights later once Gemini becomes available.',
+      'Use semantic search or manual legal review in the meantime.',
+    ],
+    clauseInsights: [],
+    provider: 'template-fallback',
+    degraded: true,
+    geminiError: {
+      source: 'contract-ingest',
+      message: reason || 'Gemini insights were not generated during ingestion.',
+      statusCode: null,
+      details: null,
+    },
+  };
+}
+
+function hasGeminiInsightWarning({ overview = null, clauseInsights = [] } = {}) {
+  return Boolean(
+    (overview?.degraded && overview?.geminiError)
+      || clauseInsights.some((insight) => insight?.degraded && insight?.geminiError),
+  );
+}
+
+function buildInsightPipelineDetail(overview = null, clauseInsights = []) {
+  if (!hasGeminiInsightWarning({ overview, clauseInsights })) {
+    return 'Gemini insights were generated for this contract.';
+  }
+
+  const overviewMessage = overview?.geminiError?.message || '';
+  const clauseMessage = clauseInsights.find((insight) => insight?.geminiError?.message)?.geminiError?.message || '';
+
+  return getGeminiUnavailableMessage(overviewMessage || clauseMessage);
+}
+
 function describeArtifactStorage(artifact, label) {
   if (artifact.mode === 'disabled') {
     return `${label} storage disabled.`;
@@ -287,62 +332,128 @@ async function ingestManualContract(file, options = {}) {
     },
     pipeline,
   });
-
-  const clauseInsights = await buildAutomaticClauseInsights(contract, clauses);
-  const insights = await generateContractOverview({
-    contract,
-    clauses,
-    risks,
-    clauseInsights,
-  });
-
-  const cachedInsightsPatch = buildContractInsightCachePatch({
-    overview: insights,
-    clauseInsights,
-  });
-
-  if (Object.keys(cachedInsightsPatch).length) {
-    contract.cachedInsights = {
-      ...(contract.cachedInsights || {}),
-      ...cachedInsightsPatch,
-    };
-  }
-
-  const vectorRecords = await createVectorRecords(contract, clauses);
-  const vectorIndex = await upsertClauseVectors(vectorRecords, {
-    namespace: env.pineconeContractNamespace,
-  });
-
-  pipeline.push(
-    {
-      key: 'firestore',
-      label: 'Structured contract store',
-      status: 'completed',
-      detail: 'Saving structured contract bundle.',
-    },
-    {
-      key: 'vector',
-      label: 'Semantic clause index',
-      status: 'completed',
-      detail: `Indexed ${vectorIndex.count} clause vectors via ${vectorIndex.mode}.`,
-    },
-  );
   const persistence = await saveContractBundle({
     contract,
     clauses,
     risks,
   });
-  pipeline[pipeline.length - 2].detail = `Saved via ${persistence.mode}.`;
+  pipeline.push({
+    key: 'firestore',
+    label: 'Structured contract store',
+    status: 'completed',
+    detail: `Saved via ${persistence.mode}.`,
+  });
+
+  let clauseInsights = [];
+  let insights = buildInsightUnavailableOverview(contract);
+  const warnings = [];
+
+  try {
+    clauseInsights = await buildAutomaticClauseInsights(contract, clauses);
+    insights = await generateContractOverview({
+      contract,
+      clauses,
+      risks,
+      clauseInsights,
+    });
+
+    const cachedInsightsPatch = buildContractInsightCachePatch({
+      overview: insights,
+      clauseInsights,
+    });
+
+    if (Object.keys(cachedInsightsPatch).length) {
+      contract.cachedInsights = {
+        ...(contract.cachedInsights || {}),
+        ...cachedInsightsPatch,
+      };
+    }
+
+    pipeline.push({
+      key: 'insights',
+      label: 'Gemini insights',
+      status: hasGeminiInsightWarning({ overview: insights, clauseInsights }) ? 'warning' : 'completed',
+      detail: buildInsightPipelineDetail(insights, clauseInsights),
+    });
+  } catch (error) {
+    warnings.push({
+      key: 'insights',
+      message: error.message,
+    });
+    insights = buildInsightUnavailableOverview(contract, error.message);
+    pipeline.push({
+      key: 'insights',
+      label: 'Gemini insights',
+      status: 'warning',
+      detail: getGeminiUnavailableMessage(error.message),
+    });
+  }
+
+  let vectorIndex = {
+    mode: 'skipped',
+    count: 0,
+  };
+
+  try {
+    const vectorRecords = await createVectorRecords(contract, clauses);
+    vectorIndex = await upsertClauseVectors(vectorRecords, {
+      namespace: env.pineconeContractNamespace,
+    });
+    pipeline.push({
+      key: 'vector',
+      label: 'Semantic clause index',
+      status: 'completed',
+      detail: `Indexed ${vectorIndex.count} clause vectors via ${vectorIndex.mode}.`,
+    });
+  } catch (error) {
+    warnings.push({
+      key: 'vector',
+      message: error.message,
+    });
+    vectorIndex = {
+      mode: 'warning',
+      count: 0,
+      error: error.message,
+    };
+    pipeline.push({
+      key: 'vector',
+      label: 'Semantic clause index',
+      status: 'warning',
+      detail: `Contract saved, but semantic indexing is not ready yet. ${error.message}`,
+    });
+  }
+
+  contract.updatedAt = new Date().toISOString();
+
+  try {
+    await saveContractBundle({
+      contract,
+      clauses,
+      risks,
+    });
+  } catch (error) {
+    warnings.push({
+      key: 'contract-refresh',
+      message: error.message,
+    });
+    console.warn(`Contract ${contractId} enrichment state could not be persisted after initial save:`, error.message);
+  }
 
   return {
     contract,
     clauses,
     risks,
     insights,
+    warnings,
     diagnostics: {
       extraction: extracted,
       analysisSource: analysis.source,
       persistence,
+      insightStatus: {
+        provider: insights?.provider || 'unknown',
+        degraded: Boolean(insights?.degraded),
+        geminiError: insights?.geminiError || null,
+      },
       vectorIndex,
     },
   };
@@ -366,27 +477,32 @@ async function buildContractInsightsInternal(contractId, clauseId) {
       return cachedOverview;
     }
 
-    const clauseInsights = await buildAutomaticClauseInsights(
-      contractBundle.contract,
-      contractBundle.clauses,
-    );
-    const overview = await generateContractOverview({
-      ...contractBundle,
-      clauseInsights,
-    });
+    try {
+      const clauseInsights = await buildAutomaticClauseInsights(
+        contractBundle.contract,
+        contractBundle.clauses,
+      );
+      const overview = await generateContractOverview({
+        ...contractBundle,
+        clauseInsights,
+      });
 
-    const cachedInsightsPatch = buildContractInsightCachePatch({
-      overview,
-      clauseInsights,
-    });
+      const cachedInsightsPatch = buildContractInsightCachePatch({
+        overview,
+        clauseInsights,
+      });
 
-    if (Object.keys(cachedInsightsPatch).length) {
-      await saveContractCachedInsights(contractId, cachedInsightsPatch);
-    } else if (isReusableGeminiOverview(overview)) {
-      await saveContractOverviewInsights(contractId, overview);
+      if (Object.keys(cachedInsightsPatch).length) {
+        await saveContractCachedInsights(contractId, cachedInsightsPatch);
+      } else if (isReusableGeminiOverview(overview)) {
+        await saveContractOverviewInsights(contractId, overview);
+      }
+
+      return overview;
+    } catch (error) {
+      console.warn(`Contract overview generation failed for ${contractId}, returning saved-contract fallback:`, error.message);
+      return buildInsightUnavailableOverview(contractBundle.contract, error.message);
     }
-
-    return overview;
   }
 
   const clause = contractBundle.clauses.find((item) => item.id === clauseId);

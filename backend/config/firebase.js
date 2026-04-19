@@ -24,25 +24,31 @@ const firestoreStatus = {
   message: 'Firestore credentials are not configured. Local contract storage will be used.',
 };
 
-try {
-  const credential = resolveFirebaseCredential();
-
-  if (credential && featureFlags.firebase) {
-    firebaseApp = getApps()[0] || initializeApp({
-      credential,
-      projectId: env.firebaseProjectId || undefined,
-    });
-
-    firestore = getFirestore(firebaseApp);
-
-    firestoreStatus.enabled = true;
-    firestoreStatus.mode = 'firestore';
-    firestoreStatus.message = 'Firestore is configured.';
-  }
-} catch (error) {
+if (!env.firebaseEnabled) {
   firestoreStatus.enabled = false;
-  firestoreStatus.mode = 'fallback';
-  firestoreStatus.message = `Firestore initialization failed: ${error.message}`;
+  firestoreStatus.mode = 'disabled';
+  firestoreStatus.message = 'Firestore is disabled via FIREBASE_ENABLED=false. Local contract storage will be used.';
+} else {
+  try {
+    const credential = resolveFirebaseCredential();
+
+    if (credential && featureFlags.firebase) {
+      firebaseApp = getApps()[0] || initializeApp({
+        credential,
+        projectId: env.firebaseProjectId || undefined,
+      });
+
+      firestore = getFirestore(firebaseApp);
+
+      firestoreStatus.enabled = true;
+      firestoreStatus.mode = 'firestore';
+      firestoreStatus.message = 'Firestore is configured.';
+    }
+  } catch (error) {
+    firestoreStatus.enabled = false;
+    firestoreStatus.mode = 'fallback';
+    firestoreStatus.message = `Firestore initialization failed: ${error.message}`;
+  }
 }
 
 module.exports = {

@@ -6,6 +6,20 @@ function renderClauseBody(clause, fallback = 'Clause text is unavailable.') {
   return clause?.clauseTextFull || clause?.clauseTextSummary || clause?.clauseText || fallback;
 }
 
+function getInsightNotice(contract, insights) {
+  const step = (contract?.pipeline || []).find((item) => item.key === 'insights');
+
+  if (step && ['warning', 'failed'].includes(step.status)) {
+    return step.detail || 'Gemini insights are not generated yet for this contract.';
+  }
+
+  if (insights?.degraded && insights?.geminiError) {
+    return 'Gemini insights are not generated yet for this contract.';
+  }
+
+  return '';
+}
+
 function ContractInsightsPanel({ contract, insights, pending, error }) {
   if (!contract) {
     return (
@@ -24,6 +38,8 @@ function ContractInsightsPanel({ contract, insights, pending, error }) {
     );
   }
 
+  const insightNotice = getInsightNotice(contract, insights);
+
   return (
     <section className="panel">
       <div className="panel-header">
@@ -37,6 +53,9 @@ function ContractInsightsPanel({ contract, insights, pending, error }) {
       <div className="insight-summary">
         <h4>{pending ? 'Refreshing insights...' : insights?.headline || 'Contract insight summary'}</h4>
         <p>{error || insights?.summary || 'Insight summary will appear here after analysis completes.'}</p>
+        {insightNotice ? (
+          <p className="empty-state contract-insight-note">{insightNotice}</p>
+        ) : null}
       </div>
 
       <div className="insight-grid">
@@ -129,7 +148,7 @@ function ContractInsightsPanel({ contract, insights, pending, error }) {
           ))
         ) : (
           <p className="empty-state">
-            No automatic clause insights were generated because this contract does not currently have any high-risk clauses.
+            {insightNotice || 'No automatic clause insights were generated because this contract does not currently have any high-risk clauses.'}
           </p>
         )}
       </div>

@@ -133,10 +133,12 @@ const env = {
   apiPrefix: configuredApiPrefix,
   corsOrigin: configuredCorsOrigin,
   maxUploadSizeMb: asNumber(process.env.MAX_UPLOAD_SIZE_MB, 20),
+  remoteServiceTimeoutMs: asNumber(process.env.REMOTE_SERVICE_TIMEOUT_MS, 15000),
   tempStorageDir: resolveIfPresent(process.env.TEMP_STORAGE_DIR, path.resolve(projectRoot, 'tmp')),
   mlServiceUrl: process.env.ML_SERVICE_URL || 'http://127.0.0.1:8001',
   requirePythonMlService: asBoolean(process.env.REQUIRE_PYTHON_ML_SERVICE, false),
   strictRemoteServices: asBoolean(process.env.STRICT_REMOTE_SERVICES, false),
+  firebaseEnabled: asBoolean(process.env.FIREBASE_ENABLED, true),
   firebaseProjectId: process.env.FIREBASE_PROJECT_ID || '',
   firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
   firebasePrivateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
@@ -194,7 +196,8 @@ const env = {
 
 const featureFlags = {
   firebase: Boolean(
-    env.firebaseProjectId
+    env.firebaseEnabled
+      && env.firebaseProjectId
       && env.firebaseClientEmail
       && env.firebasePrivateKey,
   ),
