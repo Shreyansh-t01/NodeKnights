@@ -87,65 +87,76 @@ function ContractInsightsPanel({ contract, insights, pending, error }) {
         </div>
 
         {(insights?.clauseInsights || []).length ? (
-          insights.clauseInsights.map((insight) => (
-            <article key={insight.clauseId} className="insight-card">
-              <div className="insight-meta">
-                <strong>{formatClauseType(insight.clauseType || 'Clause')}</strong>
-                <span>{insight.riskLabel || 'high'} risk</span>
-              </div>
+          insights.clauseInsights.map((insight) => {
+            const comparisonSourceType = insight.precedentClause?.sourceType || insight.precedentMatches?.[0]?.sourceType || '';
+            const bestComparisonLabel = comparisonSourceType === 'precedent' ? 'Best Precedent' : 'Best Comparison';
+            const additionalComparisonLabel = comparisonSourceType === 'precedent'
+              ? 'Additional Precedents'
+              : 'Additional Comparable Clauses';
+            const emptyComparisonTitle = comparisonSourceType === 'precedent'
+              ? 'No stored precedent yet'
+              : 'No stored comparison yet';
 
-              <div className="insight-compare-grid">
-                <section className="insight-compare-block">
-                  <p className="eyebrow">Current Clause</p>
-                  <h4>{insight.currentClause?.contractTitle || contract.title}</h4>
-                  <p>{renderClauseBody(insight.currentClause, renderClauseBody(insight))}</p>
-                </section>
-
-                <section className="insight-compare-block">
-                  <p className="eyebrow">Best Comparison</p>
-                  <h4>{insight.precedentClause?.title || 'No stored precedent yet'}</h4>
-                  <p>
-                    {insight.precedentClause
-                      ? renderClauseBody(insight.precedentClause)
-                      : 'This panel fills from your indexed precedent bank or the closest matching clause from another indexed contract.'}
-                  </p>
-                </section>
-              </div>
-
-              <p><strong>Why it is risky:</strong> {insight.whyItIsRisky}</p>
-              <p><strong>Comparison:</strong> {insight.comparison}</p>
-              <p><strong>Recommended change:</strong> {insight.recommendedChange}</p>
-
-              {(insight.ruleMatches || []).length ? (
-                <div className="insight-rule-stack">
-                  <p className="eyebrow">Rules And Policies</p>
-                  {(insight.ruleMatches || []).map((rule) => (
-                    <div key={rule.id} className="insight-rule-item">
-                      <strong>{rule.title || 'Benchmark guidance'}</strong>
-                      <p>{rule.benchmark || rule.textSummary || rule.textFull}</p>
-                      {rule.recommendedAction ? (
-                        <p><strong>Expected action:</strong> {rule.recommendedAction}</p>
-                      ) : null}
-                    </div>
-                  ))}
+            return (
+              <article key={insight.clauseId} className="insight-card">
+                <div className="insight-meta">
+                  <strong>{formatClauseType(insight.clauseType || 'Clause')}</strong>
+                  <span>{insight.riskLabel || 'high'} risk</span>
                 </div>
-              ) : null}
 
-              {(insight.precedentMatches || []).length > 1 ? (
-                <div className="insight-related-list">
-                  <p className="eyebrow">Additional Comparisons</p>
-                  <ul>
-                    {insight.precedentMatches.slice(1).map((match) => (
-                      <li key={match.id}>
-                        <strong>{match.title || formatClauseType(match.clauseType || 'precedent')}</strong>
-                        {typeof match.score === 'number' ? ` (${match.score.toFixed(2)})` : ''}
-                      </li>
+                <div className="insight-compare-grid">
+                  <section className="insight-compare-block">
+                    <p className="eyebrow">Current Clause</p>
+                    <h4>{insight.currentClause?.contractTitle || contract.title}</h4>
+                    <p>{renderClauseBody(insight.currentClause, renderClauseBody(insight))}</p>
+                  </section>
+
+                  <section className="insight-compare-block">
+                    <p className="eyebrow">{bestComparisonLabel}</p>
+                    <h4>{insight.precedentClause?.title || emptyComparisonTitle}</h4>
+                    <p>
+                      {insight.precedentClause
+                        ? renderClauseBody(insight.precedentClause)
+                        : 'This panel fills from your indexed precedent bank or the closest matching clause from another indexed contract.'}
+                    </p>
+                  </section>
+                </div>
+
+                <p><strong>Why it is risky:</strong> {insight.whyItIsRisky}</p>
+                <p><strong>Comparison:</strong> {insight.comparison}</p>
+                <p><strong>Recommended change:</strong> {insight.recommendedChange}</p>
+
+                {(insight.ruleMatches || []).length ? (
+                  <div className="insight-rule-stack">
+                    <p className="eyebrow">Rules And Policies</p>
+                    {(insight.ruleMatches || []).map((rule) => (
+                      <div key={rule.id} className="insight-rule-item">
+                        <strong>{rule.title || 'Benchmark guidance'}</strong>
+                        <p>{rule.benchmark || rule.textSummary || rule.textFull}</p>
+                        {rule.recommendedAction ? (
+                          <p><strong>Expected action:</strong> {rule.recommendedAction}</p>
+                        ) : null}
+                      </div>
                     ))}
-                  </ul>
-                </div>
-              ) : null}
-            </article>
-          ))
+                  </div>
+                ) : null}
+
+                {(insight.precedentMatches || []).length > 1 ? (
+                  <div className="insight-related-list">
+                    <p className="eyebrow">{additionalComparisonLabel}</p>
+                    <ul>
+                      {insight.precedentMatches.slice(1).map((match) => (
+                        <li key={match.id}>
+                          <strong>{match.title || formatClauseType(match.clauseType || 'precedent')}</strong>
+                          {typeof match.score === 'number' ? ` (${match.score.toFixed(2)})` : ''}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </article>
+            );
+          })
         ) : (
           <p className="empty-state">
             {insightNotice || 'No automatic clause insights were generated because this contract does not currently have any high-risk clauses.'}

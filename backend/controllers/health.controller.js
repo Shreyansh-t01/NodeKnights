@@ -11,6 +11,14 @@ function buildPineconeBaseUrl() {
     : `https://${env.pineconeIndexHost}`;
 }
 
+function pineconeHeaders(contentType = 'application/json') {
+  return {
+    'Content-Type': contentType,
+    'Api-Key': env.pineconeApiKey,
+    'X-Pinecone-Api-Version': env.pineconeApiVersion,
+  };
+}
+
 function makeHealthCheckId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`;
 }
@@ -130,63 +138,106 @@ async function getPineconeDependencyStatus() {
   }
 
   const id = makeHealthCheckId('pinecone');
-  const vector = Array.from({ length: env.embeddingDimension }, (_, index) => (index === 0 ? 1 : 0));
+  const usesIntegratedText = env.embeddingProvider === 'pinecone';
 
   try {
-    const upsertResponse = await fetch(`${buildPineconeBaseUrl()}/vectors/upsert`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Api-Key': env.pineconeApiKey,
-      },
-      body: JSON.stringify({
-        namespace: env.pineconeContractNamespace,
-        vectors: [
-          {
-            id,
-            values: vector,
-            metadata: {
-              source: 'dependency-health-check',
-              healthCheckId: id,
-            },
-          },
-        ],
-      }),
-    });
+    if (usesIntegratedText) {
+      const upsertResponse = await fetch(
+        `${buildPineconeBaseUrl()}/records/namespaces/${encodeURIComponent(env.pineconeContractNamespace)}/upsert`,
+        {
+          method: 'POST',
+          headers: pineconeHeaders('application/x-ndjson'),
+          body: `${JSON.stringify({
+            _id: id,
+            [env.pineconeTextField]: 'dependency health check contract clause',
+            source: 'dependency-health-check',
+            healthCheckId: id,
+            corpusType: 'contract_clause',
+          })}\n`,
+        },
+      );
 
-    if (!upsertResponse.ok) {
-      throw new Error(`Pinecone upsert failed with ${upsertResponse.status}`);
+      if (!upsertResponse.ok) {
+        throw new Error(`Pinecone text upsert failed with ${upsertResponse.status}`);
+      }
+    } else {
+      const vector = Array.from({ length: env.embeddingDimension }, (_, index) => (index === 0 ? 1 : 0));
+      const upsertResponse = await fetch(`${buildPineconeBaseUrl()}/vectors/upsert`, {
+        method: 'POST',
+        headers: pineconeHeaders(),
+        body: JSON.stringify({
+          namespace: env.pineconeContractNamespace,
+          vectors: [
+            {
+              id,
+              values: vector,
+              metadata: {
+                source: 'dependency-health-check',
+                healthCheckId: id,
+              },
+            },
+          ],
+        }),
+      });
+
+      if (!upsertResponse.ok) {
+        throw new Error(`Pinecone upsert failed with ${upsertResponse.status}`);
+      }
     }
 
     let matched = false;
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      const queryResponse = await fetch(`${buildPineconeBaseUrl()}/query`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Api-Key': env.pineconeApiKey,
-        },
-        body: JSON.stringify({
-          namespace: env.pineconeContractNamespace,
-          vector,
-          topK: 1,
-          includeMetadata: true,
-          filter: {
-            healthCheckId: {
-              $eq: id,
+      const queryResponse = usesIntegratedText
+        ? await fetch(
+          `${buildPineconeBaseUrl()}/records/namespaces/${encodeURIComponent(env.pineconeContractNamespace)}/search`,
+          {
+            method: 'POST',
+            headers: {
+              ...pineconeHeaders(),
+              Accept: 'application/json',
             },
+            body: JSON.stringify({
+              query: {
+                inputs: {
+                  text: 'dependency health check contract clause',
+                },
+                top_k: 1,
+                filter: {
+                  healthCheckId: {
+                    $eq: id,
+                  },
+                },
+              },
+            }),
           },
-        }),
-      });
+        )
+        : await fetch(`${buildPineconeBaseUrl()}/query`, {
+          method: 'POST',
+          headers: pineconeHeaders(),
+          body: JSON.stringify({
+            namespace: env.pineconeContractNamespace,
+            vector: Array.from({ length: env.embeddingDimension }, (_, index) => (index === 0 ? 1 : 0)),
+            topK: 1,
+            includeMetadata: true,
+            filter: {
+              healthCheckId: {
+                $eq: id,
+              },
+            },
+          }),
+        });
 
       if (!queryResponse.ok) {
         throw new Error(`Pinecone query failed with ${queryResponse.status}`);
       }
 
       const queryPayload = await queryResponse.json();
-      matched = Array.isArray(queryPayload.matches)
-        && queryPayload.matches.some((match) => match.id === id);
+      matched = usesIntegratedText
+        ? (Array.isArray(queryPayload?.result?.hits)
+          && queryPayload.result.hits.some((match) => match._id === id))
+        : (Array.isArray(queryPayload.matches)
+          && queryPayload.matches.some((match) => match.id === id));
 
       if (matched) {
         break;
@@ -197,10 +248,7 @@ async function getPineconeDependencyStatus() {
 
     const deleteResponse = await fetch(`${buildPineconeBaseUrl()}/vectors/delete`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Api-Key': env.pineconeApiKey,
-      },
+      headers: pineconeHeaders(),
       body: JSON.stringify({
         namespace: env.pineconeContractNamespace,
         ids: [id],
@@ -213,7 +261,7 @@ async function getPineconeDependencyStatus() {
       reachable: true,
       writeVerified: true,
       queryVerified: matched,
-      mode: 'pinecone',
+      mode: usesIntegratedText ? 'pinecone-integrated' : 'pinecone',
       namespace: env.pineconeContractNamespace,
       cleanup: deleteResponse.ok ? 'deleted' : 'delete-failed',
     };

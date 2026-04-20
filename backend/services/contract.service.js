@@ -14,7 +14,11 @@ const {
   listContracts,
   getContractById,
 } = require('./contract.repository');
-const { deleteClauseVectorsForContract, upsertClauseVectors } = require('./vector.service');
+const {
+  deleteClauseVectorsForContract,
+  upsertClauseVectors,
+  usesPineconeIntegratedText,
+} = require('./vector.service');
 const { generateContractOverview, generateClauseInsight, generateBatchClauseInsights } = require('./insight.service');
 const {
   findComparableContractMatchesForClause,
@@ -33,6 +37,30 @@ const {
 const pendingContractInsightRequests = new Map();
 
 async function createVectorRecords(contract, clauses) {
+  if (usesPineconeIntegratedText()) {
+    return clauses.map((clause) => ({
+      id: clause.id,
+      namespace: env.pineconeContractNamespace,
+      text: clause.clauseTextFull || clause.clauseText,
+      metadata: {
+        corpusType: 'contract_clause',
+        contractId: contract.id,
+        contractTitle: contract.title,
+        clauseId: clause.id,
+        clauseType: clause.clauseType,
+        riskLabel: clause.riskLabel,
+        clauseText: clause.clauseText,
+        clauseTextSummary: clause.clauseTextSummary || clause.clauseText,
+        clauseTextFull: clause.clauseTextFull || clause.clauseText,
+        position: clause.position,
+        sourceType: 'contract',
+        embeddingProvider: 'pinecone-integrated',
+        embeddingModel: env.pineconeIntegratedModel || 'pinecone-hosted',
+        embeddingTaskType: 'RETRIEVAL_DOCUMENT',
+      },
+    }));
+  }
+
   const embeddings = await embedTexts(
     clauses.map((clause) => ({
       text: clause.clauseTextFull || clause.clauseText,
@@ -79,10 +107,14 @@ function buildCurrentClauseContext(contract, clause) {
 }
 
 async function buildClauseReviewContext(contract, clause) {
-  const searchText = clause.clauseTextFull || clause.clauseText || '';
-  let retrievalVector = null;
+  return buildClauseReviewContextWithVector(contract, clause, null);
+}
 
-  if (searchText) {
+async function buildClauseReviewContextWithVector(contract, clause, precomputedVector = null) {
+  const searchText = clause.clauseTextFull || clause.clauseText || '';
+  let retrievalVector = precomputedVector;
+
+  if (!retrievalVector && searchText && !usesPineconeIntegratedText()) {
     try {
       retrievalVector = (await embedText(searchText, {
         taskType: 'RETRIEVAL_QUERY',
@@ -92,11 +124,18 @@ async function buildClauseReviewContext(contract, clause) {
     }
   }
 
-  const [precedentMatches, comparisonMatches, ruleMatches] = await Promise.all([
+  const [precedentMatches, ruleMatches] = await Promise.all([
     findPrecedentMatchesForClause({ clause, topK: 3, vector: retrievalVector, queryText: searchText }),
-    findComparableContractMatchesForClause({ clause, topK: 3, vector: retrievalVector, queryText: searchText }),
     findRelevantKnowledge({ clause, topK: 4, vector: retrievalVector, queryText: searchText }),
   ]);
+  const comparisonMatches = precedentMatches.length
+    ? []
+    : await findComparableContractMatchesForClause({
+      clause,
+      topK: 3,
+      vector: retrievalVector,
+      queryText: searchText,
+    });
   const effectiveMatches = precedentMatches.length ? precedentMatches : comparisonMatches;
 
   return {
@@ -105,6 +144,48 @@ async function buildClauseReviewContext(contract, clause) {
     precedentClause: effectiveMatches[0] || null,
     ruleMatches,
   };
+}
+
+async function buildClauseReviewContexts(contract, clauses = []) {
+  if (!clauses.length) {
+    return [];
+  }
+
+  const retrievalVectorByClauseId = new Map();
+
+  if (!usesPineconeIntegratedText()) {
+    const embeddingTargets = clauses
+      .map((clause) => ({
+        clauseId: clause.id,
+        searchText: clause.clauseTextFull || clause.clauseText || '',
+      }))
+      .filter((entry) => entry.searchText);
+
+    if (embeddingTargets.length) {
+      try {
+        const embeddings = await embedTexts(
+          embeddingTargets.map((entry) => ({
+            text: entry.searchText,
+            taskType: 'RETRIEVAL_QUERY',
+          })),
+        );
+
+        embeddingTargets.forEach((entry, index) => {
+          retrievalVectorByClauseId.set(entry.clauseId, embeddings[index]?.values || null);
+        });
+      } catch (error) {
+        console.warn('Batch clause retrieval embedding failed, continuing with per-clause retrieval:', error.message);
+      }
+    }
+  }
+
+  return Promise.all(
+    clauses.map((clause) => buildClauseReviewContextWithVector(
+      contract,
+      clause,
+      retrievalVectorByClauseId.get(clause.id) || null,
+    )),
+  );
 }
 
 async function buildAutomaticClauseInsights(contract, clauses = []) {
@@ -131,9 +212,7 @@ async function buildAutomaticClauseInsights(contract, clauses = []) {
   });
 
   if (missingTargets.length) {
-    const reviewContexts = await Promise.all(
-      missingTargets.map((clause) => buildClauseReviewContext(contract, clause)),
-    );
+    const reviewContexts = await buildClauseReviewContexts(contract, missingTargets);
     const generatedInsights = await generateBatchClauseInsights(missingTargets, reviewContexts);
 
     generatedInsights.forEach((insight, index) => {
@@ -146,11 +225,13 @@ async function buildAutomaticClauseInsights(contract, clauses = []) {
     .filter(Boolean);
 }
 
-function isReusableGeminiOverview(insights) {
+function isReusableOverview(insights) {
   return Boolean(
     insights
-      && insights.provider === 'gemini'
-      && !insights.degraded,
+      && !insights.degraded
+      && typeof insights.headline === 'string'
+      && typeof insights.summary === 'string'
+      && Array.isArray(insights.nextSteps)
   );
 }
 
@@ -166,7 +247,7 @@ function isReusableGeminiClauseInsight(insight) {
 function getCachedContractOverview(contract = {}) {
   const overview = contract.cachedInsights?.overview;
 
-  return isReusableGeminiOverview(overview) ? overview : null;
+  return isReusableOverview(overview) ? overview : null;
 }
 
 function getCachedClauseInsight(contract = {}, clauseId = '') {
@@ -192,7 +273,7 @@ function buildContractInsightCachePatch({ overview = null, clauseInsights = [] }
     ...buildReusableClauseInsightsPatch(clauseInsights),
   };
 
-  if (isReusableGeminiOverview(overview)) {
+  if (isReusableOverview(overview)) {
     patch.overview = overview;
     patch.generatedAt = new Date().toISOString();
     patch.provider = overview.provider;
@@ -238,7 +319,7 @@ function hasGeminiInsightWarning({ overview = null, clauseInsights = [] } = {}) 
 
 function buildInsightPipelineDetail(overview = null, clauseInsights = []) {
   if (!hasGeminiInsightWarning({ overview, clauseInsights })) {
-    return 'Gemini insights were generated for this contract.';
+    return 'AI insights were generated for this contract.';
   }
 
   const overviewMessage = overview?.geminiError?.message || '';
@@ -371,7 +452,7 @@ async function ingestManualContract(file, options = {}) {
 
     pipeline.push({
       key: 'insights',
-      label: 'Gemini insights',
+      label: 'AI insights',
       status: hasGeminiInsightWarning({ overview: insights, clauseInsights }) ? 'warning' : 'completed',
       detail: buildInsightPipelineDetail(insights, clauseInsights),
     });
@@ -383,7 +464,7 @@ async function ingestManualContract(file, options = {}) {
     insights = buildInsightUnavailableOverview(contract, error.message);
     pipeline.push({
       key: 'insights',
-      label: 'Gemini insights',
+      label: 'AI insights',
       status: 'warning',
       detail: getGeminiUnavailableMessage(error.message),
     });
@@ -494,7 +575,7 @@ async function buildContractInsightsInternal(contractId, clauseId) {
 
       if (Object.keys(cachedInsightsPatch).length) {
         await saveContractCachedInsights(contractId, cachedInsightsPatch);
-      } else if (isReusableGeminiOverview(overview)) {
+      } else if (isReusableOverview(overview)) {
         await saveContractOverviewInsights(contractId, overview);
       }
 

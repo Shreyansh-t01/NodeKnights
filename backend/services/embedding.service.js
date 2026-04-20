@@ -4,6 +4,7 @@ const path = require('node:path');
 const AppError = require('../errors/AppError');
 const { env, featureFlags } = require('../config/env');
 const { buildDeterministicEmbeddingValues } = require('../utils/deterministicEmbedding');
+const { withGeminiRequestSlot } = require('../utils/geminiRequestGate');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 const {
   computeRetryDelayMs,
@@ -127,11 +128,16 @@ async function setCachedEmbedding(text, options = {}, value) {
 }
 
 function ensureEmbeddingsConfigured() {
+  if (env.embeddingProvider === 'local') {
+    return;
+  }
+
   if (featureFlags.embeddingApi) {
     return;
   }
 
-  throw new AppError(503, 'Gemini embeddings are not configured for this environment.', {
+  throw new AppError(503, `${env.embeddingProvider === 'pinecone' ? 'Pinecone-managed' : 'Gemini'} embeddings are not configured for this environment.`, {
+    provider: env.embeddingProvider,
     configuredBaseUrl: env.genAiBaseUrl || null,
     configuredModel: env.embeddingModel || null,
   });
@@ -237,7 +243,7 @@ async function postEmbeddingRequest(url, body, label) {
     const timeoutId = setTimeout(() => controller.abort(), env.genAiTimeoutMs);
 
     try {
-      const response = await fetch(url, {
+      const response = await withGeminiRequestSlot(() => fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -245,7 +251,7 @@ async function postEmbeddingRequest(url, body, label) {
         },
         signal: controller.signal,
         body: JSON.stringify(body),
-      });
+      }));
 
       if (!response.ok) {
         const parsedError = await parseErrorResponse(response);
@@ -313,6 +319,10 @@ async function embedText(text, options = {}) {
     throw new AppError(400, 'Text is required for embedding.');
   }
 
+  if (env.embeddingProvider !== 'gemini') {
+    return buildLocalEmbeddingResult(normalizedText, options);
+  }
+
   const cachedEmbedding = await getCachedEmbedding(normalizedText, options);
 
   if (cachedEmbedding) {
@@ -370,6 +380,10 @@ async function embedTexts(entries = [], options = {}) {
 
   if (!normalizedEntries.length) {
     return [];
+  }
+
+  if (env.embeddingProvider !== 'gemini') {
+    return normalizedEntries.map((entry) => buildLocalEmbeddingResult(entry.text, entry));
   }
 
   const resolvedResults = new Array(normalizedEntries.length);

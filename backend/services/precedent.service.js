@@ -8,7 +8,11 @@ const { analyzeContractText } = require('./mlAnalysis.service');
 const { embedText, embedTexts } = require('./embedding.service');
 const { formatClauseType } = require('./contract.helpers');
 const { getContractById } = require('./contract.repository');
-const { querySimilarClauses, upsertClauseVectors } = require('./vector.service');
+const {
+  querySimilarClauses,
+  upsertClauseVectors,
+  usesPineconeIntegratedText,
+} = require('./vector.service');
 const { getPrecedentById, listPrecedents, savePrecedentBundle } = require('./precedent.repository');
 
 function parseTitle(value = 'Precedent') {
@@ -159,6 +163,34 @@ function buildAnalyzedClauseRecords(precedentId, analysisClauses = [], defaults 
 }
 
 async function buildVectorRecords(precedent, clauses = []) {
+  if (usesPineconeIntegratedText()) {
+    return clauses.map((clause) => ({
+      id: clause.id,
+      namespace: env.pineconePrecedentNamespace,
+      text: clause.clauseTextFull || clause.clauseText,
+      metadata: {
+        corpusType: 'precedent_clause',
+        precedentId: precedent.id,
+        precedentTitle: precedent.title,
+        clauseId: clause.id,
+        clauseType: clause.clauseType,
+        riskLabel: clause.riskLabel,
+        clauseText: clause.clauseText,
+        clauseTextSummary: clause.clauseTextSummary || clause.clauseText,
+        clauseTextFull: clause.clauseTextFull || clause.clauseText,
+        position: clause.position,
+        sectionHeading: clause.sectionHeading || '',
+        contractType: clause.contractType || precedent.metadata?.contractType || '',
+        jurisdiction: clause.jurisdiction || precedent.metadata?.jurisdiction || '',
+        sourceType: 'precedent',
+        tags: clause.tags || [],
+        embeddingProvider: 'pinecone-integrated',
+        embeddingModel: env.pineconeIntegratedModel || 'pinecone-hosted',
+        embeddingTaskType: 'RETRIEVAL_DOCUMENT',
+      },
+    }));
+  }
+
   const embeddings = await embedTexts(
     clauses.map((clause) => ({
       text: clause.clauseTextFull || clause.clauseText,
@@ -319,9 +351,11 @@ async function findPrecedentMatchesForClause({ clause, topK = 3, vector = null, 
   try {
     const embeddingValues = Array.isArray(vector) && vector.length
       ? vector
-      : (await embedText(searchText, {
-        taskType: 'RETRIEVAL_QUERY',
-      })).values;
+      : (usesPineconeIntegratedText()
+        ? null
+        : (await embedText(searchText, {
+          taskType: 'RETRIEVAL_QUERY',
+        })).values);
     const clauseType = normalizeClauseType(clause?.clauseType || 'other');
 
     const primaryMatches = clauseType !== 'other'
@@ -362,9 +396,11 @@ async function findComparableContractMatchesForClause({ clause, topK = 3, vector
   try {
     const embeddingValues = Array.isArray(vector) && vector.length
       ? vector
-      : (await embedText(searchText, {
-        taskType: 'RETRIEVAL_QUERY',
-      })).values;
+      : (usesPineconeIntegratedText()
+        ? null
+        : (await embedText(searchText, {
+          taskType: 'RETRIEVAL_QUERY',
+        })).values);
     const clauseType = normalizeClauseType(clause?.clauseType || 'other');
 
     const primaryMatches = await querySimilarClauses({

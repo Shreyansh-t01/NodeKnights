@@ -9,6 +9,7 @@ const rulebook = JSON.parse(fs.readFileSync(env.rulebookPath, 'utf-8'));
 
 // Cache for clause insights to avoid repeated API calls
 const clauseInsightCache = new Map();
+const BATCH_CLAUSE_INSIGHT_CHUNK_SIZE = 2;
 
 const contractOverviewSchema = {
   type: 'object',
@@ -122,6 +123,17 @@ function trimPromptText(value, maxLength = 1200) {
   }
 
   return `${normalized.slice(0, maxLength - 3).trim()}...`;
+}
+
+function chunkItems(items = [], chunkSize = 1) {
+  const normalizedChunkSize = Math.max(1, Number(chunkSize) || 1);
+  const chunks = [];
+
+  for (let index = 0; index < items.length; index += normalizedChunkSize) {
+    chunks.push(items.slice(index, index + normalizedChunkSize));
+  }
+
+  return chunks;
 }
 
 function buildGeminiFailureInfo(error, source = 'gemini') {
@@ -315,6 +327,65 @@ function toPromptRuleMatches(matches = []) {
   });
 }
 
+function toBatchPromptMatches(matches = []) {
+  return matches.slice(0, 1).map((match) => {
+    const normalized = normalizePrecedentMatch(match);
+
+    return {
+      sourceType: normalized.sourceType,
+      clauseType: normalized.clauseType,
+      riskLabel: normalized.riskLabel,
+      score: normalized.score,
+      contractTitle: trimPromptText(normalized.title, 80),
+      clauseTextSummary: trimPromptText(normalized.clauseTextSummary, 100),
+      clauseTextFull: trimPromptText(normalized.clauseTextFull, 160),
+    };
+  });
+}
+
+function toBatchPromptRuleMatches(matches = []) {
+  return matches.slice(0, 1).map((match) => {
+    const normalized = normalizeRuleMatch(match);
+
+    return {
+      title: trimPromptText(normalized.title, 80),
+      sourceType: normalized.sourceType,
+      documentType: normalized.documentType,
+      primaryConcern: trimPromptText(normalized.primaryConcern, 110),
+      benchmark: trimPromptText(normalized.benchmark || normalized.textSummary, 120),
+      recommendedAction: trimPromptText(normalized.recommendedAction, 120),
+    };
+  });
+}
+
+function buildInsightRequestOptions(overrides = {}) {
+  return {
+    includeDefaultModelFallbacks: false,
+    modelCandidates: [
+      env.genAiModel,
+      ...(Array.isArray(env.genAiModelCandidates) ? env.genAiModelCandidates : []),
+    ].filter(Boolean),
+    maxAttempts: Math.max(2, env.genAiMaxRetries + 1),
+    requestTimeoutMs: Math.max(env.genAiTimeoutMs, 20000),
+    maxOutputTokens: Math.max(env.genAiMaxOutputTokens, 900),
+    lowLatencyMaxOutputTokens: Math.max(env.genAiMaxOutputTokens, 900),
+    temperature: Math.min(env.genAiTemperature, 0.1),
+    lowLatencyTemperature: Math.min(env.genAiTemperature, 0.1),
+    thinkingBudget: 0,
+    ...overrides,
+  };
+}
+
+function isGeneratedClauseInsightComplete(insight = {}) {
+  return Boolean(
+    insight
+      && insight.clauseId
+      && asText(insight.whyItIsRisky, '')
+      && asText(insight.comparison, '')
+      && asText(insight.recommendedChange, ''),
+  );
+}
+
 function buildTemplateClauseInsight(clause, reviewContext = {}) {
   const currentClause = buildCurrentClausePayload(
     clause,
@@ -372,6 +443,40 @@ function buildTemplateContractOverview(contractBundle) {
       'Check policy and rule matches before redrafting the clause.',
     ],
     clauseInsights,
+  };
+}
+
+function buildDerivedContractOverview(contractBundle) {
+  const fallback = buildTemplateContractOverview(contractBundle);
+  const highRiskCount = Number(contractBundle?.contract?.metadata?.riskCounts?.high || 0);
+  const highlightedClauseTypes = [...new Set(
+    (fallback.clauseInsights || [])
+      .map((insight) => formatClauseType(insight.clauseType || 'clause'))
+      .filter(Boolean),
+  )].slice(0, 2);
+  const clauseFocus = highlightedClauseTypes.length
+    ? `Primary review focus is ${highlightedClauseTypes.join(' and ')} language.`
+    : '';
+
+  return {
+    ...fallback,
+    headline: highRiskCount > 0
+      ? `${highRiskCount} high-risk clause${highRiskCount === 1 ? '' : 's'} need review before approval.`
+      : fallback.headline,
+    summary: compactText(
+      [contractBundle?.contract?.metadata?.summary || fallback.summary, clauseFocus]
+        .filter(Boolean)
+        .join(' '),
+      fallback.summary,
+      260,
+    ),
+    nextSteps: [
+      highlightedClauseTypes[0]
+        ? `Review the ${highlightedClauseTypes[0]} wording against the suggested benchmark edits.`
+        : fallback.nextSteps[0],
+      'Compare the flagged clauses with the strongest precedent or closest indexed contract language.',
+      'Confirm notice periods, payment terms, and redline approvals before final sign-off.',
+    ],
   };
 }
 
@@ -517,13 +622,13 @@ function buildBatchClauseInsightPrompt(clauses, reviewContexts = []) {
       clauseId: clause.id,
       context: {
         currentClause: {
-          ...currentClause,
-          clauseText: trimPromptText(currentClause.clauseText, 140),
-          clauseTextSummary: trimPromptText(currentClause.clauseTextSummary, 140),
-          clauseTextFull: trimPromptText(currentClause.clauseTextFull, 320),
+          clauseType: currentClause.clauseType,
+          riskLabel: currentClause.riskLabel,
+          clauseTextSummary: trimPromptText(currentClause.clauseTextSummary, 100),
+          clauseTextFull: trimPromptText(currentClause.clauseTextFull, 180),
         },
-        precedentMatches: toPromptMatches(precedentMatches),
-        ruleMatches: toPromptRuleMatches(ruleMatches),
+        precedentMatches: toBatchPromptMatches(precedentMatches),
+        ruleMatches: toBatchPromptRuleMatches(ruleMatches),
       },
     };
   });
@@ -535,10 +640,11 @@ function buildBatchClauseInsightPrompt(clauses, reviewContexts = []) {
     'Keep the explanations practical and actionable.',
     'When explaining the comparison, explicitly anchor it to the precedent and benchmark guidance in the context.',
     'Each whyItIsRisky, comparison, and recommendedChange value must be one short sentence.',
+    'Keep each value under 35 words.',
     'Return JSON only with an array of insights, each containing clauseId, whyItIsRisky, comparison, and recommendedChange.',
     '',
     'Clauses to analyze:',
-    JSON.stringify(clausesData, null, 2),
+    serializePromptContext({ clauses: clausesData }),
   ].join('\n');
 }
 
@@ -572,43 +678,9 @@ function buildSemanticAnswerPrompt({ query, matches, contract }) {
 }
 
 async function generateContractOverview(contractBundle) {
-  const fallback = buildTemplateContractOverview(contractBundle);
-
-  if (!isGeminiEnabled()) {
-    return attachInsightMeta(fallback, {
-      degraded: true,
-      provider: 'template-fallback',
-      geminiError: buildGeminiFailureInfo(
-        new AppError(503, 'Gemini is not configured for contract insights.', {
-          provider: env.genAiProvider,
-          model: env.genAiModel,
-        }),
-      ),
-    });
-  }
-
-  try {
-    const generated = await generateStructuredObject({
-      prompt: buildContractOverviewPrompt(contractBundle, fallback),
-      responseSchema: contractOverviewSchema,
-      label: 'contract overview',
-    });
-
-    return attachInsightMeta({
-      headline: compactText(generated?.headline, fallback.headline, 100),
-      summary: compactText(generated?.summary, fallback.summary, 260),
-      topRiskItems: fallback.topRiskItems,
-      nextSteps: compactStringArray(generated?.nextSteps, fallback.nextSteps, 3, 90),
-      clauseInsights: fallback.clauseInsights,
-    });
-  } catch (error) {
-    console.warn('Gemini contract overview failed, using explicit template fallback:', error.message);
-    return attachInsightMeta(fallback, {
-      degraded: true,
-      provider: 'template-fallback',
-      geminiError: buildGeminiFailureInfo(error),
-    });
-  }
+  return attachInsightMeta(buildDerivedContractOverview(contractBundle), {
+    provider: 'derived-overview',
+  });
 }
 
 async function generateBatchClauseInsights(clauses, reviewContexts = []) {
@@ -627,40 +699,71 @@ async function generateBatchClauseInsights(clauses, reviewContexts = []) {
     }));
   }
 
-  try {
-    const generated = await generateStructuredObject({
-      prompt: buildBatchClauseInsightPrompt(clauses, reviewContexts),
-      responseSchema: batchClauseInsightSchema,
-      label: 'batch clause insights',
-    });
+  const batchRequestOptions = buildInsightRequestOptions({
+    maxAttempts: Math.max(2, env.genAiMaxRetries + 1),
+    requestTimeoutMs: Math.max(env.genAiTimeoutMs, 25000),
+    maxOutputTokens: Math.max(env.genAiMaxOutputTokens, 1200),
+    lowLatencyMaxOutputTokens: Math.max(env.genAiMaxOutputTokens, 1200),
+  });
+  const resultsByClauseId = new Map();
 
-    const generatedInsights = generated?.insights || [];
+  for (const chunk of chunkItems(
+    clauses.map((clause, index) => ({
+      clause,
+      reviewContext: reviewContexts[index] || {},
+      fallback: fallbacks[index],
+    })),
+    BATCH_CLAUSE_INSIGHT_CHUNK_SIZE,
+  )) {
+    const chunkClauses = chunk.map((item) => item.clause);
+    const chunkReviewContexts = chunk.map((item) => item.reviewContext);
 
-    return fallbacks.map((fallback, index) => {
-      const generatedInsight = generatedInsights.find((item) => item?.clauseId === clauses[index].id) || {};
-
-      const result = attachInsightMeta({
-        ...fallback,
-        whyItIsRisky: compactText(generatedInsight?.whyItIsRisky, fallback.whyItIsRisky, 180),
-        comparison: compactText(generatedInsight?.comparison, fallback.comparison, 220),
-        recommendedChange: compactText(generatedInsight?.recommendedChange, fallback.recommendedChange, 180),
+    try {
+      const generated = await generateStructuredObject({
+        prompt: buildBatchClauseInsightPrompt(chunkClauses, chunkReviewContexts),
+        responseSchema: batchClauseInsightSchema,
+        label: 'batch clause insights',
+        requestOptions: batchRequestOptions,
       });
 
-      // Cache successful results
-      if (result.provider === 'gemini' && !result.degraded) {
-        clauseInsightCache.set(clauses[index].id, result);
-      }
+      const generatedInsightByClauseId = new Map(
+        (generated?.insights || [])
+          .filter(isGeneratedClauseInsightComplete)
+          .map((item) => [item.clauseId, item]),
+      );
 
-      return result;
-    });
-  } catch (error) {
-    console.warn('Gemini batch clause insights failed, using explicit template fallback:', error.message);
-    return fallbacks.map((fallback) => attachInsightMeta(fallback, {
-      degraded: true,
-      provider: 'template-fallback',
-      geminiError: buildGeminiFailureInfo(error),
-    }));
+      for (const item of chunk) {
+        const generatedInsight = generatedInsightByClauseId.get(item.clause.id);
+
+        if (!generatedInsight) {
+          resultsByClauseId.set(
+            item.clause.id,
+            await generateClauseInsight(item.clause, item.reviewContext),
+          );
+          continue;
+        }
+
+        const result = attachInsightMeta({
+          ...item.fallback,
+          whyItIsRisky: compactText(generatedInsight.whyItIsRisky, item.fallback.whyItIsRisky, 180),
+          comparison: compactText(generatedInsight.comparison, item.fallback.comparison, 220),
+          recommendedChange: compactText(generatedInsight.recommendedChange, item.fallback.recommendedChange, 180),
+        });
+
+        clauseInsightCache.set(item.clause.id, result);
+        resultsByClauseId.set(item.clause.id, result);
+      }
+    } catch (error) {
+      console.warn('Gemini batch clause insight chunk failed, retrying clauses individually:', error.message);
+
+      for (const item of chunk) {
+        const result = await generateClauseInsight(item.clause, item.reviewContext);
+        resultsByClauseId.set(item.clause.id, result);
+      }
+    }
   }
+
+  return clauses.map((clause, index) => resultsByClauseId.get(clause.id) || fallbacks[index]);
 }
 
 async function generateClauseInsight(clause, reviewContext = {}) {
@@ -690,6 +793,7 @@ async function generateClauseInsight(clause, reviewContext = {}) {
       prompt: buildClauseInsightPrompt(clause, reviewContext),
       responseSchema: clauseInsightSchema,
       label: 'clause insight',
+      requestOptions: buildInsightRequestOptions(),
     });
 
     const result = attachInsightMeta({
@@ -738,6 +842,11 @@ async function buildSemanticAnswer({ query, matches, contract }) {
       prompt: buildSemanticAnswerPrompt({ query, matches, contract }),
       responseSchema: semanticAnswerSchema,
       label: 'semantic answer',
+      requestOptions: buildInsightRequestOptions({
+        requestTimeoutMs: Math.max(env.genAiTimeoutMs, 18000),
+        maxOutputTokens: Math.max(env.genAiMaxOutputTokens, 700),
+        lowLatencyMaxOutputTokens: Math.max(env.genAiMaxOutputTokens, 700),
+      }),
     });
 
     return attachInsightMeta({

@@ -5,7 +5,11 @@ const { env, featureFlags } = require('../config/env');
 const AppError = require('../errors/AppError');
 const { extractTextFromDocument } = require('./documentExtraction.service');
 const { embedText, embedTexts } = require('./embedding.service');
-const { querySimilarClauses, upsertClauseVectors } = require('./vector.service');
+const {
+  querySimilarClauses,
+  upsertClauseVectors,
+  usesPineconeIntegratedText,
+} = require('./vector.service');
 const {
   getKnowledgeDocumentById,
   listKnowledgeDocuments,
@@ -214,6 +218,42 @@ async function buildVectorRecords(knowledgeDocument, chunks = []) {
     title: `${knowledgeDocument.title} ${chunk.sectionTitle || chunk.primaryClauseType || 'chunk'}`.trim(),
     taskType: 'RETRIEVAL_DOCUMENT',
   }));
+
+  if (usesPineconeIntegratedText()) {
+    return chunks.map((chunk, index) => ({
+      id: chunk.id,
+      namespace: env.pineconeKnowledgeNamespace,
+      text: searchPayloads[index].text,
+      metadata: {
+        corpusType: 'knowledge_chunk',
+        knowledgeId: knowledgeDocument.id,
+        knowledgeTitle: knowledgeDocument.title,
+        chunkId: chunk.id,
+        position: chunk.position,
+        sectionTitle: chunk.sectionTitle,
+        primaryClauseType: chunk.primaryClauseType,
+        clauseTypes: chunk.clauseTypes,
+        primaryConcern: chunk.primaryConcern,
+        benchmark: chunk.benchmark,
+        recommendedAction: chunk.recommendedAction,
+        textSummary: chunk.textSummary,
+        textFull: chunk.textFull,
+        sourceType: chunk.sourceType || knowledgeDocument.metadata?.sourceType || 'policy',
+        documentType: chunk.documentType || knowledgeDocument.metadata?.documentType || 'rulebook',
+        organization: chunk.organization || knowledgeDocument.metadata?.organization || '',
+        jurisdiction: chunk.jurisdiction || knowledgeDocument.metadata?.jurisdiction || '',
+        league: chunk.league || knowledgeDocument.metadata?.league || '',
+        sport: chunk.sport || knowledgeDocument.metadata?.sport || '',
+        version: chunk.version || knowledgeDocument.metadata?.version || '',
+        status: chunk.status || knowledgeDocument.status || 'active',
+        tags: chunk.tags || [],
+        embeddingProvider: 'pinecone-integrated',
+        embeddingModel: env.pineconeIntegratedModel || 'pinecone-hosted',
+        embeddingTaskType: 'RETRIEVAL_DOCUMENT',
+      },
+    }));
+  }
+
   const embeddings = await embedTexts(searchPayloads);
 
   return chunks.map((chunk, index) => ({
@@ -384,9 +424,11 @@ async function findRelevantKnowledge({ clause, topK = 4, vector = null, queryTex
     const effectiveQueryText = `${normalizeClauseType(clause?.clauseType || 'other').replace(/_/g, ' ')} ${clauseText}`.trim();
     const embeddingValues = Array.isArray(vector) && vector.length
       ? vector
-      : (await embedText(effectiveQueryText, {
-        taskType: 'RETRIEVAL_QUERY',
-      })).values;
+      : (usesPineconeIntegratedText()
+        ? null
+        : (await embedText(effectiveQueryText, {
+          taskType: 'RETRIEVAL_QUERY',
+        })).values);
     const primaryClauseType = normalizeClauseType(clause?.clauseType || 'other');
 
     const targetedMatches = primaryClauseType !== 'other'
@@ -426,12 +468,13 @@ async function searchKnowledge({ query, topK = 5, clauseType } = {}) {
     throw new AppError(503, 'Pinecone must be configured before knowledge search can run.');
   }
 
-  const embedding = await embedText(query, {
-    taskType: 'RETRIEVAL_QUERY',
-  });
   const normalizedClauseType = asText(clauseType) ? normalizeClauseType(clauseType) : '';
   const matches = await querySimilarClauses({
-    vector: embedding.values,
+    vector: usesPineconeIntegratedText()
+      ? null
+      : (await embedText(query, {
+        taskType: 'RETRIEVAL_QUERY',
+      })).values,
     topK,
     namespace: env.pineconeKnowledgeNamespace,
     filters: normalizedClauseType

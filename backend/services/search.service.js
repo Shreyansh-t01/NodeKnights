@@ -4,7 +4,7 @@ const { env } = require('../config/env');
 const AppError = require('../errors/AppError');
 const { embedText } = require('./embedding.service');
 const { reindexContractSearchIndex } = require('./searchIndex.service');
-const { querySimilarClauses } = require('./vector.service');
+const { querySimilarClauses, usesPineconeIntegratedText } = require('./vector.service');
 const { buildSemanticAnswer } = require('./insight.service');
 const { saveContractCachedInsights } = require('./contract.repository');
 const { getContractDetails } = require('./contract.service');
@@ -90,9 +90,6 @@ async function runSemanticSearch({ query, contractId, topK = 5 }) {
     }
   }
 
-  const embedding = await embedText(query, {
-    taskType: 'RETRIEVAL_QUERY',
-  });
   const filters = contractId
     ? {
       corpusType: 'contract_clause',
@@ -102,7 +99,11 @@ async function runSemanticSearch({ query, contractId, topK = 5 }) {
       corpusType: 'contract_clause',
     };
   let matches = await querySimilarClauses({
-    vector: embedding.values,
+    vector: usesPineconeIntegratedText()
+      ? null
+      : (await embedText(query, {
+        taskType: 'RETRIEVAL_QUERY',
+      })).values,
     topK,
     namespace: env.pineconeContractNamespace,
     filters,
@@ -112,7 +113,11 @@ async function runSemanticSearch({ query, contractId, topK = 5 }) {
   if (!matches.length && contractId) {
     await reindexContractSearchIndex(contractId);
     matches = await querySimilarClauses({
-      vector: embedding.values,
+      vector: usesPineconeIntegratedText()
+        ? null
+        : (await embedText(query, {
+          taskType: 'RETRIEVAL_QUERY',
+        })).values,
       topK,
       namespace: env.pineconeContractNamespace,
       filters,

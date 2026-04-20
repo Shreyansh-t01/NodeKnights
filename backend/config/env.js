@@ -120,6 +120,11 @@ const configuredGenAiModelCandidates = asList(
 const configuredEmbeddingModel = process.env.GEMINI_EMBEDDING_MODEL
   || process.env.EMBEDDING_MODEL
   || 'gemini-embedding-001';
+const configuredEmbeddingProvider = asChoice(
+  process.env.EMBEDDING_PROVIDER,
+  ['gemini', 'pinecone', 'local'],
+  configuredGenAiApiKey && configuredEmbeddingModel ? 'gemini' : 'local',
+);
 const configuredApiPrefix = process.env.API_PREFIX || '/api';
 const configuredCorsOrigin = process.env.CORS_ORIGIN || '*';
 const configuredGoogleRedirectUri = process.env.GOOGLE_REDIRECT_URI || '';
@@ -171,6 +176,10 @@ const env = {
   pineconeContractNamespace: process.env.PINECONE_CONTRACT_NAMESPACE || process.env.PINECONE_NAMESPACE || 'contracts',
   pineconePrecedentNamespace: process.env.PINECONE_PRECEDENT_NAMESPACE || 'precedents',
   pineconeKnowledgeNamespace: process.env.PINECONE_KNOWLEDGE_NAMESPACE || 'knowledge',
+  pineconeApiVersion: process.env.PINECONE_API_VERSION || '2026-04',
+  pineconeTextField: process.env.PINECONE_TEXT_FIELD || 'chunk_text',
+  pineconeIntegratedModel: process.env.PINECONE_INTEGRATED_MODEL || '',
+  pineconeTextUpsertBatchSize: asNumber(process.env.PINECONE_TEXT_UPSERT_BATCH_SIZE, 96),
   embeddingDimension: asNumber(process.env.EMBEDDING_DIMENSION, 128),
   precedentCollection: process.env.PRECEDENT_COLLECTION || 'precedents',
   knowledgeCollection: process.env.KNOWLEDGE_COLLECTION || 'knowledge_documents',
@@ -179,10 +188,12 @@ const env = {
   genAiApiKey: configuredGenAiApiKey,
   genAiModel: configuredGenAiModel,
   genAiModelCandidates: configuredGenAiModelCandidates,
+  embeddingProvider: configuredEmbeddingProvider,
   embeddingModel: configuredEmbeddingModel,
   embeddingBatchSize: asNumber(process.env.EMBEDDING_BATCH_SIZE, 20),
   genAiTimeoutMs: asNumber(process.env.GENAI_TIMEOUT_MS, 30000),
   genAiMaxRetries: asNumber(process.env.GENAI_MAX_RETRIES, 2),
+  genAiMaxConcurrentRequests: asNumber(process.env.GENAI_MAX_CONCURRENT_REQUESTS, 1),
   genAiRetryBaseMs: asNumber(process.env.GENAI_RETRY_BASE_MS, 1500),
   genAiRetryMaxMs: asNumber(process.env.GENAI_RETRY_MAX_MS, 12000),
   genAiTemperature: asNumber(process.env.GENAI_TEMPERATURE, 0.2),
@@ -213,9 +224,14 @@ const featureFlags = {
   ),
   pinecone: Boolean(env.pineconeApiKey && env.pineconeIndexHost),
   embeddingApi: Boolean(
-    env.genAiBaseUrl
+    env.embeddingProvider === 'gemini'
+      && env.genAiBaseUrl
       && env.genAiApiKey
       && env.embeddingModel,
+  ),
+  pineconeIntegratedEmbedding: Boolean(
+    env.embeddingProvider === 'pinecone'
+      && env.pineconeTextField,
   ),
   externalGenAi: Boolean(
     env.genAiProvider !== 'template'

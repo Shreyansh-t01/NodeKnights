@@ -4,6 +4,7 @@ const path = require('node:path');
 const AppError = require('../errors/AppError');
 const { env, featureFlags } = require('../config/env');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
+const { withGeminiRequestSlot } = require('../utils/geminiRequestGate');
 const {
   computeRetryDelayMs,
   extractRetryDelayMs,
@@ -34,11 +35,47 @@ function normalizeModelName(modelName) {
   return String(modelName || '').trim();
 }
 
-function getGeminiModelCandidates() {
+function normalizeModelCandidates(modelCandidates = []) {
+  return [...new Set(
+    (Array.isArray(modelCandidates) ? modelCandidates : [])
+      .map(normalizeModelName)
+      .filter(Boolean),
+  )];
+}
+
+function buildSerializableRequestOptions(requestOptions = {}) {
+  const options = requestOptions && typeof requestOptions === 'object' ? requestOptions : {};
+
+  return {
+    includeDefaultModelFallbacks: options.includeDefaultModelFallbacks,
+    maxAttempts: options.maxAttempts,
+    requestTimeoutMs: options.requestTimeoutMs,
+    maxOutputTokens: options.maxOutputTokens,
+    lowLatencyMaxOutputTokens: options.lowLatencyMaxOutputTokens,
+    temperature: options.temperature,
+    lowLatencyTemperature: options.lowLatencyTemperature,
+    thinkingBudget: options.thinkingBudget,
+    modelCandidates: normalizeModelCandidates(options.modelCandidates),
+  };
+}
+
+function getGeminiModelCandidates(requestOptions = {}) {
+  const requestedCandidates = normalizeModelCandidates(requestOptions.modelCandidates);
+
+  if (requestedCandidates.length) {
+    return requestedCandidates;
+  }
+
+  const configuredCandidates = normalizeModelCandidates([
+    env.genAiModel,
+    ...(Array.isArray(env.genAiModelCandidates) ? env.genAiModelCandidates : []),
+  ]);
+  const includeDefaultModelFallbacks = requestOptions.includeDefaultModelFallbacks
+    ?? !(Array.isArray(env.genAiModelCandidates) && env.genAiModelCandidates.length > 0);
+
   return [...new Set([
-    normalizeModelName(env.genAiModel),
-    ...(Array.isArray(env.genAiModelCandidates) ? env.genAiModelCandidates.map(normalizeModelName) : []),
-    ...DEFAULT_GEMINI_RESPONSE_MODELS,
+    ...configuredCandidates,
+    ...(includeDefaultModelFallbacks ? DEFAULT_GEMINI_RESPONSE_MODELS : []),
   ].filter(Boolean))];
 }
 
@@ -138,23 +175,47 @@ function buildPlainJsonPrompt(prompt, responseSchema) {
   ].join('\n');
 }
 
-function buildGenerationConfig({ responseSchema, modelName, attempt, mode = 'schema' }) {
+function resolveGenerationSetting(value, fallback) {
+  return Number.isFinite(Number(value)) ? Number(value) : fallback;
+}
+
+function buildGenerationConfig({
+  responseSchema,
+  modelName,
+  attempt,
+  mode = 'schema',
+  requestOptions = {},
+}) {
   const lowLatencyMode = attempt > 1 || String(modelName || '').includes('flash-lite');
+  const maxOutputTokens = Math.max(200, resolveGenerationSetting(
+    requestOptions.maxOutputTokens,
+    env.genAiMaxOutputTokens,
+  ));
+  const lowLatencyMaxOutputTokens = Math.max(200, resolveGenerationSetting(
+    requestOptions.lowLatencyMaxOutputTokens,
+    maxOutputTokens,
+  ));
+  const temperature = resolveGenerationSetting(requestOptions.temperature, env.genAiTemperature);
+  const lowLatencyTemperature = resolveGenerationSetting(
+    requestOptions.lowLatencyTemperature,
+    Math.min(temperature, 0.1),
+  );
+  const thinkingBudget = resolveGenerationSetting(requestOptions.thinkingBudget, env.genAiThinkingBudget);
   const generationConfig = {
     responseMimeType: 'application/json',
-    temperature: lowLatencyMode ? Math.min(env.genAiTemperature, 0.1) : env.genAiTemperature,
+    temperature: lowLatencyMode ? lowLatencyTemperature : temperature,
     maxOutputTokens: lowLatencyMode
-      ? Math.min(env.genAiMaxOutputTokens, 900)
-      : env.genAiMaxOutputTokens,
+      ? Math.min(maxOutputTokens, lowLatencyMaxOutputTokens)
+      : maxOutputTokens,
   };
 
   if (mode === 'schema' && responseSchema) {
     generationConfig.responseJsonSchema = responseSchema;
   }
 
-  if (env.genAiThinkingBudget > 0 && !lowLatencyMode) {
+  if (thinkingBudget > 0 && !lowLatencyMode) {
     generationConfig.thinkingConfig = {
-      thinkingBudget: env.genAiThinkingBudget,
+      thinkingBudget,
     };
   }
 
@@ -219,7 +280,7 @@ function shouldTryPlainJsonFallback(error) {
 
   const status = Number(error.details?.status || error.statusCode || 0);
 
-  return error.message.includes('invalid JSON') || [500, 502, 503, 504].includes(status);
+  return error.message.includes('invalid JSON') || status === 400;
 }
 
 function shouldTryNextModel(error) {
@@ -229,9 +290,9 @@ function shouldTryNextModel(error) {
 
   const status = Number(error.details?.status || error.statusCode || 0);
 
-  return isRetryableGeminiFailure(error)
+  return (isRetryableGeminiFailure(error) && status !== 429)
     || error.message.includes('invalid JSON')
-    || [400, 403, 404, 429].includes(status);
+    || [400, 403, 404].includes(status);
 }
 
 function shouldRetrySameModel(error) {
@@ -241,7 +302,7 @@ function shouldRetrySameModel(error) {
 
   const status = Number(error.details?.status || error.statusCode || 0);
 
-  if ([429, 503].includes(status)) {
+  if (status === 429) {
     return false;
   }
 
@@ -255,20 +316,21 @@ async function runGeminiRequest({
   modelName,
   mode = 'schema',
   maxAttemptsOverride = null,
+  requestOptions = {},
 }) {
-  const maxAttempts = Math.max(1, maxAttemptsOverride ?? (env.genAiMaxRetries + 1));
+  const maxAttempts = Math.max(1, maxAttemptsOverride ?? requestOptions.maxAttempts ?? (env.genAiMaxRetries + 1));
   let lastError = null;
-  const requestTimeoutMs = Math.min(
-    env.genAiTimeoutMs,
-    mode === 'json-prompt' ? 10000 : 15000,
-  );
+  const requestTimeoutMs = Math.max(1000, resolveGenerationSetting(
+    requestOptions.requestTimeoutMs,
+    Math.min(env.genAiTimeoutMs, mode === 'json-prompt' ? 10000 : 15000),
+  ));
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
 
     try {
-      const response = await fetch(buildGeminiUrl(modelName), {
+      const response = await withGeminiRequestSlot(() => fetch(buildGeminiUrl(modelName), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -293,9 +355,10 @@ async function runGeminiRequest({
             modelName,
             attempt,
             mode,
+            requestOptions,
           }),
         }),
-      });
+      }));
 
       if (!response.ok) {
         const bodyText = await response.text();
@@ -367,11 +430,16 @@ async function runGeminiRequest({
   throw lastError;
 }
 
-async function generateStructuredObjectInternal({ prompt, responseSchema, label = 'response' }) {
+async function generateStructuredObjectInternal({
+  prompt,
+  responseSchema,
+  label = 'response',
+  requestOptions = {},
+}) {
   const attemptedModels = [];
   let lastError = null;
 
-  for (const modelName of getGeminiModelCandidates()) {
+  for (const modelName of getGeminiModelCandidates(requestOptions)) {
     attemptedModels.push(modelName);
 
     try {
@@ -381,6 +449,7 @@ async function generateStructuredObjectInternal({ prompt, responseSchema, label 
         label,
         modelName,
         mode: 'schema',
+        requestOptions,
       });
 
       return result.value;
@@ -397,6 +466,7 @@ async function generateStructuredObjectInternal({ prompt, responseSchema, label 
           modelName,
           mode: 'json-prompt',
           maxAttemptsOverride: 1,
+          requestOptions,
         });
 
         return result.value;
@@ -420,19 +490,25 @@ async function generateStructuredObjectInternal({ prompt, responseSchema, label 
   throw lastError;
 }
 
-function buildRequestKey({ prompt, responseSchema, label }) {
+function buildRequestKey({ prompt, responseSchema, label, requestOptions = {} }) {
   return crypto
     .createHash('sha256')
     .update(JSON.stringify({
       prompt,
       responseSchema,
       label,
-      models: getGeminiModelCandidates(),
+      requestOptions: buildSerializableRequestOptions(requestOptions),
+      models: getGeminiModelCandidates(requestOptions),
     }))
     .digest('hex');
 }
 
-async function generateStructuredObject({ prompt, responseSchema, label = 'response' }) {
+async function generateStructuredObject({
+  prompt,
+  responseSchema,
+  label = 'response',
+  requestOptions = {},
+}) {
   if (!isGeminiEnabled()) {
     throw new AppError(503, 'Gemini is not configured for this environment.', {
       provider: env.genAiProvider,
@@ -440,7 +516,7 @@ async function generateStructuredObject({ prompt, responseSchema, label = 'respo
     });
   }
 
-  const requestKey = buildRequestKey({ prompt, responseSchema, label });
+  const requestKey = buildRequestKey({ prompt, responseSchema, label, requestOptions });
   const cachedResponse = await getCompletedStructuredRequest(requestKey);
 
   if (cachedResponse !== undefined) {
@@ -455,6 +531,7 @@ async function generateStructuredObject({ prompt, responseSchema, label = 'respo
     prompt,
     responseSchema,
     label,
+    requestOptions,
   }).then(async (value) => {
     await setCompletedStructuredRequest(requestKey, {
       label,

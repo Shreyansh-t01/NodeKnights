@@ -399,6 +399,7 @@ function App() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [selectedDocumentViewerUrl, setSelectedDocumentViewerUrl] = useState(null);
   const viewerObjectUrlRef = useRef(null);
+  const freshInsightsRef = useRef({ contractId: '', updatedAt: '' });
   const deferredQuery = useDeferredValue(query);
   const deferredDocumentQuery = useDeferredValue(documentQuery);
 
@@ -493,6 +494,7 @@ function App() {
 
   function handleSelectContract(contractId) {
     const summary = contracts.find((contract) => contract.id === contractId) || null;
+    freshInsightsRef.current = { contractId: '', updatedAt: '' };
     setSelectedContractId(contractId);
     setSelectedContract(summary);
     setSearchError('');
@@ -500,6 +502,7 @@ function App() {
 
   function handleOpenInsights(contractId) {
     const summary = contracts.find((contract) => contract.id === contractId) || null;
+    freshInsightsRef.current = { contractId: '', updatedAt: '' };
     setSelectedContractId(contractId);
     setSelectedContract(summary);
     setContractInsights(buildEmptyInsights(summary));
@@ -687,6 +690,16 @@ function App() {
       if (!selectedContractId) {
         setContractInsights(buildEmptyInsights());
       }
+      return undefined;
+    }
+
+    if (
+      freshInsightsRef.current.contractId === selectedContractId
+      && freshInsightsRef.current.updatedAt === (selectedContract?.updatedAt || '')
+    ) {
+      freshInsightsRef.current = { contractId: '', updatedAt: '' };
+      setInsightsPending(false);
+      setInsightsError('');
       return undefined;
     }
 
@@ -933,6 +946,10 @@ function App() {
         clauses: response.data.clauses,
         risks: response.data.risks,
       });
+      freshInsightsRef.current = {
+        contractId: uploadedContract.id,
+        updatedAt: uploadedContract.updatedAt || '',
+      };
 
       startTransition(() => {
         setContracts((current) => [uploadedContract, ...current.filter((item) => item.id !== uploadedContract.id)]);
@@ -1063,6 +1080,7 @@ function App() {
 
     if (notification.contractId) {
       const summary = contracts.find((contract) => contract.id === notification.contractId) || null;
+      freshInsightsRef.current = { contractId: '', updatedAt: '' };
 
       if (summary) {
         setSelectedContractId(summary.id);

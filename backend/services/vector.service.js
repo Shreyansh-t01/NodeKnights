@@ -2,6 +2,7 @@ const path = require('node:path');
 
 const { env, featureFlags } = require('../config/env');
 const AppError = require('../errors/AppError');
+const { buildDeterministicEmbeddingValues } = require('../utils/deterministicEmbedding');
 const { cosineSimilarity } = require('../utils/vectorMath');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 
@@ -15,6 +16,18 @@ function pineconeBaseUrl() {
   return env.pineconeIndexHost.startsWith('http')
     ? env.pineconeIndexHost
     : `https://${env.pineconeIndexHost}`;
+}
+
+function pineconeHeaders(contentType = 'application/json') {
+  return {
+    'Content-Type': contentType,
+    'Api-Key': env.pineconeApiKey,
+    'X-Pinecone-Api-Version': env.pineconeApiVersion,
+  };
+}
+
+function usesPineconeIntegratedText() {
+  return env.embeddingProvider === 'pinecone';
 }
 
 function buildPineconeRequiredError(operation, error) {
@@ -94,22 +107,91 @@ function buildPineconeFilter(filters = {}) {
   return clauses.length === 1 ? clauses[0] : { $and: clauses };
 }
 
+function tokenize(text = '') {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length > 2);
+}
+
+function lexicalOverlapScore(queryText, clauseText) {
+  const queryTokens = new Set(tokenize(queryText));
+  const clauseTokens = new Set(tokenize(clauseText));
+
+  if (!queryTokens.size || !clauseTokens.size) {
+    return 0;
+  }
+
+  let intersection = 0;
+
+  queryTokens.forEach((token) => {
+    if (clauseTokens.has(token)) {
+      intersection += 1;
+    }
+  });
+
+  return intersection / queryTokens.size;
+}
+
+function clauseTypeBoost(queryText, clauseType = 'other') {
+  const queryTokens = new Set(tokenize(queryText));
+  const typeTokens = clauseType.split('_');
+
+  return typeTokens.some((token) => queryTokens.has(token)) ? 0.25 : 0;
+}
+
+function excludeMatch(match, excludeIds = []) {
+  return excludeIds.includes(match.id) || excludeIds.includes(match.metadata?.clauseId);
+}
+
+function searchableTextFromMetadata(metadata = {}) {
+  if (typeof metadata[env.pineconeTextField] === 'string' && metadata[env.pineconeTextField].trim()) {
+    return metadata[env.pineconeTextField];
+  }
+
+  return metadata.clauseTextFull
+    || metadata.clauseTextSummary
+    || metadata.clauseText
+    || metadata.textFull
+    || metadata.textSummary
+    || '';
+}
+
+function getRecordText(record = {}) {
+  if (typeof record.text === 'string' && record.text.trim()) {
+    return record.text.trim();
+  }
+
+  return searchableTextFromMetadata(record.metadata || {});
+}
+
+function normalizeLocalRecord(record = {}, resolvedNamespace) {
+  const text = getRecordText(record);
+  const values = Array.isArray(record.values) && record.values.length
+    ? record.values
+    : buildDeterministicEmbeddingValues(text, env.embeddingDimension);
+
+  return {
+    ...record,
+    namespace: resolveNamespace(record.namespace || resolvedNamespace),
+    values,
+  };
+}
+
 async function upsertLocalVectors(records, namespace) {
   const resolvedNamespace = resolveNamespace(namespace);
+  const normalizedRecords = records.map((record) => normalizeLocalRecord(record, resolvedNamespace));
   const current = await readJsonFile(localVectorStorePath, []);
-  const next = current.filter((item) => !records.some((record) => (
+  const next = current.filter((item) => !normalizedRecords.some((record) => (
     record.id === item.id
       && resolveNamespace(record.namespace || resolvedNamespace) === normalizeLocalNamespace(item)
   )));
-  next.push(...records.map((record) => ({
-    ...record,
-    namespace: resolveNamespace(record.namespace || resolvedNamespace),
-  })));
+  next.push(...normalizedRecords);
   await writeJsonFile(localVectorStorePath, next);
 
   return {
     mode: 'local-vector-store',
-    count: records.length,
+    count: normalizedRecords.length,
     location: localVectorStorePath,
     namespace: resolvedNamespace,
   };
@@ -119,10 +201,7 @@ async function upsertPineconeVectors(records, namespace) {
   const resolvedNamespace = resolveNamespace(namespace);
   const response = await fetch(`${pineconeBaseUrl()}/vectors/upsert`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Api-Key': env.pineconeApiKey,
-    },
+    headers: pineconeHeaders(),
     body: JSON.stringify({
       namespace: resolvedNamespace,
       vectors: records.map((record) => ({
@@ -147,6 +226,69 @@ async function upsertPineconeVectors(records, namespace) {
   };
 }
 
+function chunkRecords(records = [], chunkSize = 96) {
+  const normalizedChunkSize = Math.max(1, Math.min(96, Number(chunkSize) || 96));
+  const chunks = [];
+
+  for (let index = 0; index < records.length; index += normalizedChunkSize) {
+    chunks.push(records.slice(index, index + normalizedChunkSize));
+  }
+
+  return chunks;
+}
+
+function buildPineconeTextRecord(record = {}) {
+  const text = getRecordText(record);
+
+  if (!text) {
+    throw new AppError(400, 'A text field is required for Pinecone integrated text upserts.', {
+      recordId: record.id || null,
+      textField: env.pineconeTextField,
+    });
+  }
+
+  return {
+    _id: record.id,
+    [env.pineconeTextField]: text,
+    ...(record.metadata || {}),
+  };
+}
+
+async function upsertPineconeTextRecords(records, namespace) {
+  const resolvedNamespace = resolveNamespace(namespace);
+  const batches = chunkRecords(records, env.pineconeTextUpsertBatchSize);
+  let count = 0;
+
+  for (const batch of batches) {
+    const body = batch
+      .map((record) => JSON.stringify(buildPineconeTextRecord(record)))
+      .join('\n');
+
+    const response = await fetch(
+      `${pineconeBaseUrl()}/records/namespaces/${encodeURIComponent(resolvedNamespace)}/upsert`,
+      {
+        method: 'POST',
+        headers: pineconeHeaders('application/x-ndjson'),
+        body,
+      },
+    );
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(`Pinecone text upsert failed with ${response.status}: ${message}`);
+    }
+
+    count += batch.length;
+  }
+
+  return {
+    mode: 'pinecone-integrated',
+    count,
+    namespace: resolvedNamespace,
+    textField: env.pineconeTextField,
+  };
+}
+
 async function upsertClauseVectors(records, options = {}) {
   const namespace = resolveNamespace(options.namespace || records[0]?.namespace);
 
@@ -156,7 +298,9 @@ async function upsertClauseVectors(records, options = {}) {
 
   if (featureFlags.pinecone) {
     try {
-      return await upsertPineconeVectors(records, namespace);
+      return usesPineconeIntegratedText()
+        ? await upsertPineconeTextRecords(records, namespace)
+        : await upsertPineconeVectors(records, namespace);
     } catch (error) {
       if (env.strictRemoteServices) {
         throw buildPineconeRequiredError('upsert', error);
@@ -208,10 +352,7 @@ async function deletePineconeVectorsByFilter(filters = {}, namespace) {
 
   const response = await fetch(`${pineconeBaseUrl()}/vectors/delete`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Api-Key': env.pineconeApiKey,
-    },
+    headers: pineconeHeaders(),
     body: JSON.stringify({
       namespace: resolvedNamespace,
       filter,
@@ -224,7 +365,7 @@ async function deletePineconeVectorsByFilter(filters = {}, namespace) {
   }
 
   return {
-    mode: 'pinecone',
+    mode: usesPineconeIntegratedText() ? 'pinecone-integrated' : 'pinecone',
     namespace: resolvedNamespace,
     deletedCount: null,
     filter,
@@ -258,52 +399,6 @@ async function deleteClauseVectorsForContract(contractId, options = {}) {
   }
 
   return deleteLocalVectorsByFilter(filters, namespace);
-}
-
-function tokenize(text = '') {
-  return text
-    .toLowerCase()
-    .split(/[^a-z0-9]+/)
-    .filter((token) => token.length > 2);
-}
-
-function lexicalOverlapScore(queryText, clauseText) {
-  const queryTokens = new Set(tokenize(queryText));
-  const clauseTokens = new Set(tokenize(clauseText));
-
-  if (!queryTokens.size || !clauseTokens.size) {
-    return 0;
-  }
-
-  let intersection = 0;
-
-  queryTokens.forEach((token) => {
-    if (clauseTokens.has(token)) {
-      intersection += 1;
-    }
-  });
-
-  return intersection / queryTokens.size;
-}
-
-function clauseTypeBoost(queryText, clauseType = 'other') {
-  const queryTokens = new Set(tokenize(queryText));
-  const typeTokens = clauseType.split('_');
-
-  return typeTokens.some((token) => queryTokens.has(token)) ? 0.25 : 0;
-}
-
-function excludeMatch(match, excludeIds = []) {
-  return excludeIds.includes(match.id) || excludeIds.includes(match.metadata?.clauseId);
-}
-
-function searchableTextFromMetadata(metadata = {}) {
-  return metadata.clauseTextFull
-    || metadata.clauseTextSummary
-    || metadata.clauseText
-    || metadata.textFull
-    || metadata.textSummary
-    || '';
 }
 
 function rerankMatches(matches = [], queryText = '', excludeIds = []) {
@@ -348,7 +443,17 @@ async function queryLocalVectors(vector, topK, namespace, filters, queryText, ex
     .slice(0, topK);
 }
 
-async function queryPinecone(vector, topK, namespace, filters, queryText = '', excludeIds = []) {
+function normalizePineconeMatch(match = {}) {
+  return {
+    id: match.id || match._id || '',
+    score: typeof match.score === 'number'
+      ? match.score
+      : (typeof match._score === 'number' ? match._score : 0),
+    metadata: match.metadata || match.fields || {},
+  };
+}
+
+async function queryPineconeVector(vector, topK, namespace, filters, queryText = '', excludeIds = []) {
   const resolvedNamespace = resolveNamespace(namespace);
   const fetchTopK = Math.max(topK, Math.min(50, topK * 8));
   const body = {
@@ -366,10 +471,7 @@ async function queryPinecone(vector, topK, namespace, filters, queryText = '', e
 
   const response = await fetch(`${pineconeBaseUrl()}/query`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Api-Key': env.pineconeApiKey,
-    },
+    headers: pineconeHeaders(),
     body: JSON.stringify(body),
   });
 
@@ -380,6 +482,45 @@ async function queryPinecone(vector, topK, namespace, filters, queryText = '', e
 
   const payload = await response.json();
   return rerankMatches(payload.matches || [], queryText, excludeIds).slice(0, topK);
+}
+
+async function queryPineconeText(queryText, topK, namespace, filters, excludeIds = []) {
+  const resolvedNamespace = resolveNamespace(namespace);
+  const fetchTopK = Math.max(topK, Math.min(50, topK * 8));
+  const pineconeFilter = buildPineconeFilter(filters);
+  const body = {
+    query: {
+      inputs: {
+        text: queryText,
+      },
+      top_k: fetchTopK,
+      ...(pineconeFilter ? { filter: pineconeFilter } : {}),
+    },
+  };
+
+  const response = await fetch(
+    `${pineconeBaseUrl()}/records/namespaces/${encodeURIComponent(resolvedNamespace)}/search`,
+    {
+      method: 'POST',
+      headers: {
+        ...pineconeHeaders(),
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(body),
+    },
+  );
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(`Pinecone text search failed with ${response.status}: ${message}`);
+  }
+
+  const payload = await response.json();
+  const hits = Array.isArray(payload?.result?.hits)
+    ? payload.result.hits.map(normalizePineconeMatch)
+    : [];
+
+  return rerankMatches(hits, queryText, excludeIds).slice(0, topK);
 }
 
 async function querySimilarClauses({
@@ -394,9 +535,15 @@ async function querySimilarClauses({
     throw buildPineconeRequiredError('query', new Error('Pinecone is not configured.'));
   }
 
+  const canUseIntegratedTextSearch = usesPineconeIntegratedText() && String(queryText || '').trim();
+
   if (featureFlags.pinecone) {
     try {
-      return await queryPinecone(vector, topK, namespace, filters, queryText, excludeIds);
+      if (canUseIntegratedTextSearch) {
+        return await queryPineconeText(queryText, topK, namespace, filters, excludeIds);
+      }
+
+      return await queryPineconeVector(vector, topK, namespace, filters, queryText, excludeIds);
     } catch (error) {
       if (env.strictRemoteServices) {
         throw buildPineconeRequiredError('query', error);
@@ -406,11 +553,16 @@ async function querySimilarClauses({
     }
   }
 
-  return queryLocalVectors(vector, topK, namespace, filters, queryText, excludeIds);
+  const fallbackVector = Array.isArray(vector) && vector.length
+    ? vector
+    : buildDeterministicEmbeddingValues(queryText, env.embeddingDimension);
+
+  return queryLocalVectors(fallbackVector, topK, namespace, filters, queryText, excludeIds);
 }
 
 module.exports = {
   deleteClauseVectorsForContract,
   querySimilarClauses,
   upsertClauseVectors,
+  usesPineconeIntegratedText,
 };
