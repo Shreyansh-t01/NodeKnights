@@ -878,14 +878,13 @@ function App() {
     document.title = `Legal Intelligence | ${titles[safePath] || 'Overview'}`;
   }, [safePath]);
 
-  async function handleSemanticSearch(event) {
-    event.preventDefault();
+  async function runSemanticSearch(searchQuery = query) {
     setSearchPending(true);
     setSearchError('');
 
     try {
       const response = await api.semanticSearch({
-        query,
+        query: searchQuery,
         contractId: selectedContractId,
         topK: 5,
       });
@@ -894,12 +893,26 @@ function App() {
         setSearchResult(response.data);
         setSearchError('');
       });
+
+      return response.data;
     } catch (error) {
       startTransition(() => {
         setSearchError(error.message || 'Semantic search is unavailable right now.');
       });
+
+      throw error;
     } finally {
       setSearchPending(false);
+    }
+  }
+
+  async function handleSemanticSearch(event) {
+    event.preventDefault();
+
+    try {
+      await runSemanticSearch();
+    } catch (error) {
+      // State is already updated inside runSemanticSearch.
     }
   }
 
@@ -1158,6 +1171,7 @@ function App() {
         searchError={searchError}
         onQueryChange={setQuery}
         onSubmit={handleSemanticSearch}
+        onRunSearch={runSemanticSearch}
         modeLabel={modeLabel}
       />
     );

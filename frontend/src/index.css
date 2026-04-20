@@ -793,6 +793,16 @@ input {
   cursor: pointer;
 }
 
+.search-row .search-secondary-button {
+  border: 1px solid rgba(32, 54, 95, 0.16);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--navy);
+}
+
+.search-row .search-secondary-button:hover:not(:disabled) {
+  background: rgba(226, 233, 248, 0.92);
+}
+
 .search-row button:disabled,
 .upload-row button:disabled {
   opacity: 0.6;
@@ -805,6 +815,16 @@ input {
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(23, 32, 51, 0.08);
+}
+
+.search-voice-status {
+  color: var(--navy);
+  font-weight: 700;
+}
+
+.search-voice-error {
+  margin: 0;
+  color: #8c2f2f;
 }
 
 .search-grid {
@@ -890,6 +910,36 @@ input {
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--navy);
+}
+
+.insight-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.insight-report-button {
+  padding: 0.82rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(32, 54, 95, 0.18);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--navy);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.insight-report-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(32, 54, 95, 0.28);
+  background: rgba(226, 233, 248, 0.92);
+}
+
+.insight-report-button:disabled {
+  opacity: 0.68;
+  cursor: wait;
 }
 
 .document-viewer-panel {
@@ -982,6 +1032,11 @@ input {
 
   .panel-header {
     flex-direction: column;
+  }
+
+  .insight-panel-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .app-nav-links {

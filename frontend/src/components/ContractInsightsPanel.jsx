@@ -1,26 +1,16 @@
-function formatClauseType(value = 'Clause') {
-  return value.replace(/_/g, ' ');
-}
+import { useState } from 'react';
 
-function renderClauseBody(clause, fallback = 'Clause text is unavailable.') {
-  return clause?.clauseTextFull || clause?.clauseTextSummary || clause?.clauseText || fallback;
-}
-
-function getInsightNotice(contract, insights) {
-  const step = (contract?.pipeline || []).find((item) => item.key === 'insights');
-
-  if (step && ['warning', 'failed'].includes(step.status)) {
-    return step.detail || 'Gemini insights are not generated yet for this contract.';
-  }
-
-  if (insights?.degraded && insights?.geminiError) {
-    return 'Gemini insights are not generated yet for this contract.';
-  }
-
-  return '';
-}
+import {
+  downloadContractInsightReport,
+  formatClauseType,
+  getInsightNotice,
+  renderClauseBody,
+} from '../lib/contractInsightReport';
 
 function ContractInsightsPanel({ contract, insights, pending, error }) {
+  const [reportPending, setReportPending] = useState(false);
+  const [reportError, setReportError] = useState('');
+
   if (!contract) {
     return (
       <section className="panel">
@@ -40,6 +30,24 @@ function ContractInsightsPanel({ contract, insights, pending, error }) {
 
   const insightNotice = getInsightNotice(contract, insights);
 
+  function handleDownloadReport() {
+    setReportPending(true);
+    setReportError('');
+
+    try {
+      downloadContractInsightReport({
+        contract,
+        insights,
+        pending,
+        error,
+      });
+    } catch (downloadError) {
+      setReportError(downloadError.message || 'The analysis report could not be generated.');
+    } finally {
+      setReportPending(false);
+    }
+  }
+
   return (
     <section className="panel">
       <div className="panel-header">
@@ -47,7 +55,17 @@ function ContractInsightsPanel({ contract, insights, pending, error }) {
           <p className="eyebrow">AI Insights</p>
           <h3>{contract.title}</h3>
         </div>
-        <span className="mode-label">Auto-generated only for high-risk clauses</span>
+        <div className="insight-panel-actions">
+          <span className="mode-label">Auto-generated only for high-risk clauses</span>
+          <button
+            type="button"
+            className="insight-report-button"
+            onClick={handleDownloadReport}
+            disabled={reportPending}
+          >
+            {reportPending ? 'Preparing PDF...' : 'Get Report'}
+          </button>
+        </div>
       </div>
 
       <div className="insight-summary">
@@ -55,6 +73,9 @@ function ContractInsightsPanel({ contract, insights, pending, error }) {
         <p>{error || insights?.summary || 'Insight summary will appear here after analysis completes.'}</p>
         {insightNotice ? (
           <p className="empty-state contract-insight-note">{insightNotice}</p>
+        ) : null}
+        {reportError ? (
+          <p className="empty-state contract-insight-note">{reportError}</p>
         ) : null}
       </div>
 

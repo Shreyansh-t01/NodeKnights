@@ -14,6 +14,7 @@ function SearchPage({
   onSelectContract,
   onQueryChange,
   onSubmit,
+  onRunSearch,
   modeLabel,
 }) {
   const [scopeQuery, setScopeQuery] = useState('');
@@ -112,6 +113,7 @@ function SearchPage({
           scopeLabel={selectedContract?.title || ''}
           onQueryChange={onQueryChange}
           onSubmit={onSubmit}
+          onRunSearch={onRunSearch}
           modeLabel={modeLabel}
         />
       </div>
