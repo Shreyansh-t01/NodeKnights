@@ -89,6 +89,10 @@ function joinUrl(baseUrl, pathname) {
   return `${String(baseUrl).replace(/\/+$/, '')}/${String(pathname).replace(/^\/+/, '')}`;
 }
 
+function withoutTrailingSlash(value) {
+  return String(value || '').replace(/\/+$/, '');
+}
+
 function deriveWebhookUrl(redirectUri, apiPrefix) {
   if (!redirectUri) {
     return '';
@@ -140,7 +144,7 @@ const env = {
   maxUploadSizeMb: asNumber(process.env.MAX_UPLOAD_SIZE_MB, 20),
   remoteServiceTimeoutMs: asNumber(process.env.REMOTE_SERVICE_TIMEOUT_MS, 15000),
   tempStorageDir: resolveIfPresent(process.env.TEMP_STORAGE_DIR, path.resolve(projectRoot, 'tmp')),
-  mlServiceUrl: process.env.ML_SERVICE_URL || 'http://127.0.0.1:8001',
+  mlServiceUrl: withoutTrailingSlash(process.env.ML_SERVICE_URL || 'http://127.0.0.1:8001'),
   requirePythonMlService: asBoolean(process.env.REQUIRE_PYTHON_ML_SERVICE, false),
   strictRemoteServices: asBoolean(process.env.STRICT_REMOTE_SERVICES, false),
   firebaseEnabled: asBoolean(process.env.FIREBASE_ENABLED, true),
