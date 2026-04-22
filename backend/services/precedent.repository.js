@@ -1,6 +1,9 @@
 const { firestore, firestoreStatus } = require('../config/firebase');
 const { env } = require('../config/env');
 const AppError = require('../errors/AppError');
+const { withRemoteServiceTimeout } = require('../utils/remoteServiceTimeout');
+
+const FIRESTORE_OPERATION_TIMEOUT_MS = Math.min(env.remoteServiceTimeoutMs, 5000);
 
 function requireFirestore() {
   if (!firestoreStatus.enabled || !firestore) {
@@ -13,18 +16,29 @@ function requireFirestore() {
   return firestore;
 }
 
-async function savePrecedentBundle({ precedent, clauses = [] }) {
-  const db = requireFirestore();
-  const precedentRef = db.collection(env.precedentCollection).doc(precedent.id);
-  const batch = db.batch();
-
-  batch.set(precedentRef, precedent);
-
-  clauses.forEach((clause) => {
-    batch.set(precedentRef.collection('clauses').doc(clause.id), clause);
+function withFirestoreTimeout(operation, task) {
+  return withRemoteServiceTimeout(`Firestore precedent ${operation}`, task, {
+    service: 'firestore',
+    collection: env.precedentCollection,
+    operation,
+    timeoutMs: FIRESTORE_OPERATION_TIMEOUT_MS,
   });
+}
 
-  await batch.commit();
+async function savePrecedentBundle({ precedent, clauses = [] }) {
+  await withFirestoreTimeout('write', async () => {
+    const db = requireFirestore();
+    const precedentRef = db.collection(env.precedentCollection).doc(precedent.id);
+    const batch = db.batch();
+
+    batch.set(precedentRef, precedent);
+
+    clauses.forEach((clause) => {
+      batch.set(precedentRef.collection('clauses').doc(clause.id), clause);
+    });
+
+    await batch.commit();
+  });
 
   return {
     mode: 'firebase',
@@ -33,8 +47,10 @@ async function savePrecedentBundle({ precedent, clauses = [] }) {
 }
 
 async function listPrecedents() {
-  const db = requireFirestore();
-  const snapshot = await db.collection(env.precedentCollection).get();
+  const snapshot = await withFirestoreTimeout('list', () => {
+    const db = requireFirestore();
+    return db.collection(env.precedentCollection).get();
+  });
 
   return snapshot.docs
     .map((document) => document.data())
@@ -42,22 +58,24 @@ async function listPrecedents() {
 }
 
 async function getPrecedentById(precedentId) {
-  const db = requireFirestore();
-  const precedentRef = db.collection(env.precedentCollection).doc(precedentId);
-  const precedentDoc = await precedentRef.get();
+  return withFirestoreTimeout('read', async () => {
+    const db = requireFirestore();
+    const precedentRef = db.collection(env.precedentCollection).doc(precedentId);
+    const precedentDoc = await precedentRef.get();
 
-  if (!precedentDoc.exists) {
-    throw new AppError(404, `Precedent not found: ${precedentId}`);
-  }
+    if (!precedentDoc.exists) {
+      throw new AppError(404, `Precedent not found: ${precedentId}`);
+    }
 
-  const clausesSnapshot = await precedentRef.collection('clauses').get();
+    const clausesSnapshot = await precedentRef.collection('clauses').get();
 
-  return {
-    precedent: precedentDoc.data(),
-    clauses: clausesSnapshot.docs
-      .map((document) => document.data())
-      .sort((a, b) => a.position - b.position),
-  };
+    return {
+      precedent: precedentDoc.data(),
+      clauses: clausesSnapshot.docs
+        .map((document) => document.data())
+        .sort((a, b) => a.position - b.position),
+    };
+  });
 }
 
 module.exports = {

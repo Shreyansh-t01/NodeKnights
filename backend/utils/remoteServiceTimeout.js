@@ -2,7 +2,10 @@ const AppError = require('../errors/AppError');
 const { env } = require('../config/env');
 
 async function withRemoteServiceTimeout(label, operation, details = {}) {
-  const timeoutMs = Math.max(1000, Number(env.remoteServiceTimeoutMs) || 15000);
+  const timeoutMs = Math.max(
+    1000,
+    Number(details.timeoutMs || env.remoteServiceTimeoutMs) || 15000,
+  );
   let timeoutId = null;
 
   try {

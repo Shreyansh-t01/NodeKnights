@@ -125,7 +125,6 @@ At minimum review and set these:
 
 ```env
 NODE_ENV=production
-PORT=3000
 HOST=0.0.0.0
 API_PREFIX=/api
 CORS_ORIGIN=https://app.example.com
@@ -135,6 +134,9 @@ ML_SERVICE_TIMEOUT_MS=60000
 REQUIRE_PYTHON_ML_SERVICE=false
 STRICT_REMOTE_SERVICES=true
 ```
+
+On Railway, do not manually import local-only variables such as `PORT`, `TEMP_STORAGE_DIR`, or `RULEBOOK_PATH`.
+Railway owns the runtime port, and local filesystem paths from your laptop can make the backend crash before `/` or `/healthz` can respond.
 
 Then set your real service credentials:
 

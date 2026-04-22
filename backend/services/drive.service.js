@@ -702,7 +702,9 @@ async function stopDriveChangesWatch({ state, suppressErrors = false } = {}) {
   });
 }
 
-async function getDriveWatchStatus() {
+async function getDriveWatchStatus(options = {}) {
+  const includeState = options.includeState !== false;
+
   return {
     ready: featureFlags.googleConnectors
       && hasConfiguredDriveFolders()
@@ -710,8 +712,9 @@ async function getDriveWatchStatus() {
     enabled: env.googleDriveWatchEnabled,
     folderIds: env.googleDriveFolderIds,
     webhookUrlConfigured: Boolean(env.googleDriveWebhookUrl),
-    watchState: await getConnectorState(DRIVE_WATCH_STATE_KEY),
-    syncState: await getConnectorState(DRIVE_SYNC_STATE_KEY),
+    stateIncluded: includeState,
+    watchState: includeState ? await getConnectorState(DRIVE_WATCH_STATE_KEY) : null,
+    syncState: includeState ? await getConnectorState(DRIVE_SYNC_STATE_KEY) : null,
   };
 }
 

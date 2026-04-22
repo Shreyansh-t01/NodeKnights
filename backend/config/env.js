@@ -1,18 +1,46 @@
+const fs = require('node:fs');
 const path = require('node:path');
 
 const projectRoot = path.resolve(__dirname, '..');
 
+function cleanValue(value) {
+  if (value === undefined || value === null) {
+    return '';
+  }
+
+  const trimmed = String(value).trim();
+  const first = trimmed[0];
+  const last = trimmed[trimmed.length - 1];
+
+  if (
+    trimmed.length >= 2
+    && ((first === '"' && last === '"') || (first === '\'' && last === '\''))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+
+  return trimmed;
+}
+
+function envValue(name, fallback = '') {
+  return cleanValue(process.env[name]) || fallback;
+}
+
 function asNumber(value, fallback) {
-  if (value === undefined || value === null || value === '') {
+  const normalized = cleanValue(value);
+
+  if (!normalized) {
     return fallback;
   }
 
-  const parsed = Number(value);
+  const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function asBoolean(value, fallback) {
-  if (value === undefined || value === null || value === '') {
+  const normalizedValue = cleanValue(value);
+
+  if (!normalizedValue) {
     return fallback;
   }
 
@@ -20,7 +48,7 @@ function asBoolean(value, fallback) {
     return value;
   }
 
-  const normalized = String(value).trim().toLowerCase();
+  const normalized = normalizedValue.toLowerCase();
 
   if (['true', '1', 'yes', 'on'].includes(normalized)) {
     return true;
@@ -34,22 +62,26 @@ function asBoolean(value, fallback) {
 }
 
 function asList(value) {
-  if (!value) {
+  const normalized = cleanValue(value);
+
+  if (!normalized) {
     return [];
   }
 
-  return value
+  return normalized
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
 }
 
 function asChoice(value, allowedValues, fallback) {
-  if (value === undefined || value === null || value === '') {
+  const rawValue = cleanValue(value);
+
+  if (!rawValue) {
     return fallback;
   }
 
-  let normalized = String(value).trim().toLowerCase();
+  let normalized = rawValue.toLowerCase();
 
   if (normalized === 'superbase') {
     normalized = 'supabase';
@@ -59,15 +91,53 @@ function asChoice(value, allowedValues, fallback) {
 }
 
 function resolveIfPresent(value, fallback = '') {
-  if (!value) {
+  const normalized = cleanValue(value);
+
+  if (!normalized) {
     return fallback;
   }
 
-  return path.isAbsolute(value) ? value : path.resolve(projectRoot, value);
+  return path.isAbsolute(normalized) ? normalized : path.resolve(projectRoot, normalized);
+}
+
+function resolveExistingFileIfPresent(value, fallback = '') {
+  const configuredPath = resolveIfPresent(value);
+
+  if (configuredPath && fs.existsSync(configuredPath)) {
+    return configuredPath;
+  }
+
+  if (fallback && fs.existsSync(fallback)) {
+    return fallback;
+  }
+
+  return configuredPath || fallback;
+}
+
+function isRailwayRuntime() {
+  return Boolean(
+    envValue('RAILWAY_ENVIRONMENT')
+      || envValue('RAILWAY_SERVICE_ID')
+      || envValue('RAILWAY_PROJECT_ID'),
+  );
+}
+
+function resolveHost(value) {
+  const host = cleanValue(value) || '0.0.0.0';
+  const normalized = host.toLowerCase();
+
+  if (
+    isRailwayRuntime()
+    && ['localhost', '127.0.0.1', '::1'].includes(normalized)
+  ) {
+    return '0.0.0.0';
+  }
+
+  return host;
 }
 
 function firstHttpUrl(value) {
-  const urls = String(value || '')
+  const urls = cleanValue(value)
     .split(',')
     .map((item) => item.trim())
     .filter((item) => /^https?:\/\//i.test(item));
@@ -90,7 +160,7 @@ function joinUrl(baseUrl, pathname) {
 }
 
 function withoutTrailingSlash(value) {
-  return String(value || '').replace(/\/+$/, '');
+  return cleanValue(value).replace(/\/+$/, '');
 }
 
 function deriveWebhookUrl(redirectUri, apiPrefix) {
@@ -106,89 +176,89 @@ function deriveWebhookUrl(redirectUri, apiPrefix) {
   }
 }
 
-const configuredGenAiProvider = (process.env.GENAI_PROVIDER || (process.env.GEMINI_API_KEY ? 'gemini' : 'template'))
+const configuredGenAiProvider = (envValue('GENAI_PROVIDER') || (envValue('GEMINI_API_KEY') ? 'gemini' : 'template'))
   .trim()
   .toLowerCase();
 
-const configuredGenAiBaseUrl = process.env.GEMINI_BASE_URL
-  || process.env.GENAI_BASE_URL
+const configuredGenAiBaseUrl = envValue('GEMINI_BASE_URL')
+  || envValue('GENAI_BASE_URL')
   || (configuredGenAiProvider === 'gemini' ? 'https://generativelanguage.googleapis.com/v1beta' : '');
 
-const configuredGenAiApiKey = process.env.GEMINI_API_KEY || process.env.GENAI_API_KEY || '';
-const configuredGenAiModel = process.env.GEMINI_MODEL
-  || process.env.GENAI_MODEL
+const configuredGenAiApiKey = envValue('GEMINI_API_KEY') || envValue('GENAI_API_KEY');
+const configuredGenAiModel = envValue('GEMINI_MODEL')
+  || envValue('GENAI_MODEL')
   || (configuredGenAiProvider === 'gemini' ? 'gemini-2.5-flash' : '');
 const configuredGenAiModelCandidates = asList(
-  process.env.GEMINI_MODEL_CANDIDATES || process.env.GENAI_MODEL_CANDIDATES,
+  envValue('GEMINI_MODEL_CANDIDATES') || envValue('GENAI_MODEL_CANDIDATES'),
 );
-const configuredEmbeddingModel = process.env.GEMINI_EMBEDDING_MODEL
-  || process.env.EMBEDDING_MODEL
+const configuredEmbeddingModel = envValue('GEMINI_EMBEDDING_MODEL')
+  || envValue('EMBEDDING_MODEL')
   || 'gemini-embedding-001';
 const configuredEmbeddingProvider = asChoice(
-  process.env.EMBEDDING_PROVIDER,
+  envValue('EMBEDDING_PROVIDER'),
   ['gemini', 'pinecone', 'local'],
   configuredGenAiApiKey && configuredEmbeddingModel ? 'gemini' : 'local',
 );
-const configuredApiPrefix = process.env.API_PREFIX || '/api';
-const configuredCorsOrigin = process.env.CORS_ORIGIN || '*';
-const configuredGoogleRedirectUri = process.env.GOOGLE_REDIRECT_URI || '';
-const configuredAppBaseUrl = process.env.APP_BASE_URL || firstHttpUrl(configuredCorsOrigin);
-const configuredDriveWebhookUrl = process.env.GOOGLE_DRIVE_WEBHOOK_URL
+const configuredApiPrefix = envValue('API_PREFIX', '/api');
+const configuredCorsOrigin = envValue('CORS_ORIGIN', '*');
+const configuredGoogleRedirectUri = envValue('GOOGLE_REDIRECT_URI');
+const configuredAppBaseUrl = envValue('APP_BASE_URL') || firstHttpUrl(configuredCorsOrigin);
+const configuredDriveWebhookUrl = envValue('GOOGLE_DRIVE_WEBHOOK_URL')
   || deriveWebhookUrl(configuredGoogleRedirectUri, configuredApiPrefix);
 
 const env = {
-  nodeEnv: process.env.NODE_ENV || 'development',
-  port: asNumber(process.env.PORT, 3000),
-  host: process.env.HOST || '0.0.0.0',
+  nodeEnv: envValue('NODE_ENV', 'development'),
+  port: asNumber(envValue('PORT'), 3000),
+  host: resolveHost(envValue('HOST')),
   apiPrefix: configuredApiPrefix,
   corsOrigin: configuredCorsOrigin,
-  maxUploadSizeMb: asNumber(process.env.MAX_UPLOAD_SIZE_MB, 20),
-  remoteServiceTimeoutMs: asNumber(process.env.REMOTE_SERVICE_TIMEOUT_MS, 15000),
-  tempStorageDir: resolveIfPresent(process.env.TEMP_STORAGE_DIR, path.resolve(projectRoot, 'tmp')),
-  mlServiceUrl: withoutTrailingSlash(process.env.ML_SERVICE_URL || 'http://127.0.0.1:8001'),
-  mlServiceTimeoutMs: asNumber(process.env.ML_SERVICE_TIMEOUT_MS, 60000),
-  requirePythonMlService: asBoolean(process.env.REQUIRE_PYTHON_ML_SERVICE, false),
-  strictRemoteServices: asBoolean(process.env.STRICT_REMOTE_SERVICES, false),
-  firebaseEnabled: asBoolean(process.env.FIREBASE_ENABLED, true),
-  firebaseProjectId: process.env.FIREBASE_PROJECT_ID || '',
-  firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
-  firebasePrivateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+  maxUploadSizeMb: asNumber(envValue('MAX_UPLOAD_SIZE_MB'), 20),
+  remoteServiceTimeoutMs: asNumber(envValue('REMOTE_SERVICE_TIMEOUT_MS'), 15000),
+  tempStorageDir: resolveIfPresent(envValue('TEMP_STORAGE_DIR'), path.resolve(projectRoot, 'tmp')),
+  mlServiceUrl: withoutTrailingSlash(envValue('ML_SERVICE_URL') || 'http://127.0.0.1:8001'),
+  mlServiceTimeoutMs: asNumber(envValue('ML_SERVICE_TIMEOUT_MS'), 60000),
+  requirePythonMlService: asBoolean(envValue('REQUIRE_PYTHON_ML_SERVICE'), false),
+  strictRemoteServices: asBoolean(envValue('STRICT_REMOTE_SERVICES'), false),
+  firebaseEnabled: asBoolean(envValue('FIREBASE_ENABLED'), true),
+  firebaseProjectId: envValue('FIREBASE_PROJECT_ID'),
+  firebaseClientEmail: envValue('FIREBASE_CLIENT_EMAIL'),
+  firebasePrivateKey: envValue('FIREBASE_PRIVATE_KEY').replace(/\\n/g, '\n'),
   artifactStorageMode: asChoice(process.env.ARTIFACT_STORAGE_MODE, ['disabled', 'local', 'supabase'], 'disabled'),
-  supabaseUrl: process.env.SUPABASE_URL || '',
-  supabaseSecretKey: process.env.SUPABASE_SECRET_KEY || '',
-  supabaseStorageBucket: process.env.SUPABASE_STORAGE_BUCKET || '',
-  googleClientId: process.env.GOOGLE_CLIENT_ID || '',
-  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+  supabaseUrl: envValue('SUPABASE_URL'),
+  supabaseSecretKey: envValue('SUPABASE_SECRET_KEY'),
+  supabaseStorageBucket: envValue('SUPABASE_STORAGE_BUCKET'),
+  googleClientId: envValue('GOOGLE_CLIENT_ID'),
+  googleClientSecret: envValue('GOOGLE_CLIENT_SECRET'),
   googleRedirectUri: configuredGoogleRedirectUri,
-  googleRefreshToken: process.env.GOOGLE_REFRESH_TOKEN || '',
-  googleWorkspaceUser: process.env.GOOGLE_WORKSPACE_USER || 'me',
+  googleRefreshToken: envValue('GOOGLE_REFRESH_TOKEN'),
+  googleWorkspaceUser: envValue('GOOGLE_WORKSPACE_USER', 'me'),
   appBaseUrl: configuredAppBaseUrl,
-  googleDriveFolderIds: asList(process.env.GOOGLE_DRIVE_FOLDER_IDS),
+  googleDriveFolderIds: asList(envValue('GOOGLE_DRIVE_FOLDER_IDS')),
   googleDriveWebhookUrl: configuredDriveWebhookUrl,
-  googleDriveWatchEnabled: asBoolean(process.env.GOOGLE_DRIVE_WATCH_ENABLED, false),
-  googleDriveWatchChannelToken: process.env.GOOGLE_DRIVE_WATCH_CHANNEL_TOKEN || '',
-  googleDriveWatchExpirationMs: asNumber(process.env.GOOGLE_DRIVE_WATCH_EXPIRATION_MS, 604800000),
-  googleDriveWatchRenewalLeadMs: asNumber(process.env.GOOGLE_DRIVE_WATCH_RENEWAL_LEAD_MS, 21600000),
-  googleDriveWatchRenewalCheckMs: asNumber(process.env.GOOGLE_DRIVE_WATCH_RENEWAL_CHECK_MS, 3600000),
-  gmailDefaultQuery: process.env.GMAIL_DEFAULT_QUERY || 'has:attachment filename:pdf newer_than:30d',
-  gmailPollEnabled: asBoolean(process.env.GMAIL_POLL_ENABLED, false),
-  gmailPollIntervalMs: asNumber(process.env.GMAIL_POLL_INTERVAL_MS, 300000),
-  gmailPollMaxResults: asNumber(process.env.GMAIL_POLL_MAX_RESULTS, 10),
-  notificationEmailEnabled: asBoolean(process.env.NOTIFICATION_EMAIL_ENABLED, true),
-  notificationEmailRecipients: asList(process.env.NOTIFICATION_EMAIL_RECIPIENTS),
-  pineconeApiKey: process.env.PINECONE_API_KEY || '',
-  pineconeIndexHost: process.env.PINECONE_INDEX_HOST || '',
-  pineconeNamespace: process.env.PINECONE_NAMESPACE || 'contracts',
-  pineconeContractNamespace: process.env.PINECONE_CONTRACT_NAMESPACE || process.env.PINECONE_NAMESPACE || 'contracts',
-  pineconePrecedentNamespace: process.env.PINECONE_PRECEDENT_NAMESPACE || 'precedents',
-  pineconeKnowledgeNamespace: process.env.PINECONE_KNOWLEDGE_NAMESPACE || 'knowledge',
-  pineconeApiVersion: process.env.PINECONE_API_VERSION || '2026-04',
-  pineconeTextField: process.env.PINECONE_TEXT_FIELD || 'chunk_text',
-  pineconeIntegratedModel: process.env.PINECONE_INTEGRATED_MODEL || '',
-  pineconeTextUpsertBatchSize: asNumber(process.env.PINECONE_TEXT_UPSERT_BATCH_SIZE, 96),
-  embeddingDimension: asNumber(process.env.EMBEDDING_DIMENSION, 128),
-  precedentCollection: process.env.PRECEDENT_COLLECTION || 'precedents',
-  knowledgeCollection: process.env.KNOWLEDGE_COLLECTION || 'knowledge_documents',
+  googleDriveWatchEnabled: asBoolean(envValue('GOOGLE_DRIVE_WATCH_ENABLED'), false),
+  googleDriveWatchChannelToken: envValue('GOOGLE_DRIVE_WATCH_CHANNEL_TOKEN'),
+  googleDriveWatchExpirationMs: asNumber(envValue('GOOGLE_DRIVE_WATCH_EXPIRATION_MS'), 604800000),
+  googleDriveWatchRenewalLeadMs: asNumber(envValue('GOOGLE_DRIVE_WATCH_RENEWAL_LEAD_MS'), 21600000),
+  googleDriveWatchRenewalCheckMs: asNumber(envValue('GOOGLE_DRIVE_WATCH_RENEWAL_CHECK_MS'), 3600000),
+  gmailDefaultQuery: envValue('GMAIL_DEFAULT_QUERY', 'has:attachment filename:pdf newer_than:30d'),
+  gmailPollEnabled: asBoolean(envValue('GMAIL_POLL_ENABLED'), false),
+  gmailPollIntervalMs: asNumber(envValue('GMAIL_POLL_INTERVAL_MS'), 300000),
+  gmailPollMaxResults: asNumber(envValue('GMAIL_POLL_MAX_RESULTS'), 10),
+  notificationEmailEnabled: asBoolean(envValue('NOTIFICATION_EMAIL_ENABLED'), true),
+  notificationEmailRecipients: asList(envValue('NOTIFICATION_EMAIL_RECIPIENTS')),
+  pineconeApiKey: envValue('PINECONE_API_KEY'),
+  pineconeIndexHost: envValue('PINECONE_INDEX_HOST'),
+  pineconeNamespace: envValue('PINECONE_NAMESPACE', 'contracts'),
+  pineconeContractNamespace: envValue('PINECONE_CONTRACT_NAMESPACE') || envValue('PINECONE_NAMESPACE', 'contracts'),
+  pineconePrecedentNamespace: envValue('PINECONE_PRECEDENT_NAMESPACE', 'precedents'),
+  pineconeKnowledgeNamespace: envValue('PINECONE_KNOWLEDGE_NAMESPACE', 'knowledge'),
+  pineconeApiVersion: envValue('PINECONE_API_VERSION', '2026-04'),
+  pineconeTextField: envValue('PINECONE_TEXT_FIELD', 'chunk_text'),
+  pineconeIntegratedModel: envValue('PINECONE_INTEGRATED_MODEL'),
+  pineconeTextUpsertBatchSize: asNumber(envValue('PINECONE_TEXT_UPSERT_BATCH_SIZE'), 96),
+  embeddingDimension: asNumber(envValue('EMBEDDING_DIMENSION'), 128),
+  precedentCollection: envValue('PRECEDENT_COLLECTION', 'precedents'),
+  knowledgeCollection: envValue('KNOWLEDGE_COLLECTION', 'knowledge_documents'),
   genAiProvider: configuredGenAiProvider,
   genAiBaseUrl: configuredGenAiBaseUrl,
   genAiApiKey: configuredGenAiApiKey,
@@ -196,17 +266,17 @@ const env = {
   genAiModelCandidates: configuredGenAiModelCandidates,
   embeddingProvider: configuredEmbeddingProvider,
   embeddingModel: configuredEmbeddingModel,
-  embeddingBatchSize: asNumber(process.env.EMBEDDING_BATCH_SIZE, 20),
-  genAiTimeoutMs: asNumber(process.env.GENAI_TIMEOUT_MS, 30000),
-  genAiMaxRetries: asNumber(process.env.GENAI_MAX_RETRIES, 2),
-  genAiMaxConcurrentRequests: asNumber(process.env.GENAI_MAX_CONCURRENT_REQUESTS, 1),
-  genAiRetryBaseMs: asNumber(process.env.GENAI_RETRY_BASE_MS, 1500),
-  genAiRetryMaxMs: asNumber(process.env.GENAI_RETRY_MAX_MS, 12000),
-  genAiTemperature: asNumber(process.env.GENAI_TEMPERATURE, 0.2),
-  genAiMaxOutputTokens: asNumber(process.env.GENAI_MAX_OUTPUT_TOKENS, 1400),
-  genAiThinkingBudget: asNumber(process.env.GENAI_THINKING_BUDGET, 0),
-  rulebookPath: resolveIfPresent(
-    process.env.RULEBOOK_PATH,
+  embeddingBatchSize: asNumber(envValue('EMBEDDING_BATCH_SIZE'), 20),
+  genAiTimeoutMs: asNumber(envValue('GENAI_TIMEOUT_MS'), 30000),
+  genAiMaxRetries: asNumber(envValue('GENAI_MAX_RETRIES'), 2),
+  genAiMaxConcurrentRequests: asNumber(envValue('GENAI_MAX_CONCURRENT_REQUESTS'), 1),
+  genAiRetryBaseMs: asNumber(envValue('GENAI_RETRY_BASE_MS'), 1500),
+  genAiRetryMaxMs: asNumber(envValue('GENAI_RETRY_MAX_MS'), 12000),
+  genAiTemperature: asNumber(envValue('GENAI_TEMPERATURE'), 0.2),
+  genAiMaxOutputTokens: asNumber(envValue('GENAI_MAX_OUTPUT_TOKENS'), 1400),
+  genAiThinkingBudget: asNumber(envValue('GENAI_THINKING_BUDGET'), 0),
+  rulebookPath: resolveExistingFileIfPresent(
+    envValue('RULEBOOK_PATH'),
     path.resolve(projectRoot, 'data', 'rulebook.json'),
   ),
 };

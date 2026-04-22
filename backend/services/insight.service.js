@@ -5,7 +5,32 @@ const { env } = require('../config/env');
 const { formatClauseType } = require('./contract.helpers');
 const { generateStructuredObject, isGeminiEnabled } = require('./genAi.service');
 
-const rulebook = JSON.parse(fs.readFileSync(env.rulebookPath, 'utf-8'));
+const fallbackRulebook = [
+  {
+    clauseType: 'other',
+    primaryConcern: 'The clause should be reviewed for unclear obligations, missing limits, and operational risk.',
+    benchmark: 'Use clear scope, responsibility, timelines, remedies, and approval requirements.',
+    recommendedAction: 'Ask legal counsel to clarify the clause and align it with the rest of the agreement.',
+  },
+];
+
+function loadRulebook() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(env.rulebookPath, 'utf-8'));
+
+    if (Array.isArray(parsed) && parsed.length) {
+      return parsed;
+    }
+
+    console.warn(`Rulebook file did not contain a non-empty array: ${env.rulebookPath}`);
+  } catch (error) {
+    console.warn(`Rulebook load failed from ${env.rulebookPath}: ${error.message}`);
+  }
+
+  return fallbackRulebook;
+}
+
+const rulebook = loadRulebook();
 
 // Cache for clause insights to avoid repeated API calls
 const clauseInsightCache = new Map();

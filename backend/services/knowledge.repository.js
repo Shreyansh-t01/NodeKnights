@@ -1,6 +1,9 @@
 const { firestore, firestoreStatus } = require('../config/firebase');
 const { env } = require('../config/env');
 const AppError = require('../errors/AppError');
+const { withRemoteServiceTimeout } = require('../utils/remoteServiceTimeout');
+
+const FIRESTORE_OPERATION_TIMEOUT_MS = Math.min(env.remoteServiceTimeoutMs, 5000);
 
 function requireFirestore() {
   if (!firestoreStatus.enabled || !firestore) {
@@ -13,18 +16,29 @@ function requireFirestore() {
   return firestore;
 }
 
-async function saveKnowledgeBundle({ knowledgeDocument, chunks = [] }) {
-  const db = requireFirestore();
-  const knowledgeRef = db.collection(env.knowledgeCollection).doc(knowledgeDocument.id);
-  const batch = db.batch();
-
-  batch.set(knowledgeRef, knowledgeDocument);
-
-  chunks.forEach((chunk) => {
-    batch.set(knowledgeRef.collection('chunks').doc(chunk.id), chunk);
+function withFirestoreTimeout(operation, task) {
+  return withRemoteServiceTimeout(`Firestore knowledge ${operation}`, task, {
+    service: 'firestore',
+    collection: env.knowledgeCollection,
+    operation,
+    timeoutMs: FIRESTORE_OPERATION_TIMEOUT_MS,
   });
+}
 
-  await batch.commit();
+async function saveKnowledgeBundle({ knowledgeDocument, chunks = [] }) {
+  await withFirestoreTimeout('write', async () => {
+    const db = requireFirestore();
+    const knowledgeRef = db.collection(env.knowledgeCollection).doc(knowledgeDocument.id);
+    const batch = db.batch();
+
+    batch.set(knowledgeRef, knowledgeDocument);
+
+    chunks.forEach((chunk) => {
+      batch.set(knowledgeRef.collection('chunks').doc(chunk.id), chunk);
+    });
+
+    await batch.commit();
+  });
 
   return {
     mode: 'firebase',
@@ -33,8 +47,10 @@ async function saveKnowledgeBundle({ knowledgeDocument, chunks = [] }) {
 }
 
 async function listKnowledgeDocuments() {
-  const db = requireFirestore();
-  const snapshot = await db.collection(env.knowledgeCollection).get();
+  const snapshot = await withFirestoreTimeout('list', () => {
+    const db = requireFirestore();
+    return db.collection(env.knowledgeCollection).get();
+  });
 
   return snapshot.docs
     .map((document) => document.data())
@@ -42,22 +58,24 @@ async function listKnowledgeDocuments() {
 }
 
 async function getKnowledgeDocumentById(knowledgeId) {
-  const db = requireFirestore();
-  const knowledgeRef = db.collection(env.knowledgeCollection).doc(knowledgeId);
-  const knowledgeDoc = await knowledgeRef.get();
+  return withFirestoreTimeout('read', async () => {
+    const db = requireFirestore();
+    const knowledgeRef = db.collection(env.knowledgeCollection).doc(knowledgeId);
+    const knowledgeDoc = await knowledgeRef.get();
 
-  if (!knowledgeDoc.exists) {
-    throw new AppError(404, `Knowledge document not found: ${knowledgeId}`);
-  }
+    if (!knowledgeDoc.exists) {
+      throw new AppError(404, `Knowledge document not found: ${knowledgeId}`);
+    }
 
-  const chunksSnapshot = await knowledgeRef.collection('chunks').get();
+    const chunksSnapshot = await knowledgeRef.collection('chunks').get();
 
-  return {
-    knowledgeDocument: knowledgeDoc.data(),
-    chunks: chunksSnapshot.docs
-      .map((document) => document.data())
-      .sort((a, b) => a.position - b.position),
-  };
+    return {
+      knowledgeDocument: knowledgeDoc.data(),
+      chunks: chunksSnapshot.docs
+        .map((document) => document.data())
+        .sort((a, b) => a.position - b.position),
+    };
+  });
 }
 
 module.exports = {

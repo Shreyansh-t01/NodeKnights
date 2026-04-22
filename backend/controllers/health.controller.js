@@ -278,11 +278,15 @@ async function getPineconeDependencyStatus() {
   }
 }
 
-async function getMlServiceStatus() {
+async function getMlServiceStatus(options = {}) {
+  const timeoutMs = Math.max(
+    1000,
+    Number(options.timeoutMs || Math.min(env.remoteServiceTimeoutMs, 3000)) || 3000,
+  );
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
     controller.abort();
-  }, env.remoteServiceTimeoutMs);
+  }, timeoutMs);
 
   try {
     const response = await fetch(env.mlServiceUrl, {
@@ -312,7 +316,7 @@ async function getMlServiceStatus() {
     };
   } catch (error) {
     const message = error.name === 'AbortError'
-      ? `ML service health check timed out after ${env.remoteServiceTimeoutMs}ms.`
+      ? `ML service health check timed out after ${timeoutMs}ms.`
       : error.message;
 
     return {
@@ -332,8 +336,8 @@ async function getHealth(req, res) {
   const [mlServiceStatus, googleStatus, driveStatus, gmailStatus] = await Promise.all([
     getMlServiceStatus(),
     getGoogleConnectorStatus(),
-    getDriveWatchStatus(),
-    getGmailPollStatus(),
+    getDriveWatchStatus({ includeState: false }),
+    getGmailPollStatus({ includeState: false }),
   ]);
   const workspaceRecipientConfigured = String(env.googleWorkspaceUser || '').includes('@');
 

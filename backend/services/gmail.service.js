@@ -346,14 +346,17 @@ async function importGmailAttachments({ query, maxResults = env.gmailPollMaxResu
     .map((item) => item.payload);
 }
 
-async function getGmailPollStatus() {
+async function getGmailPollStatus(options = {}) {
+  const includeState = options.includeState !== false;
+
   return {
     ready: featureFlags.googleConnectors,
     enabled: env.gmailPollEnabled,
     workspaceUser: env.googleWorkspaceUser,
     query: env.gmailDefaultQuery,
     maxResults: env.gmailPollMaxResults,
-    syncState: await getConnectorState(GMAIL_SYNC_STATE_KEY),
+    stateIncluded: includeState,
+    syncState: includeState ? await getConnectorState(GMAIL_SYNC_STATE_KEY) : null,
   };
 }
 

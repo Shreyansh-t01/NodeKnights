@@ -8,6 +8,7 @@ const { withRemoteServiceTimeout } = require('../utils/remoteServiceTimeout');
 const localStorePath = path.join(env.tempStorageDir, 'local-store', 'connector-state.json');
 const STATE_COLLECTION = '_connector_state';
 const PROCESSED_SOURCE_COLLECTION = '_source_ingestion_index';
+const CONNECTOR_STATE_TIMEOUT_MS = Math.min(env.remoteServiceTimeoutMs, 3000);
 
 function buildEmptyLocalState() {
   return {
@@ -103,7 +104,7 @@ async function getConnectorState(key) {
       const snapshot = await withRemoteServiceTimeout(
         'Firestore connector state read',
         () => firestore.collection(STATE_COLLECTION).doc(key).get(),
-        { collection: STATE_COLLECTION, key },
+        { collection: STATE_COLLECTION, key, timeoutMs: CONNECTOR_STATE_TIMEOUT_MS },
       );
       return snapshot.exists ? snapshot.data() : null;
     } catch (error) {
@@ -128,12 +129,12 @@ async function setConnectorState(key, value) {
       await withRemoteServiceTimeout(
         'Firestore connector state write',
         () => documentRef.set(nextValue, { merge: true }),
-        { collection: STATE_COLLECTION, key },
+        { collection: STATE_COLLECTION, key, timeoutMs: CONNECTOR_STATE_TIMEOUT_MS },
       );
       const snapshot = await withRemoteServiceTimeout(
         'Firestore connector state read after write',
         () => documentRef.get(),
-        { collection: STATE_COLLECTION, key },
+        { collection: STATE_COLLECTION, key, timeoutMs: CONNECTOR_STATE_TIMEOUT_MS },
       );
       return snapshot.data();
     } catch (error) {
@@ -152,7 +153,7 @@ async function getProcessedSource(sourceKey) {
       const snapshot = await withRemoteServiceTimeout(
         'Firestore processed-source read',
         () => firestore.collection(PROCESSED_SOURCE_COLLECTION).doc(documentId).get(),
-        { collection: PROCESSED_SOURCE_COLLECTION, documentId },
+        { collection: PROCESSED_SOURCE_COLLECTION, documentId, timeoutMs: CONNECTOR_STATE_TIMEOUT_MS },
       );
       return snapshot.exists ? snapshot.data() : null;
     } catch (error) {
@@ -178,12 +179,12 @@ async function markProcessedSource(sourceKey, payload = {}) {
       await withRemoteServiceTimeout(
         'Firestore processed-source write',
         () => documentRef.set(nextValue, { merge: true }),
-        { collection: PROCESSED_SOURCE_COLLECTION, documentId },
+        { collection: PROCESSED_SOURCE_COLLECTION, documentId, timeoutMs: CONNECTOR_STATE_TIMEOUT_MS },
       );
       const snapshot = await withRemoteServiceTimeout(
         'Firestore processed-source read after write',
         () => documentRef.get(),
-        { collection: PROCESSED_SOURCE_COLLECTION, documentId },
+        { collection: PROCESSED_SOURCE_COLLECTION, documentId, timeoutMs: CONNECTOR_STATE_TIMEOUT_MS },
       );
       return snapshot.data();
     } catch (error) {
@@ -203,7 +204,7 @@ async function deleteProcessedSource(sourceKey) {
       const snapshot = await withRemoteServiceTimeout(
         'Firestore processed-source read before delete',
         () => ref.get(),
-        { collection: PROCESSED_SOURCE_COLLECTION, documentId },
+        { collection: PROCESSED_SOURCE_COLLECTION, documentId, timeoutMs: CONNECTOR_STATE_TIMEOUT_MS },
       );
 
       if (!snapshot.exists) {
@@ -214,7 +215,7 @@ async function deleteProcessedSource(sourceKey) {
       await withRemoteServiceTimeout(
         'Firestore processed-source delete',
         () => ref.delete(),
-        { collection: PROCESSED_SOURCE_COLLECTION, documentId },
+        { collection: PROCESSED_SOURCE_COLLECTION, documentId, timeoutMs: CONNECTOR_STATE_TIMEOUT_MS },
       );
       return existing;
     } catch (error) {
@@ -234,7 +235,7 @@ async function deleteProcessedSourcesByContractId(contractId) {
           .collection(PROCESSED_SOURCE_COLLECTION)
           .where('contractId', '==', contractId)
           .get(),
-        { collection: PROCESSED_SOURCE_COLLECTION, contractId },
+        { collection: PROCESSED_SOURCE_COLLECTION, contractId, timeoutMs: CONNECTOR_STATE_TIMEOUT_MS },
       );
 
       if (snapshot.empty) {
@@ -254,7 +255,7 @@ async function deleteProcessedSourcesByContractId(contractId) {
       await withRemoteServiceTimeout(
         'Firestore processed-source bulk delete',
         () => batch.commit(),
-        { collection: PROCESSED_SOURCE_COLLECTION, contractId },
+        { collection: PROCESSED_SOURCE_COLLECTION, contractId, timeoutMs: CONNECTOR_STATE_TIMEOUT_MS },
       );
 
       return {

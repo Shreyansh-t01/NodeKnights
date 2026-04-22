@@ -7,11 +7,13 @@ const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 const { withRemoteServiceTimeout } = require('../utils/remoteServiceTimeout');
 
 const localStorePath = path.join(env.tempStorageDir, 'local-store', 'contracts.json');
+const FIRESTORE_OPERATION_TIMEOUT_MS = Math.min(env.remoteServiceTimeoutMs, 5000);
 
 function withFirestoreTimeout(operation, task) {
   return withRemoteServiceTimeout(`Firestore ${operation}`, task, {
     service: 'firestore',
     operation,
+    timeoutMs: FIRESTORE_OPERATION_TIMEOUT_MS,
   });
 }
 
