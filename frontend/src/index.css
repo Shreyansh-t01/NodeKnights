@@ -3,7 +3,6 @@
   --bg: #f4f6f7;
   --surface: #ffffff;
   --surface-muted: #f8faf9;
-  --surface-strong: #fbfcfb;
   --ink: #141817;
   --muted: #65716d;
   --line: #dce4e0;
@@ -34,8 +33,7 @@ body {
   margin: 0;
   min-height: 100vh;
   color: var(--ink);
-  background:
-    linear-gradient(180deg, #f8fafb 0%, #f3f6f4 42%, #eef3f0 100%);
+  background: linear-gradient(180deg, #f8fafb 0%, #f3f6f4 42%, #eef3f0 100%);
 }
 
 img {
@@ -44,13 +42,17 @@ img {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
 button,
 a,
-input {
+input,
+select,
+textarea {
   outline-color: var(--forest);
 }
 
@@ -72,20 +74,28 @@ button {
   box-shadow: var(--shadow-soft);
 }
 
-.app-nav {
-  position: sticky;
-  top: 0.75rem;
+.auth-shell {
+  min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(210px, auto) 1fr auto;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  padding: 0.75rem;
-  z-index: 40;
-  overflow: visible;
-  backdrop-filter: blur(16px);
+  place-items: center;
+  padding: 1rem;
+  background:
+    linear-gradient(135deg, rgba(19, 32, 30, 0.95), rgba(35, 62, 57, 0.92)),
+    linear-gradient(180deg, #f8fafb 0%, #eef3f0 100%);
 }
 
+.auth-panel {
+  width: min(100%, 760px);
+  display: grid;
+  gap: 1.2rem;
+  padding: 1.2rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: var(--shadow);
+}
+
+.auth-brand,
 .app-nav-brand {
   display: flex;
   align-items: center;
@@ -165,6 +175,134 @@ button {
   white-space: nowrap;
 }
 
+.auth-copy {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.auth-copy h1 {
+  margin: 0;
+  max-width: 620px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2.35rem;
+  line-height: 1.08;
+}
+
+.auth-copy p,
+.brief-panel p,
+.panel p,
+.panel li,
+.contract-meta,
+.search-hint,
+.document-card-meta {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.auth-copy p {
+  margin: 0;
+}
+
+.auth-mode-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+  padding: 0.35rem;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+}
+
+.auth-mode-toggle button {
+  min-height: 2.45rem;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.auth-mode-toggle .auth-mode-active {
+  background: var(--surface);
+  color: var(--forest);
+  box-shadow: var(--shadow-soft);
+}
+
+.auth-form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.auth-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 0.4rem;
+  color: var(--court);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.auth-form input,
+.auth-form select,
+.auth-form textarea,
+.scope-search-row input,
+.search-row input,
+.upload-row input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.78rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--court);
+}
+
+.auth-form textarea {
+  resize: vertical;
+}
+
+.auth-form button[type="submit"] {
+  min-height: 2.8rem;
+  border-radius: 8px;
+  background: var(--court);
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.auth-form button[type="submit"]:disabled {
+  opacity: 0.62;
+  cursor: wait;
+}
+
+.auth-error {
+  margin: 0;
+  padding: 0.8rem;
+  border-radius: 8px;
+  color: var(--burgundy);
+  background: var(--burgundy-soft);
+  border: 1px solid rgba(139, 47, 63, 0.18);
+}
+
+.app-nav {
+  position: sticky;
+  top: 0.75rem;
+  display: grid;
+  grid-template-columns: minmax(210px, auto) 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  z-index: 40;
+  overflow: visible;
+  backdrop-filter: blur(16px);
+}
+
 .app-nav-links {
   display: flex;
   flex-wrap: wrap;
@@ -197,6 +335,52 @@ button {
   align-items: center;
   justify-content: flex-end;
   gap: 0.65rem;
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.35rem;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+}
+
+.user-menu div {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  padding-left: 0.35rem;
+}
+
+.user-menu span,
+.user-menu small {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-menu span {
+  color: var(--court);
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.user-menu small {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.user-menu button {
+  min-height: 2rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  background: var(--court);
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
 }
 
 .notification-shell {
@@ -267,7 +451,11 @@ button {
 
 .notification-popover-head,
 .notification-item-head,
-.panel-header {
+.panel-header,
+.contract-review-header,
+.contract-review-body-head,
+.document-card-row,
+.contract-review-stat-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -328,7 +516,6 @@ button {
 
 .notification-meta {
   font-size: 0.84rem;
-  color: var(--muted);
 }
 
 .notification-severity {
@@ -363,8 +550,7 @@ button {
   padding: 2rem;
   border-radius: 8px;
   color: #f8fbf9;
-  background:
-    linear-gradient(135deg, #13201e 0%, #203c37 58%, #3d2f37 100%);
+  background: linear-gradient(135deg, #13201e 0%, #203c37 58%, #3d2f37 100%);
   box-shadow: var(--shadow);
   overflow: hidden;
 }
@@ -395,10 +581,17 @@ button {
   line-height: 1.72;
 }
 
-.hero-actions {
+.hero-actions,
+.contract-card-actions,
+.contract-review-actions,
+.document-actions,
+.insight-panel-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem;
+}
+
+.hero-actions {
   margin-top: 1.25rem;
 }
 
@@ -506,11 +699,16 @@ button {
   color: var(--court);
 }
 
+.dossier-stats span,
+.clause-signal span,
+.brief-row span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
 .dossier-stats span {
   display: block;
   margin-top: 0.35rem;
-  color: var(--muted);
-  font-size: 0.84rem;
 }
 
 .clause-signal-list {
@@ -526,11 +724,6 @@ button {
   padding: 0.75rem;
   border-radius: 8px;
   border: 1px solid var(--line);
-}
-
-.clause-signal span {
-  color: var(--muted);
-  font-size: 0.86rem;
 }
 
 .clause-signal-high {
@@ -554,8 +747,6 @@ button {
 
 .brief-panel p {
   margin: 0;
-  color: var(--muted);
-  line-height: 1.65;
 }
 
 .brief-row {
@@ -563,11 +754,6 @@ button {
   gap: 0.25rem;
   padding-top: 0.85rem;
   border-top: 1px solid var(--line);
-}
-
-.brief-row span {
-  color: var(--muted);
-  font-size: 0.84rem;
 }
 
 .eyebrow {
@@ -703,15 +889,6 @@ button {
   margin-bottom: 0.9rem;
 }
 
-.panel p,
-.panel li,
-.contract-meta,
-.search-hint,
-.document-card-meta {
-  color: var(--muted);
-  line-height: 1.6;
-}
-
 .panel p:first-child,
 .panel h3 + p {
   margin-top: 0;
@@ -721,33 +898,27 @@ button {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.contract-card {
+.contract-card,
+.contract-review-card {
   display: grid;
-  gap: 0.8rem;
+  gap: 0.85rem;
   background: var(--surface);
   border-color: var(--line);
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .contract-card:hover,
-.contract-card-active {
+.contract-card-active,
+.contract-review-card-active {
   transform: translateY(-2px);
   border-color: rgba(15, 95, 85, 0.32);
   box-shadow: var(--shadow);
 }
 
-.contract-card-footer {
+.contract-card-footer,
+.contract-review-body {
   display: grid;
   gap: 0.85rem;
-}
-
-.contract-card-actions,
-.contract-review-actions,
-.document-actions,
-.insight-panel-actions {
-  display: flex;
-  gap: 0.6rem;
-  flex-wrap: wrap;
 }
 
 .contract-card-open,
@@ -802,40 +973,13 @@ button {
   padding: 1rem;
 }
 
-.contract-review-card {
-  display: grid;
-  gap: 1rem;
-  padding: 1rem;
-  background: var(--surface);
-}
-
-.contract-review-card-active {
-  border-color: rgba(15, 95, 85, 0.3);
-}
-
-.contract-review-header,
-.contract-review-body-head,
-.document-card-row,
-.contract-review-stat-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
 .contract-review-meta-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.65rem 1rem;
 }
 
-.contract-review-toggle {
-  background: var(--surface);
-}
-
 .contract-review-body {
-  display: grid;
-  gap: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--line);
 }
@@ -1013,18 +1157,6 @@ button {
 
 .scope-search-row {
   margin-bottom: 0.75rem;
-}
-
-.scope-search-row input,
-.search-row input,
-.upload-row input {
-  width: 100%;
-  min-height: 2.75rem;
-  padding: 0.78rem 0.9rem;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: #fff;
-  color: var(--court);
 }
 
 .search-row input,
@@ -1264,6 +1396,10 @@ button {
     line-height: 1.08;
   }
 
+  .auth-copy h1 {
+    font-size: 2rem;
+  }
+
   .hero-text {
     font-size: 1rem;
   }
@@ -1280,6 +1416,7 @@ button {
   }
 
   .dossier-stats,
+  .auth-field-grid,
   .clause-signal,
   .clause-table-head,
   .clause-row {
@@ -1298,7 +1435,14 @@ button {
   }
 
   .brand-tagline,
-  .mode-label {
+  .mode-label,
+  .user-menu span,
+  .user-menu small {
     white-space: normal;
+  }
+
+  .user-menu {
+    width: 100%;
+    justify-content: space-between;
   }
 }

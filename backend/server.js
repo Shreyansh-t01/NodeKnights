@@ -6,6 +6,7 @@ const helmet = require('helmet');
 
 const { env } = require('./config/env');
 const healthRoutes = require('./routes/health.routes');
+const authRoutes = require('./routes/auth.routes');
 const contractRoutes = require('./routes/contract.routes');
 const connectorRoutes = require('./routes/connector.routes');
 const notificationRoutes = require('./routes/notification.routes');
@@ -16,6 +17,8 @@ const knowledgeRoutes = require('./routes/knowledge.routes');
 const { syncSearchIndexes } = require('./services/searchIndex.service');
 const { bootstrapDriveWatchAutomation } = require('./services/drive.service');
 const { bootstrapGmailPollingAutomation } = require('./services/gmail.service');
+const { bootstrapAuthUser } = require('./services/auth.service');
+const { authenticate } = require('./middlewares/authenticate');
 const notFound = require('./middlewares/notFound');
 const errorHandler = require('./middlewares/errorHandler');
 
@@ -50,6 +53,7 @@ app.get('/', (req, res) => {
       health: `${env.apiPrefix}/health`,
       contracts: `${env.apiPrefix}/contracts`,
       connectors: `${env.apiPrefix}/connectors`,
+      auth: `${env.apiPrefix}/auth`,
       notifications: `${env.apiPrefix}/notifications`,
       search: `${env.apiPrefix}/search`,
       documents: `${env.apiPrefix}/documents`,
@@ -59,6 +63,8 @@ app.get('/', (req, res) => {
   });
 });
 
+app.use(`${env.apiPrefix}/auth`, authRoutes);
+app.use(env.apiPrefix, authenticate);
 app.use(`${env.apiPrefix}/health`, healthRoutes);
 app.use(`${env.apiPrefix}/contracts`, contractRoutes);
 app.use(`${env.apiPrefix}/connectors`, connectorRoutes);
@@ -75,6 +81,16 @@ const server = http.createServer(app);
 
 server.listen(env.port, env.host, () => {
   console.log(`Legal intelligence backend listening on ${env.host}:${env.port}`);
+
+  bootstrapAuthUser()
+    .then((result) => {
+      if (result.created) {
+        console.log(`Bootstrap auth user created for ${result.username}.`);
+      }
+    })
+    .catch((error) => {
+      console.error('Bootstrap auth user failed:', error.message);
+    });
 
   Promise.allSettled([
     bootstrapDriveWatchAutomation(),

@@ -45,10 +45,12 @@ function describeEmailStatus(notification) {
 }
 
 function AppNav({
+  authUser,
   currentPath,
   notifications = [],
   notificationsOpen,
   notificationUnreadCount,
+  onLogout,
   onMarkNotificationsRead,
   onNavigate,
   onNotificationSelect,
@@ -84,6 +86,15 @@ function AppNav({
 
       <div className="app-nav-status">
         <span className="mode-label">{modeLabel}</span>
+        {authUser ? (
+          <div className="user-menu">
+            <div>
+              <span>{authUser.fullName}</span>
+              <small>{authUser.organizationName}</small>
+            </div>
+            <button type="button" onClick={onLogout}>Logout</button>
+          </div>
+        ) : null}
 
         <div className="notification-shell">
           <button

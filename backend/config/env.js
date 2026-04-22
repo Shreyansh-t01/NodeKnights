@@ -275,6 +275,19 @@ const env = {
   genAiTemperature: asNumber(envValue('GENAI_TEMPERATURE'), 0.2),
   genAiMaxOutputTokens: asNumber(envValue('GENAI_MAX_OUTPUT_TOKENS'), 1400),
   genAiThinkingBudget: asNumber(envValue('GENAI_THINKING_BUDGET'), 0),
+  authEnabled: asBoolean(envValue('AUTH_ENABLED'), true),
+  authUsername: envValue('AUTH_USERNAME'),
+  authPassword: envValue('AUTH_PASSWORD'),
+  authSessionSecret: (
+    envValue('AUTH_SESSION_SECRET')
+    || envValue('AUTH_PASSWORD')
+    || 'development-auth-session-secret-change-me'
+  ),
+  authSessionTtlMs: asNumber(envValue('AUTH_SESSION_TTL_MS'), 604800000),
+  authUserStorePath: resolveIfPresent(
+    envValue('AUTH_USER_STORE_PATH'),
+    path.resolve(projectRoot, 'tmp', 'auth-store.json'),
+  ),
   rulebookPath: resolveExistingFileIfPresent(
     envValue('RULEBOOK_PATH'),
     path.resolve(projectRoot, 'data', 'rulebook.json'),

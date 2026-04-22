@@ -1,4 +1,18 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
+const AUTH_STORAGE_KEY = 'lexora.auth.token';
+
+export function getAuthToken() {
+  return window.localStorage.getItem(AUTH_STORAGE_KEY) || '';
+}
+
+export function setAuthToken(token) {
+  if (token) {
+    window.localStorage.setItem(AUTH_STORAGE_KEY, token);
+    return;
+  }
+
+  window.localStorage.removeItem(AUTH_STORAGE_KEY);
+}
 
 function buildQueryString(params = {}) {
   const searchParams = new URLSearchParams();
@@ -34,9 +48,14 @@ async function readErrorMessage(response) {
 async function request(path, options = {}) {
   const headers = new Headers(options.headers || {});
   const isFormData = options.body instanceof FormData;
+  const token = getAuthToken();
 
   if (!isFormData && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
+  }
+
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -53,6 +72,21 @@ async function request(path, options = {}) {
 
 export const api = {
   baseUrl: API_BASE_URL,
+  getAuthToken,
+  setAuthToken,
+  register: (payload) => request('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  login: (payload) => request('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  getCurrentUser: () => request('/auth/me'),
+  logout: () => request('/auth/logout', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  }),
   getHealth: () => request('/health'),
   getNotifications: (params = {}) => request(`/notifications${buildQueryString(params)}`),
   markNotificationsRead: () => request('/notifications/read', {

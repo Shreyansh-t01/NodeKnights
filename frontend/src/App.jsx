@@ -12,6 +12,7 @@ import ContractsPage from './pages/ContractsPage';
 import InsightsPage from './pages/InsightsPage';
 import SearchPage from './pages/SearchPage';
 import DocumentsPage from './pages/DocumentsPage';
+import AuthPage from './pages/AuthPage';
 
 const KNOWN_ROUTES = new Set(['/', '/intake', '/contracts', '/insights', '/search', '/documents']);
 const LIVE_REFRESH_INTERVAL_MS = 15000;
@@ -371,7 +372,24 @@ function buildFallbackDocumentResults(query, contracts, options = {}) {
     .map((item) => item.document);
 }
 
-function App() {
+const initialLoginForm = {
+  username: '',
+  password: '',
+};
+
+const initialRegisterForm = {
+  fullName: '',
+  email: '',
+  password: '',
+  organizationName: '',
+  organizationType: 'In-house legal team',
+  roleTitle: '',
+  jurisdiction: 'India',
+  notificationEmail: '',
+  practiceFocus: 'Contract review, clause risk, and precedent search',
+};
+
+function WorkspaceApp({ authUser, onLogout }) {
   const [currentPath, setCurrentPath] = useState(normalizePath(window.location.pathname));
   const [health, setHealth] = useState(null);
   const [contracts, setContracts] = useState([]);
@@ -1208,10 +1226,12 @@ function App() {
   return (
     <main className="app-shell">
       <AppNav
+        authUser={authUser}
         currentPath={safePath}
         notifications={notifications}
         notificationsOpen={notificationsOpen}
         notificationUnreadCount={notificationUnreadCount}
+        onLogout={onLogout}
         onMarkNotificationsRead={handleMarkNotificationsRead}
         onNavigate={navigate}
         onNotificationSelect={handleNotificationSelect}
@@ -1221,6 +1241,168 @@ function App() {
       {page}
     </main>
   );
+}
+
+function App() {
+  const [authMode, setAuthMode] = useState('login');
+  const [loginForm, setLoginForm] = useState(initialLoginForm);
+  const [registerForm, setRegisterForm] = useState(initialRegisterForm);
+  const [authUser, setAuthUser] = useState(null);
+  const [authChecking, setAuthChecking] = useState(Boolean(api.getAuthToken()));
+  const [authPending, setAuthPending] = useState(false);
+  const [authError, setAuthError] = useState('');
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function hydrateAuth() {
+      const token = api.getAuthToken();
+
+      if (!token) {
+        setAuthChecking(false);
+        return;
+      }
+
+      try {
+        const response = await api.getCurrentUser();
+
+        if (!ignore) {
+          setAuthUser(response.data.user);
+          setAuthError('');
+        }
+      } catch (error) {
+        if (!ignore) {
+          api.setAuthToken('');
+          setAuthUser(null);
+        }
+      } finally {
+        if (!ignore) {
+          setAuthChecking(false);
+        }
+      }
+    }
+
+    hydrateAuth();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  function updateLoginForm(field, value) {
+    setLoginForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  function updateRegisterForm(field, value) {
+    setRegisterForm((current) => {
+      const next = {
+        ...current,
+        [field]: value,
+      };
+
+      if (field === 'email' && !current.notificationEmail) {
+        next.notificationEmail = value;
+      }
+
+      return next;
+    });
+  }
+
+  async function completeAuth(authPayload) {
+    api.setAuthToken(authPayload.token);
+    setAuthUser(authPayload.user);
+    setAuthError('');
+    setLoginForm(initialLoginForm);
+    setRegisterForm(initialRegisterForm);
+  }
+
+  async function handleLoginSubmit(event) {
+    event.preventDefault();
+    setAuthPending(true);
+    setAuthError('');
+
+    try {
+      const response = await api.login(loginForm);
+      await completeAuth(response.data);
+    } catch (error) {
+      setAuthError(error.message || 'Login failed.');
+    } finally {
+      setAuthPending(false);
+    }
+  }
+
+  async function handleRegisterSubmit(event) {
+    event.preventDefault();
+    setAuthPending(true);
+    setAuthError('');
+
+    try {
+      const response = await api.register(registerForm);
+      await completeAuth(response.data);
+    } catch (error) {
+      setAuthError(error.message || 'Registration failed.');
+    } finally {
+      setAuthPending(false);
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      await api.logout();
+    } catch (error) {
+      // Local logout should still happen if the server session is already gone.
+    } finally {
+      api.setAuthToken('');
+      setAuthUser(null);
+      setAuthMode('login');
+      window.history.pushState({}, '', '/');
+    }
+  }
+
+  if (authChecking) {
+    return (
+      <main className="auth-shell">
+        <section className="auth-panel">
+          <div className="auth-brand">
+            <div className="brand-mark" aria-hidden="true">
+              <span className="brand-mark-spine" />
+              <span className="brand-mark-line brand-mark-line-top" />
+              <span className="brand-mark-line brand-mark-line-bottom" />
+            </div>
+            <div>
+              <p className="brand-name">Lexora</p>
+              <p className="brand-tagline">Checking secure session</p>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (!authUser) {
+    return (
+      <AuthPage
+        mode={authMode}
+        pending={authPending}
+        error={authError}
+        loginForm={loginForm}
+        registerForm={registerForm}
+        onLoginChange={updateLoginForm}
+        onRegisterChange={updateRegisterForm}
+        onLoginSubmit={handleLoginSubmit}
+        onRegisterSubmit={handleRegisterSubmit}
+        onModeChange={(nextMode) => {
+          setAuthMode(nextMode);
+          setAuthError('');
+        }}
+      />
+    );
+  }
+
+  return <WorkspaceApp authUser={authUser} onLogout={handleLogout} />;
 }
 
 export default App;
