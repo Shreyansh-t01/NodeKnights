@@ -38,6 +38,13 @@ sets the app directory explicitly before starting Uvicorn.
 3. Expose the service publicly or privately as needed
 4. Point the Node backend `ML_SERVICE_URL` to this deployed service
 
+## Railway env warning
+
+Do not manually add `PORT` for this service. Railway provides it at runtime.
+Also remove `HOST` if it is set to `localhost` or `127.0.0.1`; the startup
+wrapper will force `0.0.0.0` on Railway, but stale service variables can still
+make deploy debugging confusing.
+
 ## Health check
 
 Set the platform health check path to:
