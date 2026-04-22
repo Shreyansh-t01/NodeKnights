@@ -1,20 +1,20 @@
 export const dashboardMetrics = [
   {
-    label: 'Pipeline Coverage',
+    label: 'Review Flow',
     value: '8 Stages',
-    description: 'Ingestion, storage, OCR, ML, Firestore, Pinecone, reasoning, and dashboard review.',
+    description: 'Intake, storage, OCR, ML analysis, structured records, vector search, reasoning, and review.',
     tone: 'teal',
   },
   {
-    label: 'Review Priority',
+    label: 'Priority Risk',
     value: '3 High Risks',
-    description: 'Immediate legal review areas surfaced at the clause level.',
+    description: 'High-exposure clauses surfaced early so counsel can focus attention where it matters.',
     tone: 'amber',
   },
   {
-    label: 'Search Context',
+    label: 'Evidence Base',
     value: '126 Clauses',
-    description: 'Embeddings indexed for semantic lookup and precedent-style comparison.',
+    description: 'Indexed clause language ready for semantic lookup, comparison, and drafting support.',
     tone: 'ink',
   },
 ];

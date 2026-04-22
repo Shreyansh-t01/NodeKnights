@@ -215,14 +215,14 @@ function buildLiveMetrics(contracts) {
   const clauseCount = contracts.reduce((sum, contract) => sum + ((contract.clauses || []).length || 0), 0);
 
   return dashboardMetrics.map((metric) => {
-    if (metric.label === 'Review Priority') {
+    if (metric.label === 'Priority Risk') {
       return {
         ...metric,
         value: `${highRiskCount} High Risks`,
       };
     }
 
-    if (metric.label === 'Search Context') {
+    if (metric.label === 'Evidence Base') {
       return {
         ...metric,
         value: `${clauseCount || 0} Clauses`,
@@ -875,7 +875,7 @@ function App() {
       '/documents': 'Documents',
     };
 
-    document.title = `Legal Intelligence | ${titles[safePath] || 'Overview'}`;
+    document.title = `Lexora | ${titles[safePath] || 'Overview'}`;
   }, [safePath]);
 
   async function runSemanticSearch(searchQuery = query) {

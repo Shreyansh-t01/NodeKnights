@@ -1,0 +1,8 @@
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Lexora mark</title>
+  <desc id="desc">A minimalist legal intelligence logo shaped from a document spine and two clause lines.</desc>
+  <rect x="8" y="8" width="80" height="80" rx="18" fill="#13201E"/>
+  <path d="M32 25V71H63" stroke="#F7FAF7" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M45 36H66" stroke="#64B6A6" stroke-width="6" stroke-linecap="round"/>
+  <path d="M45 51H60" stroke="#C6A45A" stroke-width="6" stroke-linecap="round"/>
+</svg>

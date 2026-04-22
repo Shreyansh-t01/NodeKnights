@@ -8,6 +8,12 @@ function StatusPill({ status, children }) {
     disabled: 'pill pill-ink',
     'review-required': 'pill pill-danger',
     'analysis-ready': 'pill pill-ready',
+    high: 'pill pill-danger',
+    medium: 'pill pill-warning',
+    low: 'pill pill-ready',
+    warning: 'pill pill-warning',
+    failed: 'pill pill-danger',
+    complete: 'pill pill-ready',
   }[status] || 'pill pill-ink';
 
   return <span className={toneClass}>{children}</span>;

@@ -1,10 +1,10 @@
 const navItems = [
-  { path: '/', label: 'Overview' },
+  { path: '/', label: 'Home' },
   { path: '/intake', label: 'Intake' },
-  { path: '/contracts', label: 'Contracts' },
+  { path: '/contracts', label: 'Review' },
   { path: '/insights', label: 'Insights' },
   { path: '/search', label: 'Search' },
-  { path: '/documents', label: 'Documents' },
+  { path: '/documents', label: 'Vault' },
 ];
 
 function formatNotificationTime(value) {
@@ -58,8 +58,15 @@ function AppNav({
   return (
     <header className="app-nav panel">
       <div className="app-nav-brand">
-        <p className="eyebrow">Legal Intelligence System</p>
-        <h2>Contract Review Workspace</h2>
+        <div className="brand-mark" aria-hidden="true">
+          <span className="brand-mark-spine" />
+          <span className="brand-mark-line brand-mark-line-top" />
+          <span className="brand-mark-line brand-mark-line-bottom" />
+        </div>
+        <div>
+          <p className="brand-name">Lexora</p>
+          <p className="brand-tagline">Legal intelligence workspace</p>
+        </div>
       </div>
 
       <nav className="app-nav-links" aria-label="Primary">

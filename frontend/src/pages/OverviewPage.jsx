@@ -18,43 +18,115 @@ function OverviewPage({
     : bootMode === 'offline'
       ? 'Backend not connected, retrying'
       : 'Connecting to backend';
+  const recentContracts = contracts.slice(0, 3);
+  const selectedContract = contracts.find((contract) => contract.id === selectedContractId) || recentContracts[0] || null;
+  const highRiskCount = contracts.reduce((sum, contract) => sum + (contract.riskCounts?.high || 0), 0);
+  const clauseCount = contracts.reduce((sum, contract) => sum + ((contract.clauses || []).length || 0), 0);
 
   return (
     <>
-      <section className="hero panel">
-        <div className="hero-copy">
-          <p className="eyebrow">Legal Intelligence System</p>
-          <h1>Move from ingestion to action without crowding every workflow onto one screen.</h1>
+      <section className="landing-hero route-grid">
+        <div className="landing-hero-content">
+          <p className="eyebrow">Lexora Legal Intelligence</p>
+          <h1>Calm contract review, grounded in clauses, precedent, and risk signals.</h1>
           <p className="hero-text">
-            The workspace is now separated into intake, contract review, AI insights, and semantic search so each step
-            in the pipeline gets a focused view.
+            Lexora gives legal teams a focused path from document intake to clause-level review, explainable insights,
+            and searchable evidence without making the workspace feel noisy.
           </p>
-          <div className="hero-pills">
-            <StatusPill status={bootMode === 'live' ? 'ready' : bootMode === 'offline' ? 'error' : 'configure'}>{modeLabel}</StatusPill>
-            <StatusPill status={health?.firebase?.enabled ? 'ready' : health ? 'configure' : 'configure'}>
-              {!health ? 'Backend service check pending' : health?.firebase?.enabled ? 'Firebase configured' : 'Structured storage not configured'}
-            </StatusPill>
-            <StatusPill status={health?.pinecone?.enabled ? 'ready' : health ? 'configure' : 'configure'}>
-              {!health ? 'Backend service check pending' : health?.pinecone?.enabled ? 'Pinecone live' : 'Vector search not configured'}
-            </StatusPill>
-            <StatusPill status={health?.reasoning?.enabled ? 'ready' : health ? 'configure' : 'configure'}>
-              {!health
-                ? 'Backend service check pending'
-                : health?.reasoning?.enabled
-                ? `${health?.reasoning?.provider || 'external'} active`
-                : 'Gemini reasoning unavailable'}
-            </StatusPill>
-          </div>
 
-          <div className="hero-actions">
-            <button type="button" onClick={() => onNavigate('/intake')}>Go To Intake</button>
-            <button type="button" onClick={() => onNavigate('/insights')}>Open AI Insights</button>
-            <button type="button" onClick={() => onNavigate('/search')}>Open Search</button>
+          <div className="hero-actions" aria-label="Primary actions">
+            <button type="button" onClick={() => onNavigate('/intake')}>Start Intake</button>
+            <button type="button" className="secondary-action" onClick={() => onNavigate('/contracts')}>Review Contracts</button>
+            <button type="button" className="secondary-action" onClick={() => onNavigate('/search')}>Search Clauses</button>
           </div>
         </div>
 
-        <div className="hero-art">
-          <img src="/legal-intelligence-workflow.svg" alt="Legal intelligence workflow diagram" />
+        <div className="assurance-grid" aria-label="System readiness">
+          <div className="assurance-item">
+            <span>Mode</span>
+            <StatusPill status={bootMode === 'live' ? 'ready' : bootMode === 'offline' ? 'error' : 'configure'}>
+              {modeLabel}
+            </StatusPill>
+          </div>
+          <div className="assurance-item">
+            <span>Storage</span>
+            <StatusPill status={health?.firebase?.enabled ? 'ready' : health ? 'configure' : 'configure'}>
+              {!health ? 'Checking' : health?.firebase?.enabled ? 'Structured' : 'Needs setup'}
+            </StatusPill>
+          </div>
+          <div className="assurance-item">
+            <span>Vector Search</span>
+            <StatusPill status={health?.pinecone?.enabled ? 'ready' : health ? 'configure' : 'configure'}>
+              {!health ? 'Checking' : health?.pinecone?.enabled ? 'Indexed' : 'Needs setup'}
+            </StatusPill>
+          </div>
+          <div className="assurance-item">
+            <span>Reasoning</span>
+            <StatusPill status={health?.reasoning?.enabled ? 'ready' : health ? 'configure' : 'configure'}>
+              {!health ? 'Checking' : health?.reasoning?.enabled ? 'Active' : 'Unavailable'}
+            </StatusPill>
+          </div>
+        </div>
+
+        <div className="landing-command-grid">
+          <article className="dossier-panel">
+            <div className="dossier-panel-head">
+              <div>
+                <p className="eyebrow">Review Dossier</p>
+                <h3>{selectedContract?.title || 'No live contract selected'}</h3>
+              </div>
+              <StatusPill status={selectedContract?.status || 'configure'}>
+                {selectedContract?.status?.replace(/-/g, ' ') || 'Awaiting intake'}
+              </StatusPill>
+            </div>
+
+            <div className="dossier-stats">
+              <div>
+                <strong>{contracts.length}</strong>
+                <span>contracts</span>
+              </div>
+              <div>
+                <strong>{highRiskCount}</strong>
+                <span>high risks</span>
+              </div>
+              <div>
+                <strong>{clauseCount}</strong>
+                <span>clauses</span>
+              </div>
+            </div>
+
+            <div className="clause-signal-list">
+              <div className="clause-signal clause-signal-high">
+                <span>Termination</span>
+                <strong>Notice and cure review</strong>
+              </div>
+              <div className="clause-signal clause-signal-medium">
+                <span>Payment</span>
+                <strong>Obligation and timeline check</strong>
+              </div>
+              <div className="clause-signal clause-signal-low">
+                <span>Confidentiality</span>
+                <strong>Survival language aligned</strong>
+              </div>
+            </div>
+          </article>
+
+          <article className="brief-panel">
+            <p className="eyebrow">Decision Brief</p>
+            <h3>What needs counsel attention?</h3>
+            <p>
+              Prioritize high-exposure clauses, compare them against trusted language, and keep every recommendation tied
+              back to the source document.
+            </p>
+            <div className="brief-row">
+              <span>Evidence</span>
+              <strong>Clause text, metadata, rules</strong>
+            </div>
+            <div className="brief-row">
+              <span>Outcome</span>
+              <strong>Explain, compare, redraft</strong>
+            </div>
+          </article>
         </div>
       </section>
 
