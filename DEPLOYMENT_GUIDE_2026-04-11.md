@@ -97,6 +97,22 @@ This order avoids frontend failures caused by missing backend URLs.
 
 ## 5. Backend deployment steps
 
+### Step 0. Set the Railway service root
+
+For Railway, deploy the backend as its own service with:
+
+```text
+Root Directory: backend
+Dockerfile Path: backend/Dockerfile
+Healthcheck Path: /healthz
+```
+
+If Railway is using Railpack or Nixpacks instead of the Dockerfile, this folder also includes `railpack.json` and `nixpacks.toml` with the same start command:
+
+```text
+node server.js
+```
+
 ### Step 1. Create a production backend env
 
 Start from:
@@ -110,10 +126,12 @@ At minimum review and set these:
 ```env
 NODE_ENV=production
 PORT=3000
+HOST=0.0.0.0
 API_PREFIX=/api
 CORS_ORIGIN=https://app.example.com
 APP_BASE_URL=https://app.example.com
 ML_SERVICE_URL=http://127.0.0.1:8001
+ML_SERVICE_TIMEOUT_MS=60000
 REQUIRE_PYTHON_ML_SERVICE=false
 STRICT_REMOTE_SERVICES=true
 ```
@@ -217,13 +235,15 @@ The backend sends contract text to:
 
 - `ML_SERVICE_URL`
 
-For Railway, create this as a separate service and set the service root directory to:
+For Railway, create this as a separate service and set:
 
 ```text
-ML-model-main/ml-service
+Root Directory: ML-model-main/ml-service
+Dockerfile Path: ML-model-main/ml-service/Dockerfile
+Healthcheck Path: /healthz
 ```
 
-The service root must include `requirements.txt`; that is what installs FastAPI, Uvicorn, spaCy, joblib, and scikit-learn in production.
+The service root must include `requirements.txt`; that is what installs FastAPI, Uvicorn, spaCy, joblib, and scikit-learn in production. The folder also includes `.python-version`, `runtime.txt`, `railpack.json`, and `nixpacks.toml` so non-Docker builds use Python 3.11 and the same start command.
 
 If you keep Python on the same server, you can use:
 
