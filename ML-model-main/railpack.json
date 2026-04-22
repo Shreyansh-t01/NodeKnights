@@ -5,6 +5,6 @@
     "python": "3.11"
   },
   "deploy": {
-    "startCommand": "python start.py"
+    "startCommand": "python ml-service/start.py"
   }
 }

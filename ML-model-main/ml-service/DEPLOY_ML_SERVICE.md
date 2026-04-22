@@ -10,6 +10,11 @@ ML-model-main/ml-service
 
 Do not deploy the repo root for this service.
 
+If you accidentally set the root directory to `ML-model-main`, the parent
+`ML-model-main/railpack.json` can still start the same service with
+`python ml-service/start.py`. The preferred root is still
+`ML-model-main/ml-service` because that is where the deployable app lives.
+
 ## Start command
 
 This service now includes both:
