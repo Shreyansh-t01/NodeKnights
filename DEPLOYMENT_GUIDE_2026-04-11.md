@@ -243,7 +243,7 @@ Dockerfile Path: ML-model-main/ml-service/Dockerfile
 Healthcheck Path: /healthz
 ```
 
-The service root must include `requirements.txt`; that is what installs FastAPI, Uvicorn, spaCy, joblib, and scikit-learn in production. The folder also includes `.python-version`, `runtime.txt`, `railpack.json`, and `nixpacks.toml` so non-Docker builds use Python 3.11 and the same start command.
+The service root must include `requirements.txt`; that is what installs FastAPI, Uvicorn, spaCy, joblib, and scikit-learn in production. The folder also includes `.python-version`, `runtime.txt`, `railpack.json`, and `nixpacks.toml` so non-Docker builds use Python 3.11 and the same `python start.py` command.
 
 If you keep Python on the same server, you can use:
 
@@ -259,7 +259,13 @@ cd d:\PROJECTS\SOLUTIONHACKATHON
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir .\ML-model-main\ml-service --host 0.0.0.0 --port 8001 --reload
 ```
 
-For production, use the same app but run it as a real long-running service.
+For production, use the included start command:
+
+```bash
+python start.py
+```
+
+That wrapper reads the platform `PORT`, defaults to `8001` locally, and starts the FastAPI app with the correct app directory.
 
 Railway health check path:
 

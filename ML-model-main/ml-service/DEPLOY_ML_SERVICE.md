@@ -20,8 +20,11 @@ This service now includes both:
 The web start command is:
 
 ```text
-python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8001}
+python start.py
 ```
+
+`start.py` reads the platform-provided `PORT`, defaults to `8001` locally, and
+sets the app directory explicitly before starting Uvicorn.
 
 ## Required steps
 
