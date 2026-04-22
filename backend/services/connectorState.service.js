@@ -3,6 +3,7 @@ const path = require('node:path');
 const { firestore, firestoreStatus } = require('../config/firebase');
 const { env } = require('../config/env');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
+const { withRemoteServiceTimeout } = require('../utils/remoteServiceTimeout');
 
 const localStorePath = path.join(env.tempStorageDir, 'local-store', 'connector-state.json');
 const STATE_COLLECTION = '_connector_state';
@@ -99,7 +100,11 @@ async function deleteProcessedSourcesByContractIdLocal(contractId) {
 async function getConnectorState(key) {
   if (firestoreStatus.enabled && firestore) {
     try {
-      const snapshot = await firestore.collection(STATE_COLLECTION).doc(key).get();
+      const snapshot = await withRemoteServiceTimeout(
+        'Firestore connector state read',
+        () => firestore.collection(STATE_COLLECTION).doc(key).get(),
+        { collection: STATE_COLLECTION, key },
+      );
       return snapshot.exists ? snapshot.data() : null;
     } catch (error) {
       console.warn('Falling back to local connector state read:', error.message);
@@ -118,8 +123,18 @@ async function setConnectorState(key, value) {
 
   if (firestoreStatus.enabled && firestore) {
     try {
-      await firestore.collection(STATE_COLLECTION).doc(key).set(nextValue, { merge: true });
-      const snapshot = await firestore.collection(STATE_COLLECTION).doc(key).get();
+      const documentRef = firestore.collection(STATE_COLLECTION).doc(key);
+
+      await withRemoteServiceTimeout(
+        'Firestore connector state write',
+        () => documentRef.set(nextValue, { merge: true }),
+        { collection: STATE_COLLECTION, key },
+      );
+      const snapshot = await withRemoteServiceTimeout(
+        'Firestore connector state read after write',
+        () => documentRef.get(),
+        { collection: STATE_COLLECTION, key },
+      );
       return snapshot.data();
     } catch (error) {
       console.warn('Falling back to local connector state write:', error.message);
@@ -134,7 +149,11 @@ async function getProcessedSource(sourceKey) {
 
   if (firestoreStatus.enabled && firestore) {
     try {
-      const snapshot = await firestore.collection(PROCESSED_SOURCE_COLLECTION).doc(documentId).get();
+      const snapshot = await withRemoteServiceTimeout(
+        'Firestore processed-source read',
+        () => firestore.collection(PROCESSED_SOURCE_COLLECTION).doc(documentId).get(),
+        { collection: PROCESSED_SOURCE_COLLECTION, documentId },
+      );
       return snapshot.exists ? snapshot.data() : null;
     } catch (error) {
       console.warn('Falling back to local processed-source read:', error.message);
@@ -154,8 +173,18 @@ async function markProcessedSource(sourceKey, payload = {}) {
 
   if (firestoreStatus.enabled && firestore) {
     try {
-      await firestore.collection(PROCESSED_SOURCE_COLLECTION).doc(documentId).set(nextValue, { merge: true });
-      const snapshot = await firestore.collection(PROCESSED_SOURCE_COLLECTION).doc(documentId).get();
+      const documentRef = firestore.collection(PROCESSED_SOURCE_COLLECTION).doc(documentId);
+
+      await withRemoteServiceTimeout(
+        'Firestore processed-source write',
+        () => documentRef.set(nextValue, { merge: true }),
+        { collection: PROCESSED_SOURCE_COLLECTION, documentId },
+      );
+      const snapshot = await withRemoteServiceTimeout(
+        'Firestore processed-source read after write',
+        () => documentRef.get(),
+        { collection: PROCESSED_SOURCE_COLLECTION, documentId },
+      );
       return snapshot.data();
     } catch (error) {
       console.warn('Falling back to local processed-source write:', error.message);
@@ -171,14 +200,22 @@ async function deleteProcessedSource(sourceKey) {
   if (firestoreStatus.enabled && firestore) {
     try {
       const ref = firestore.collection(PROCESSED_SOURCE_COLLECTION).doc(documentId);
-      const snapshot = await ref.get();
+      const snapshot = await withRemoteServiceTimeout(
+        'Firestore processed-source read before delete',
+        () => ref.get(),
+        { collection: PROCESSED_SOURCE_COLLECTION, documentId },
+      );
 
       if (!snapshot.exists) {
         return null;
       }
 
       const existing = snapshot.data();
-      await ref.delete();
+      await withRemoteServiceTimeout(
+        'Firestore processed-source delete',
+        () => ref.delete(),
+        { collection: PROCESSED_SOURCE_COLLECTION, documentId },
+      );
       return existing;
     } catch (error) {
       console.warn('Falling back to local processed-source delete:', error.message);
@@ -191,10 +228,14 @@ async function deleteProcessedSource(sourceKey) {
 async function deleteProcessedSourcesByContractId(contractId) {
   if (firestoreStatus.enabled && firestore) {
     try {
-      const snapshot = await firestore
-        .collection(PROCESSED_SOURCE_COLLECTION)
-        .where('contractId', '==', contractId)
-        .get();
+      const snapshot = await withRemoteServiceTimeout(
+        'Firestore processed-source bulk read',
+        () => firestore
+          .collection(PROCESSED_SOURCE_COLLECTION)
+          .where('contractId', '==', contractId)
+          .get(),
+        { collection: PROCESSED_SOURCE_COLLECTION, contractId },
+      );
 
       if (snapshot.empty) {
         return {
@@ -210,7 +251,11 @@ async function deleteProcessedSourcesByContractId(contractId) {
         batch.delete(document.ref);
       });
 
-      await batch.commit();
+      await withRemoteServiceTimeout(
+        'Firestore processed-source bulk delete',
+        () => batch.commit(),
+        { collection: PROCESSED_SOURCE_COLLECTION, contractId },
+      );
 
       return {
         deletedCount: snapshot.size,

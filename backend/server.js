@@ -24,10 +24,23 @@ const corsOrigin = env.corsOrigin === '*'
   ? true
   : env.corsOrigin.split(',').map((value) => value.trim()).filter(Boolean);
 
+function sendRuntimeHealth(req, res) {
+  res.status(200).json({
+    success: true,
+    service: 'legal-intelligence-backend',
+    status: 'ready',
+    environment: env.nodeEnv,
+    uptimeSeconds: Math.round(process.uptime()),
+  });
+}
+
 app.use(helmet());
 app.use(cors({ origin: corsOrigin, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+app.get('/healthz', sendRuntimeHealth);
+app.get(`${env.apiPrefix}/healthz`, sendRuntimeHealth);
 
 app.get('/', (req, res) => {
   res.json({
@@ -60,8 +73,8 @@ app.use(errorHandler);
 
 const server = http.createServer(app);
 
-server.listen(env.port, () => {
-  console.log(`Legal intelligence backend listening on port ${env.port}`);
+server.listen(env.port, env.host, () => {
+  console.log(`Legal intelligence backend listening on ${env.host}:${env.port}`);
 
   Promise.allSettled([
     bootstrapDriveWatchAutomation(),

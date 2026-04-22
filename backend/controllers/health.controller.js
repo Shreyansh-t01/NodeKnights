@@ -279,12 +279,18 @@ async function getPineconeDependencyStatus() {
 }
 
 async function getMlServiceStatus() {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, env.remoteServiceTimeoutMs);
+
   try {
     const response = await fetch(env.mlServiceUrl, {
       method: 'GET',
       headers: {
         Accept: 'application/json',
       },
+      signal: controller.signal,
     });
     let payload = null;
 
@@ -305,14 +311,20 @@ async function getMlServiceStatus() {
       message: payload?.error || null,
     };
   } catch (error) {
+    const message = error.name === 'AbortError'
+      ? `ML service health check timed out after ${env.remoteServiceTimeoutMs}ms.`
+      : error.message;
+
     return {
       enabled: true,
       required: env.requirePythonMlService,
       reachable: false,
       target: `${env.mlServiceUrl}/analyze`,
       mode: env.requirePythonMlService ? 'python-ml-service-required' : 'python-ml-service-optional',
-      message: error.message,
+      message,
     };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

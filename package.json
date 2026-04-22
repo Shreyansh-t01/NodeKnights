@@ -1,0 +1,13 @@
+{
+  "name": "nodeknights",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Deployment entrypoint for the NodeKnights backend service",
+  "scripts": {
+    "postinstall": "npm --prefix backend install --omit=dev",
+    "start": "npm --prefix backend start"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

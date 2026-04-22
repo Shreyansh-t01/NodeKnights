@@ -139,6 +139,7 @@ const configuredDriveWebhookUrl = process.env.GOOGLE_DRIVE_WEBHOOK_URL
 const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: asNumber(process.env.PORT, 3000),
+  host: process.env.HOST || '0.0.0.0',
   apiPrefix: configuredApiPrefix,
   corsOrigin: configuredCorsOrigin,
   maxUploadSizeMb: asNumber(process.env.MAX_UPLOAD_SIZE_MB, 20),
