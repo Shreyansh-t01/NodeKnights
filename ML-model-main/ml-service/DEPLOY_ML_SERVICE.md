@@ -20,29 +20,43 @@ This service now includes both:
 The web start command is:
 
 ```text
-uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8001}
+python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8001}
 ```
 
 ## Required steps
 
 1. Set the root directory to `ML-model-main/ml-service`
-2. Ensure `requirements.txt` is installed by the platform
+2. Ensure the root `requirements.txt` in this folder is installed by the platform
 3. Expose the service publicly or privately as needed
 4. Point the Node backend `ML_SERVICE_URL` to this deployed service
 
 ## Health check
 
-After deployment, verify:
+Set the platform health check path to:
+
+- `GET /healthz`
+
+Expected response:
+
+```json
+{ "success": true, "service": "legal-text-ml-service", "status": "ready" }
+```
+
+After deployment, verify the root route too:
 
 - `GET /`
 
 Expected response:
 
 ```json
-{ "message": "Legal text ML service is running" }
+{ "message": "Legal text ML service is running", "status": "ready" }
 ```
 
-Then test:
+Then test the lazy-loaded model readiness route:
+
+- `GET /ready`
+
+Finally test analysis:
 
 - `POST /analyze`
 

@@ -29,6 +29,25 @@ def get_analyze_text():
 
 @app.get("/")
 def root():
+    return {
+        "message": "Legal text ML service is running",
+        "status": "ready",
+        "mode": "lazy-load",
+    }
+
+
+@app.get("/healthz")
+def healthz():
+    return {
+        "success": True,
+        "service": "legal-text-ml-service",
+        "status": "ready",
+        "mode": "lazy-load",
+    }
+
+
+@app.get("/ready")
+def ready():
     predictor_ready = _analyze_text is not None
     error_message = None
 
@@ -44,7 +63,7 @@ def root():
         error_message = str(_predictor_error)
 
     return {
-        "message": "Legal text ML service is running",
+        "success": predictor_ready,
         "predictorReady": predictor_ready,
         "mode": "lazy-load",
         "error": error_message,

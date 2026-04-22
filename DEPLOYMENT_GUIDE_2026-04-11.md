@@ -217,20 +217,38 @@ The backend sends contract text to:
 
 - `ML_SERVICE_URL`
 
+For Railway, create this as a separate service and set the service root directory to:
+
+```text
+ML-model-main/ml-service
+```
+
+The service root must include `requirements.txt`; that is what installs FastAPI, Uvicorn, spaCy, joblib, and scikit-learn in production.
+
 If you keep Python on the same server, you can use:
 
 ```env
 ML_SERVICE_URL=http://127.0.0.1:8001
+ML_SERVICE_TIMEOUT_MS=60000
 ```
 
 To start the current local-style service:
 
 ```bash
 cd d:\PROJECTS\SOLUTIONHACKATHON
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir .\ML-model-main\ml-service --port 8001 --reload
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir .\ML-model-main\ml-service --host 0.0.0.0 --port 8001 --reload
 ```
 
 For production, use the same app but run it as a real long-running service.
+
+Railway health check path:
+
+```text
+/healthz
+```
+
+Do not use `/analyze` as a health check. The model loads lazily and can take longer on the first real analysis request.
+Keep the backend `ML_SERVICE_TIMEOUT_MS` at `60000` or higher if your first production analysis request loads spaCy and scikit-learn models from cold start.
 
 If Python is deployed separately:
 

@@ -166,13 +166,31 @@ function analyzeLocally(text) {
 }
 
 async function analyzeWithMlService(text) {
-  const response = await fetch(`${env.mlServiceUrl}/analyze`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ text }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, env.mlServiceTimeoutMs);
+
+  let response;
+
+  try {
+    response = await fetch(`${env.mlServiceUrl}/analyze`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+      body: JSON.stringify({ text }),
+    });
+  } catch (error) {
+    const message = error.name === 'AbortError'
+      ? `ML service analysis timed out after ${env.mlServiceTimeoutMs}ms.`
+      : error.message;
+
+    throw new Error(message);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     const message = await response.text();
