@@ -6,7 +6,10 @@ function IntakePage({
   uploadFile,
   uploading,
   uploadError,
+  connectorNotice,
+  connectorActionPendingId,
   onFileChange,
+  onConnectorAction,
   onUpload,
 }) {
   return (
@@ -26,9 +29,17 @@ function IntakePage({
             <h3>Ingestion connectors</h3>
           </div>
         </div>
+        {connectorNotice ? (
+          <p className={`connector-notice connector-notice-${connectorNotice.tone}`}>{connectorNotice.message}</p>
+        ) : null}
         <div className="connector-grid">
           {connectors.map((connector) => (
-            <ConnectorCard key={connector.key} connector={connector} />
+            <ConnectorCard
+              key={connector.key}
+              connector={connector}
+              actionPending={connector.actionId === connectorActionPendingId}
+              onAction={onConnectorAction}
+            />
           ))}
         </div>
       </section>

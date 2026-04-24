@@ -87,6 +87,10 @@ export const api = {
     method: 'POST',
     body: JSON.stringify({}),
   }),
+  getGoogleAuthUrl: (params = {}) => request(`/connectors/google/auth-url${buildQueryString({
+    scopes: Array.isArray(params.scopes) ? params.scopes.join(',') : params.scopes,
+    returnTo: params.returnTo,
+  })}`),
   getHealth: () => request('/health'),
   getNotifications: (params = {}) => request(`/notifications${buildQueryString(params)}`),
   markNotificationsRead: () => request('/notifications/read', {

@@ -125,7 +125,62 @@ function buildEmptySearchResult(query = '') {
   };
 }
 
-function buildConnectorState(health) {
+function buildGoogleOAuthNoticeFromUrl() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const url = new URL(window.location.href);
+  const status = String(url.searchParams.get('google_oauth') || '').trim().toLowerCase();
+
+  if (!status) {
+    return null;
+  }
+
+  const message = String(url.searchParams.get('google_oauth_message') || '').trim();
+
+  return {
+    tone: status === 'success' ? 'success' : 'error',
+    message: message || (
+      status === 'success'
+        ? 'Google Drive and Gmail access is connected.'
+        : 'Google consent did not complete. Please try again.'
+    ),
+  };
+}
+
+function consumeGoogleOAuthNotice() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const notice = buildGoogleOAuthNoticeFromUrl();
+
+  if (!notice) {
+    return null;
+  }
+
+  const url = new URL(window.location.href);
+  url.searchParams.delete('google_oauth');
+  url.searchParams.delete('google_oauth_message');
+  const nextSearch = url.searchParams.toString();
+  const nextUrl = `${url.pathname}${nextSearch ? `?${nextSearch}` : ''}${url.hash}`;
+
+  window.history.replaceState({}, '', nextUrl);
+  return notice;
+}
+
+function buildGoogleConnectorAction(returnTo = '/intake') {
+  return {
+    actionId: 'connect-google',
+    actionLabel: 'Connect Google',
+    actionPendingLabel: 'Opening Google...',
+    actionHint: 'Lexora will send you to Google and return you to this workspace after consent finishes.',
+    actionReturnTo: returnTo,
+  };
+}
+
+function buildConnectorState(health, returnTo = '/intake') {
   if (!health) {
     return connectorCards.map((connector) => ({
       ...connector,
@@ -149,6 +204,7 @@ function buildConnectorState(health) {
           ...connector,
           status: 'configure',
           description: 'Google OAuth is configured, but the backend still needs to complete the browser consent flow.',
+          ...buildGoogleConnectorAction(returnTo),
         };
       }
 
@@ -189,6 +245,7 @@ function buildConnectorState(health) {
           ...connector,
           status: 'configure',
           description: 'Google OAuth is configured, but the backend still needs to complete the browser consent flow.',
+          ...buildGoogleConnectorAction(returnTo),
         };
       }
 
@@ -412,6 +469,8 @@ function WorkspaceApp({ authUser, onLogout }) {
   const [uploading, setUploading] = useState(false);
   const [deletingContractId, setDeletingContractId] = useState('');
   const [uploadError, setUploadError] = useState('');
+  const [connectorNotice, setConnectorNotice] = useState(() => consumeGoogleOAuthNotice());
+  const [connectorActionPendingId, setConnectorActionPendingId] = useState('');
   const [notifications, setNotifications] = useState([]);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -422,7 +481,7 @@ function WorkspaceApp({ authUser, onLogout }) {
   const deferredDocumentQuery = useDeferredValue(documentQuery);
 
   const safePath = KNOWN_ROUTES.has(currentPath) ? currentPath : '/';
-  const connectors = buildConnectorState(health);
+  const connectors = buildConnectorState(health, safePath === '/' ? '/intake' : safePath);
   const metrics = useMemo(() => buildLiveMetrics(contracts), [contracts]);
   const modeLabel = bootMode === 'live'
     ? 'Live backend mode'
@@ -434,6 +493,12 @@ function WorkspaceApp({ authUser, onLogout }) {
     [documentResults, selectedDocumentId],
   );
   const selectedDocumentDownloadUrl = selectedDocument ? api.getDocumentContentUrl(selectedDocument.id, { download: true }) : '';
+
+  useEffect(() => {
+    if (connectorNotice?.tone === 'success') {
+      void refreshLiveDashboard();
+    }
+  }, [connectorNotice?.tone]);
 
   const refreshLiveDashboard = useEffectEvent(async () => {
     if (document.visibilityState === 'hidden') {
@@ -526,6 +591,33 @@ function WorkspaceApp({ authUser, onLogout }) {
     setContractInsights(buildEmptyInsights(summary));
     setInsightsError('');
     navigate('/insights');
+  }
+
+  async function handleConnectorAction(connector) {
+    if (!connector?.actionId || connectorActionPendingId) {
+      return;
+    }
+
+    if (connector.actionId !== 'connect-google') {
+      return;
+    }
+
+    setConnectorActionPendingId(connector.actionId);
+    setConnectorNotice(null);
+
+    try {
+      const response = await api.getGoogleAuthUrl({
+        returnTo: connector.actionReturnTo || '/intake',
+      });
+
+      window.location.assign(response.data.url);
+    } catch (error) {
+      setConnectorNotice({
+        tone: 'error',
+        message: error.message || 'Google consent could not be started.',
+      });
+      setConnectorActionPendingId('');
+    }
   }
 
   useEffect(() => {
@@ -1162,7 +1254,10 @@ function WorkspaceApp({ authUser, onLogout }) {
         uploadFile={uploadFile}
         uploading={uploading}
         uploadError={uploadError}
+        connectorNotice={connectorNotice}
+        connectorActionPendingId={connectorActionPendingId}
         onFileChange={(event) => setUploadFile(event.target.files?.[0] || null)}
+        onConnectorAction={handleConnectorAction}
         onUpload={handleUpload}
       />
     );

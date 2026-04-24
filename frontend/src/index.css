@@ -885,6 +885,11 @@ button {
   border-top: 4px solid var(--steel);
 }
 
+.connector-card {
+  display: grid;
+  gap: 0.85rem;
+}
+
 .panel-header {
   margin-bottom: 0.9rem;
 }
@@ -892,6 +897,57 @@ button {
 .panel p:first-child,
 .panel h3 + p {
   margin-top: 0;
+}
+
+.connector-meta,
+.connector-notice {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.connector-meta {
+  color: var(--muted);
+}
+
+.connector-notice {
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(15, 95, 85, 0.08);
+}
+
+.connector-notice-success {
+  border-color: rgba(15, 95, 85, 0.2);
+  background: rgba(15, 95, 85, 0.08);
+}
+
+.connector-notice-error {
+  border-color: rgba(164, 79, 63, 0.24);
+  background: rgba(164, 79, 63, 0.1);
+}
+
+.connector-action {
+  justify-self: start;
+  padding: 0.7rem 1.1rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--forest);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+}
+
+.connector-action:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+}
+
+.connector-action:disabled {
+  opacity: 0.68;
+  cursor: wait;
 }
 
 .contract-grid-preview {
