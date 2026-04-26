@@ -155,5 +155,10637 @@
       [36, 46, "MONEY"],
       [50, 62, "PARTY"]
     ]
+  },
+
+
+  {
+    "text": "Virat Kohli agrees to attend sponsor events organized by Punjab Kings in Ahmedabad.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        57,
+        69,
+        "ORG"
+      ],
+      [
+        73,
+        82,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Sunrisers Hyderabad appointed Akhil Raj as brand ambassador for league promotions in Ranchi.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        30,
+        39,
+        "PARTY"
+      ],
+      [
+        85,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Royal Challengers Bengaluru and Virat Kohli shall keep all commercial terms confidential during events in Delhi.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        32,
+        43,
+        "PARTY"
+      ],
+      [
+        106,
+        111,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "BYJU Sports Marketing Pvt Ltd will provide travel support to Virat Kohli for appearances in Ranchi.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        61,
+        72,
+        "PARTY"
+      ],
+      [
+        92,
+        98,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Red Bull India and Harsh Vardhan shall be referred to arbitration in Pune.",
+    "entities": [
+      [
+        20,
+        34,
+        "ORG"
+      ],
+      [
+        39,
+        52,
+        "PARTY"
+      ],
+      [
+        89,
+        93,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Neha Kapoor agrees to attend sponsor events organized by Mumbai Indians in Nagpur.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        57,
+        71,
+        "ORG"
+      ],
+      [
+        75,
+        81,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between BlueWave Sports Pvt Ltd and Aryan Kapoor was executed in Bengaluru.",
+    "entities": [
+      [
+        34,
+        57,
+        "ORG"
+      ],
+      [
+        62,
+        74,
+        "PARTY"
+      ],
+      [
+        91,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Global Sports Marketing Ltd shall pay Rs 1000000 to Manav Bhatia for 24 months in Dharamshala.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        52,
+        64,
+        "PARTY"
+      ],
+      [
+        82,
+        93,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Jio Sports Media Pvt Ltd and Naman Gupta shall keep all commercial terms confidential during events in Bengaluru.",
+    "entities": [
+      [
+        0,
+        24,
+        "ORG"
+      ],
+      [
+        29,
+        40,
+        "PARTY"
+      ],
+      [
+        103,
+        112,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Omkar Patil with Stadium Media Network Pvt Ltd shall be governed for activities in Dharamshala.",
+    "entities": [
+      [
+        23,
+        34,
+        "PARTY"
+      ],
+      [
+        40,
+        69,
+        "ORG"
+      ],
+      [
+        106,
+        117,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Arjun Singh under the agreement with Velocity Sports Management LLP include digital campaigns in New Delhi.",
+    "entities": [
+      [
+        27,
+        38,
+        "PARTY"
+      ],
+      [
+        64,
+        94,
+        "ORG"
+      ],
+      [
+        124,
+        133,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Stadium Media Network Pvt Ltd appointed Rahul Verma as brand ambassador for league promotions in Pune.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        40,
+        51,
+        "PARTY"
+      ],
+      [
+        97,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Varun Reddy to Elite Cricket Agency LLP shall apply across campaigns in Kochi.",
+    "entities": [
+      [
+        34,
+        45,
+        "PARTY"
+      ],
+      [
+        49,
+        73,
+        "ORG"
+      ],
+      [
+        106,
+        111,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "BlueWave Sports Pvt Ltd will provide travel support to Neil Fernandes for appearances in Ahmedabad.",
+    "entities": [
+      [
+        0,
+        23,
+        "ORG"
+      ],
+      [
+        55,
+        69,
+        "PARTY"
+      ],
+      [
+        89,
+        98,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Delhi Capitals may schedule media shoots with Dhruv Kapoor at the stadium in Hyderabad.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        46,
+        58,
+        "PARTY"
+      ],
+      [
+        77,
+        86,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Varun Reddy shall not endorse competing brands without written approval from Apex Cricket Ventures Pvt Ltd.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        77,
+        106,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Rohan Mehta under the agreement with Reliance Brands Limited include digital campaigns in Lucknow.",
+    "entities": [
+      [
+        27,
+        38,
+        "PARTY"
+      ],
+      [
+        64,
+        87,
+        "ORG"
+      ],
+      [
+        117,
+        124,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Kolkata Knight Riders appointed Rohan Mehta as brand ambassador for league promotions in New Delhi.",
+    "entities": [
+      [
+        0,
+        21,
+        "ORG"
+      ],
+      [
+        32,
+        43,
+        "PARTY"
+      ],
+      [
+        89,
+        98,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Arjun Singh to Elite Cricket Agency LLP shall apply across campaigns in Kolkata.",
+    "entities": [
+      [
+        34,
+        45,
+        "PARTY"
+      ],
+      [
+        49,
+        73,
+        "ORG"
+      ],
+      [
+        106,
+        113,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Samar Gill shall report to BlueWave Sports Pvt Ltd for campaign activity in Goa.",
+    "entities": [
+      [
+        11,
+        21,
+        "PARTY"
+      ],
+      [
+        38,
+        61,
+        "ORG"
+      ],
+      [
+        87,
+        90,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Lucknow Super Giants and Ishan Mehta shall keep all commercial terms confidential during events in Chennai.",
+    "entities": [
+      [
+        0,
+        20,
+        "ORG"
+      ],
+      [
+        25,
+        36,
+        "PARTY"
+      ],
+      [
+        99,
+        106,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Red Bull India appointed Ishan Mehta as brand ambassador for league promotions in Cuttack.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        25,
+        36,
+        "PARTY"
+      ],
+      [
+        82,
+        89,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Victory Brands Private Limited and Rohan Mehta was executed in Chennai.",
+    "entities": [
+      [
+        34,
+        64,
+        "ORG"
+      ],
+      [
+        69,
+        80,
+        "PARTY"
+      ],
+      [
+        97,
+        104,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Karan Malhotra under the agreement with Kolkata Knight Riders include digital campaigns in Chennai.",
+    "entities": [
+      [
+        27,
+        41,
+        "PARTY"
+      ],
+      [
+        67,
+        88,
+        "ORG"
+      ],
+      [
+        118,
+        125,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Dhruv Kapoor with Star Sports Network shall be governed for activities in Delhi.",
+    "entities": [
+      [
+        23,
+        35,
+        "PARTY"
+      ],
+      [
+        41,
+        60,
+        "ORG"
+      ],
+      [
+        97,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Jio Sports Media Pvt Ltd shall pay Rs 1800000 to Abhay Singh for 24 months in Ahmedabad.",
+    "entities": [
+      [
+        0,
+        24,
+        "ORG"
+      ],
+      [
+        49,
+        60,
+        "PARTY"
+      ],
+      [
+        78,
+        87,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Akhil Raj under the agreement with Punjab Kings include digital campaigns in Ranchi.",
+    "entities": [
+      [
+        27,
+        36,
+        "PARTY"
+      ],
+      [
+        62,
+        74,
+        "ORG"
+      ],
+      [
+        104,
+        110,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Karan Malhotra shall report to Metro League Sports Pvt Ltd for campaign activity in Jaipur.",
+    "entities": [
+      [
+        11,
+        25,
+        "PARTY"
+      ],
+      [
+        42,
+        69,
+        "ORG"
+      ],
+      [
+        95,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Mumbai Indians and Ishan Mehta shall keep all commercial terms confidential during events in Guwahati.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        19,
+        30,
+        "PARTY"
+      ],
+      [
+        93,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Sunrisers Hyderabad and Omkar Patil shall keep all commercial terms confidential during events in Jaipur.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        24,
+        35,
+        "PARTY"
+      ],
+      [
+        98,
+        104,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Priya Nair agrees to attend sponsor events organized by BYJU Sports Marketing Pvt Ltd in Chennai.",
+    "entities": [
+      [
+        0,
+        10,
+        "PARTY"
+      ],
+      [
+        56,
+        85,
+        "ORG"
+      ],
+      [
+        89,
+        96,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Abhay Singh shall report to Red Bull India for campaign activity in Mumbai.",
+    "entities": [
+      [
+        11,
+        22,
+        "PARTY"
+      ],
+      [
+        39,
+        53,
+        "ORG"
+      ],
+      [
+        79,
+        85,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Chennai Super Kings and Karan Malhotra shall be referred to arbitration in Kochi.",
+    "entities": [
+      [
+        20,
+        39,
+        "ORG"
+      ],
+      [
+        44,
+        58,
+        "PARTY"
+      ],
+      [
+        95,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Zenith Cricket Holdings Pvt Ltd and Riyan Malhotra was executed in Pune.",
+    "entities": [
+      [
+        34,
+        65,
+        "ORG"
+      ],
+      [
+        70,
+        84,
+        "PARTY"
+      ],
+      [
+        101,
+        105,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Arjun Singh agrees to attend sponsor events organized by Puma India in Ranchi.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        57,
+        67,
+        "ORG"
+      ],
+      [
+        71,
+        77,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Dream Sports Brand Solutions Pvt Ltd shall release the appearance fee to Rudra Sharma after the event in Hyderabad.",
+    "entities": [
+      [
+        0,
+        36,
+        "ORG"
+      ],
+      [
+        73,
+        85,
+        "PARTY"
+      ],
+      [
+        105,
+        114,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Pranav Iyer shall not endorse competing brands without written approval from BYJU Sports Marketing Pvt Ltd.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        77,
+        106,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Kabir Sethi to Velocity Sports Management LLP shall apply across campaigns in Indore.",
+    "entities": [
+      [
+        34,
+        45,
+        "PARTY"
+      ],
+      [
+        49,
+        79,
+        "ORG"
+      ],
+      [
+        112,
+        118,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Sony Sports Network may schedule media shoots with Abhay Singh at the stadium in Chandigarh.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        51,
+        62,
+        "PARTY"
+      ],
+      [
+        81,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Delhi Capitals may schedule media shoots with Aryan Kapoor at the stadium in Mumbai.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        46,
+        58,
+        "PARTY"
+      ],
+      [
+        77,
+        83,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Hero Sports Sponsorship Pvt Ltd will provide travel support to Rohan Mehta for appearances in Mumbai.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        63,
+        74,
+        "PARTY"
+      ],
+      [
+        94,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Rohan Mehta to Kolkata Knight Riders shall apply across campaigns in Delhi.",
+    "entities": [
+      [
+        34,
+        45,
+        "PARTY"
+      ],
+      [
+        49,
+        70,
+        "ORG"
+      ],
+      [
+        103,
+        108,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Siddharth Rao shall report to Delhi Capitals for campaign activity in Pune.",
+    "entities": [
+      [
+        11,
+        24,
+        "PARTY"
+      ],
+      [
+        41,
+        55,
+        "ORG"
+      ],
+      [
+        81,
+        85,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Naman Gupta with BlueWave Sports Pvt Ltd shall be governed for activities in Chennai.",
+    "entities": [
+      [
+        23,
+        34,
+        "PARTY"
+      ],
+      [
+        40,
+        63,
+        "ORG"
+      ],
+      [
+        100,
+        107,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Dream Sports Brand Solutions Pvt Ltd may schedule media shoots with Kavya Rao at the stadium in Goa.",
+    "entities": [
+      [
+        0,
+        36,
+        "ORG"
+      ],
+      [
+        68,
+        77,
+        "PARTY"
+      ],
+      [
+        96,
+        99,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Sunrisers Hyderabad appointed Aman Verma as brand ambassador for league promotions in Nagpur.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        30,
+        40,
+        "PARTY"
+      ],
+      [
+        86,
+        92,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Riyan Malhotra shall not endorse competing brands without written approval from Jio Sports Media Pvt Ltd.",
+    "entities": [
+      [
+        0,
+        14,
+        "PARTY"
+      ],
+      [
+        80,
+        104,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Metro League Sports Pvt Ltd and Aman Verma shall keep all commercial terms confidential during events in Pune.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        32,
+        42,
+        "PARTY"
+      ],
+      [
+        105,
+        109,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Deepak Yadav shall report to Sony Sports Network for campaign activity in Nagpur.",
+    "entities": [
+      [
+        11,
+        23,
+        "PARTY"
+      ],
+      [
+        40,
+        59,
+        "ORG"
+      ],
+      [
+        85,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Zenith Cricket Holdings Pvt Ltd shall release the appearance fee to Arjun Singh after the event in Chandigarh.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        68,
+        79,
+        "PARTY"
+      ],
+      [
+        99,
+        109,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Reliance Brands Limited shall release the appearance fee to Aman Verma after the event in New Delhi.",
+    "entities": [
+      [
+        0,
+        23,
+        "ORG"
+      ],
+      [
+        60,
+        70,
+        "PARTY"
+      ],
+      [
+        90,
+        99,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Rahul Verma shall report to Mumbai Indians for campaign activity in Pune.",
+    "entities": [
+      [
+        11,
+        22,
+        "PARTY"
+      ],
+      [
+        39,
+        53,
+        "ORG"
+      ],
+      [
+        79,
+        83,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Dream Sports Brand Solutions Pvt Ltd appointed Ankit Sharma as brand ambassador for league promotions in Indore.",
+    "entities": [
+      [
+        0,
+        36,
+        "ORG"
+      ],
+      [
+        47,
+        59,
+        "PARTY"
+      ],
+      [
+        105,
+        111,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Nikhil Menon shall report to Mumbai Indians for campaign activity in Ahmedabad.",
+    "entities": [
+      [
+        11,
+        23,
+        "PARTY"
+      ],
+      [
+        40,
+        54,
+        "ORG"
+      ],
+      [
+        80,
+        89,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Pranav Iyer shall report to Stadium Media Network Pvt Ltd for campaign activity in Ranchi.",
+    "entities": [
+      [
+        11,
+        22,
+        "PARTY"
+      ],
+      [
+        39,
+        68,
+        "ORG"
+      ],
+      [
+        94,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Priya Nair with Lucknow Super Giants shall be governed for activities in Jaipur.",
+    "entities": [
+      [
+        23,
+        33,
+        "PARTY"
+      ],
+      [
+        39,
+        59,
+        "ORG"
+      ],
+      [
+        96,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Riyan Malhotra with Red Bull India shall be governed for activities in Lucknow.",
+    "entities": [
+      [
+        23,
+        37,
+        "PARTY"
+      ],
+      [
+        43,
+        57,
+        "ORG"
+      ],
+      [
+        94,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Dream Sports Brand Solutions Pvt Ltd and Siddharth Rao shall keep all commercial terms confidential during events in Guwahati.",
+    "entities": [
+      [
+        0,
+        36,
+        "ORG"
+      ],
+      [
+        41,
+        54,
+        "PARTY"
+      ],
+      [
+        117,
+        125,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Rajasthan Royals will provide travel support to Sanya Mehra for appearances in Delhi.",
+    "entities": [
+      [
+        0,
+        16,
+        "ORG"
+      ],
+      [
+        48,
+        59,
+        "PARTY"
+      ],
+      [
+        79,
+        84,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Sameer Joshi with Zenith Cricket Holdings Pvt Ltd shall be governed for activities in Bengaluru.",
+    "entities": [
+      [
+        23,
+        35,
+        "PARTY"
+      ],
+      [
+        41,
+        72,
+        "ORG"
+      ],
+      [
+        109,
+        118,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "BYJU Sports Marketing Pvt Ltd will provide travel support to Shubham Gill for appearances in Dharamshala.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        61,
+        73,
+        "PARTY"
+      ],
+      [
+        93,
+        104,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Hero Sports Sponsorship Pvt Ltd may schedule media shoots with Rishabh Bansal at the stadium in Guwahati.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        63,
+        77,
+        "PARTY"
+      ],
+      [
+        96,
+        104,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Royal Tigers Cricket Sports Pvt Ltd will provide travel support to Kavya Rao for appearances in Ahmedabad.",
+    "entities": [
+      [
+        0,
+        35,
+        "ORG"
+      ],
+      [
+        67,
+        76,
+        "PARTY"
+      ],
+      [
+        96,
+        105,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Phoenix Sports Ventures Pvt Ltd shall pay Rs 3000000 to Varun Reddy for 3 months in Lucknow.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        56,
+        67,
+        "PARTY"
+      ],
+      [
+        84,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Jio Sports Media Pvt Ltd and Ayaan Khan shall keep all commercial terms confidential during events in Cuttack.",
+    "entities": [
+      [
+        0,
+        24,
+        "ORG"
+      ],
+      [
+        29,
+        39,
+        "PARTY"
+      ],
+      [
+        102,
+        109,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by BlueWave Sports Pvt Ltd shall be worn by Siddharth Rao during sponsor activations in Ahmedabad.",
+    "entities": [
+      [
+        27,
+        50,
+        "ORG"
+      ],
+      [
+        68,
+        81,
+        "PARTY"
+      ],
+      [
+        112,
+        121,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Kavya Rao shall report to Delhi Capitals for campaign activity in Kochi.",
+    "entities": [
+      [
+        11,
+        20,
+        "PARTY"
+      ],
+      [
+        37,
+        51,
+        "ORG"
+      ],
+      [
+        77,
+        82,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Red Bull India and Kabir Sethi shall keep all commercial terms confidential during events in Dharamshala.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        19,
+        30,
+        "PARTY"
+      ],
+      [
+        93,
+        104,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Mumbai Indians and Neil Fernandes was executed in Ranchi.",
+    "entities": [
+      [
+        34,
+        48,
+        "ORG"
+      ],
+      [
+        53,
+        67,
+        "PARTY"
+      ],
+      [
+        84,
+        90,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Gujarat Titans and Ishan Mehta shall keep all commercial terms confidential during events in Bengaluru.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        19,
+        30,
+        "PARTY"
+      ],
+      [
+        93,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Dev Patel shall not endorse competing brands without written approval from Lucknow Super Giants.",
+    "entities": [
+      [
+        0,
+        9,
+        "PARTY"
+      ],
+      [
+        75,
+        95,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Metro League Sports Pvt Ltd and Ankit Sharma shall be referred to arbitration in Ahmedabad.",
+    "entities": [
+      [
+        20,
+        47,
+        "ORG"
+      ],
+      [
+        52,
+        64,
+        "PARTY"
+      ],
+      [
+        101,
+        110,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Kolkata Knight Riders shall pay Rs 3000000 to Rahul Verma for 8 months in Nagpur.",
+    "entities": [
+      [
+        0,
+        21,
+        "ORG"
+      ],
+      [
+        46,
+        57,
+        "PARTY"
+      ],
+      [
+        74,
+        80,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Aryan Kapoor agrees to attend sponsor events organized by Mumbai Indians in Chennai.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        58,
+        72,
+        "ORG"
+      ],
+      [
+        76,
+        83,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Sony Sports Network and Rudra Sharma was executed in Nagpur.",
+    "entities": [
+      [
+        34,
+        53,
+        "ORG"
+      ],
+      [
+        58,
+        70,
+        "PARTY"
+      ],
+      [
+        87,
+        93,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Delhi Capitals shall release the appearance fee to Tarun Shetty after the event in Chennai.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        51,
+        63,
+        "PARTY"
+      ],
+      [
+        83,
+        90,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Lakshya Jain agrees to attend sponsor events organized by Victory Brands Private Limited in Ranchi.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        58,
+        88,
+        "ORG"
+      ],
+      [
+        92,
+        98,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Royal Challengers Bengaluru shall pay Rs 3000000 to Kabir Sethi for 24 months in Kochi.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        52,
+        63,
+        "PARTY"
+      ],
+      [
+        81,
+        86,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Ankit Sharma to Global Sports Marketing Ltd shall apply across campaigns in Pune.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        77,
+        "ORG"
+      ],
+      [
+        110,
+        114,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Reliance Brands Limited shall be worn by Harsh Vardhan during sponsor activations in Dharamshala.",
+    "entities": [
+      [
+        27,
+        50,
+        "ORG"
+      ],
+      [
+        68,
+        81,
+        "PARTY"
+      ],
+      [
+        112,
+        123,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Neha Kapoor agrees to attend sponsor events organized by Zenith Cricket Holdings Pvt Ltd in Hyderabad.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        57,
+        88,
+        "ORG"
+      ],
+      [
+        92,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Harsh Vardhan under the agreement with Metro League Sports Pvt Ltd include digital campaigns in Pune.",
+    "entities": [
+      [
+        27,
+        40,
+        "PARTY"
+      ],
+      [
+        66,
+        93,
+        "ORG"
+      ],
+      [
+        123,
+        127,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Sunrisers Hyderabad may schedule media shoots with Nikhil Menon at the stadium in New Delhi.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        51,
+        63,
+        "PARTY"
+      ],
+      [
+        82,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Varun Reddy under the agreement with Velocity Sports Management LLP include digital campaigns in Kochi.",
+    "entities": [
+      [
+        27,
+        38,
+        "PARTY"
+      ],
+      [
+        64,
+        94,
+        "ORG"
+      ],
+      [
+        124,
+        129,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Prime Athlete Management Pvt Ltd appointed Rohan Mehta as brand ambassador for league promotions in Mumbai.",
+    "entities": [
+      [
+        0,
+        32,
+        "ORG"
+      ],
+      [
+        43,
+        54,
+        "PARTY"
+      ],
+      [
+        100,
+        106,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Dev Patel to Metro League Sports Pvt Ltd shall apply across campaigns in Delhi.",
+    "entities": [
+      [
+        34,
+        43,
+        "PARTY"
+      ],
+      [
+        47,
+        74,
+        "ORG"
+      ],
+      [
+        107,
+        112,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Nike India Private Limited and Sameer Joshi was executed in Ranchi.",
+    "entities": [
+      [
+        34,
+        60,
+        "ORG"
+      ],
+      [
+        65,
+        77,
+        "PARTY"
+      ],
+      [
+        94,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between National Sports Promotions Ltd and Sanya Mehra was executed in Cuttack.",
+    "entities": [
+      [
+        34,
+        64,
+        "ORG"
+      ],
+      [
+        69,
+        80,
+        "PARTY"
+      ],
+      [
+        97,
+        104,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Pranav Iyer to BYJU Sports Marketing Pvt Ltd shall apply across campaigns in Kochi.",
+    "entities": [
+      [
+        34,
+        45,
+        "PARTY"
+      ],
+      [
+        49,
+        78,
+        "ORG"
+      ],
+      [
+        111,
+        116,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Star Sports Network shall be worn by Dhruv Kapoor during sponsor activations in Guwahati.",
+    "entities": [
+      [
+        27,
+        46,
+        "ORG"
+      ],
+      [
+        64,
+        76,
+        "PARTY"
+      ],
+      [
+        107,
+        115,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Tata Sports Promotions Ltd appointed Priya Nair as brand ambassador for league promotions in Ahmedabad.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        37,
+        47,
+        "PARTY"
+      ],
+      [
+        93,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Abhay Singh shall not endorse competing brands without written approval from Mumbai Indians.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        77,
+        91,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Velocity Sports Management LLP shall be worn by Yuvraj Rana during sponsor activations in Nagpur.",
+    "entities": [
+      [
+        27,
+        57,
+        "ORG"
+      ],
+      [
+        75,
+        86,
+        "PARTY"
+      ],
+      [
+        117,
+        123,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Metro League Sports Pvt Ltd and Ayaan Khan was executed in Lucknow.",
+    "entities": [
+      [
+        34,
+        61,
+        "ORG"
+      ],
+      [
+        66,
+        76,
+        "PARTY"
+      ],
+      [
+        93,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Siddharth Rao to Phoenix Sports Ventures Pvt Ltd shall apply across campaigns in Jaipur.",
+    "entities": [
+      [
+        34,
+        47,
+        "PARTY"
+      ],
+      [
+        51,
+        82,
+        "ORG"
+      ],
+      [
+        115,
+        121,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Crescent Sports Foundation may schedule media shoots with Tarun Shetty at the stadium in Jaipur.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        58,
+        70,
+        "PARTY"
+      ],
+      [
+        89,
+        95,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Summit Sports Advisors LLP shall be worn by Neil Fernandes during sponsor activations in Indore.",
+    "entities": [
+      [
+        27,
+        53,
+        "ORG"
+      ],
+      [
+        71,
+        85,
+        "PARTY"
+      ],
+      [
+        116,
+        122,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Titan Sports Pvt Ltd and Ayaan Khan shall keep all commercial terms confidential during events in Cuttack.",
+    "entities": [
+      [
+        0,
+        20,
+        "ORG"
+      ],
+      [
+        25,
+        35,
+        "PARTY"
+      ],
+      [
+        98,
+        105,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Kabir Sethi under the agreement with Mumbai Indians include digital campaigns in Jaipur.",
+    "entities": [
+      [
+        27,
+        38,
+        "PARTY"
+      ],
+      [
+        64,
+        78,
+        "ORG"
+      ],
+      [
+        108,
+        114,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Dhruv Kapoor shall report to Hero Sports Sponsorship Pvt Ltd for campaign activity in Lucknow.",
+    "entities": [
+      [
+        11,
+        23,
+        "PARTY"
+      ],
+      [
+        40,
+        71,
+        "ORG"
+      ],
+      [
+        97,
+        104,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Siddharth Rao shall not endorse competing brands without written approval from BlueWave Sports Pvt Ltd.",
+    "entities": [
+      [
+        0,
+        13,
+        "PARTY"
+      ],
+      [
+        79,
+        102,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Apex Cricket Ventures Pvt Ltd will provide travel support to Neil Fernandes for appearances in Delhi.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        61,
+        75,
+        "PARTY"
+      ],
+      [
+        95,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "CEAT Sports Division may schedule media shoots with Aryan Kapoor at the stadium in Delhi.",
+    "entities": [
+      [
+        0,
+        20,
+        "ORG"
+      ],
+      [
+        52,
+        64,
+        "PARTY"
+      ],
+      [
+        83,
+        88,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Phoenix Sports Ventures Pvt Ltd shall pay Rs 750000 to Rohan Mehta for 3 months in Kolkata.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        55,
+        66,
+        "PARTY"
+      ],
+      [
+        83,
+        90,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Zenith Cricket Holdings Pvt Ltd and Mehul Shah was executed in Dharamshala.",
+    "entities": [
+      [
+        34,
+        65,
+        "ORG"
+      ],
+      [
+        70,
+        80,
+        "PARTY"
+      ],
+      [
+        97,
+        108,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Harsh Vardhan shall not endorse competing brands without written approval from Jio Sports Media Pvt Ltd.",
+    "entities": [
+      [
+        0,
+        13,
+        "PARTY"
+      ],
+      [
+        79,
+        103,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Orion Sports Entertainment Pvt Ltd will provide travel support to Tanish Malhotra for appearances in Indore.",
+    "entities": [
+      [
+        0,
+        34,
+        "ORG"
+      ],
+      [
+        66,
+        81,
+        "PARTY"
+      ],
+      [
+        101,
+        107,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Aman Verma under the agreement with Mumbai Indians include digital campaigns in Nagpur.",
+    "entities": [
+      [
+        27,
+        37,
+        "PARTY"
+      ],
+      [
+        63,
+        77,
+        "ORG"
+      ],
+      [
+        107,
+        113,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Adidas India shall be worn by Varun Reddy during sponsor activations in New Delhi.",
+    "entities": [
+      [
+        27,
+        39,
+        "ORG"
+      ],
+      [
+        57,
+        68,
+        "PARTY"
+      ],
+      [
+        99,
+        108,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Punjab Kings will provide travel support to Varun Reddy for appearances in Chennai.",
+    "entities": [
+      [
+        0,
+        12,
+        "ORG"
+      ],
+      [
+        44,
+        55,
+        "PARTY"
+      ],
+      [
+        75,
+        82,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Adidas India shall be worn by Rudra Sharma during sponsor activations in Dharamshala.",
+    "entities": [
+      [
+        27,
+        39,
+        "ORG"
+      ],
+      [
+        57,
+        69,
+        "PARTY"
+      ],
+      [
+        100,
+        111,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Sony Sports Network shall be worn by Ayaan Khan during sponsor activations in Guwahati.",
+    "entities": [
+      [
+        27,
+        46,
+        "ORG"
+      ],
+      [
+        64,
+        74,
+        "PARTY"
+      ],
+      [
+        105,
+        113,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Aditya Nair shall report to Reliance Brands Limited for campaign activity in Hyderabad.",
+    "entities": [
+      [
+        11,
+        22,
+        "PARTY"
+      ],
+      [
+        39,
+        62,
+        "ORG"
+      ],
+      [
+        88,
+        97,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Sony Sports Network and Ishan Mehta shall be referred to arbitration in Pune.",
+    "entities": [
+      [
+        20,
+        39,
+        "ORG"
+      ],
+      [
+        44,
+        55,
+        "PARTY"
+      ],
+      [
+        92,
+        96,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Adidas India and Tanish Malhotra was executed in Pune.",
+    "entities": [
+      [
+        34,
+        46,
+        "ORG"
+      ],
+      [
+        51,
+        66,
+        "PARTY"
+      ],
+      [
+        83,
+        87,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Stadium Media Network Pvt Ltd shall be worn by Kavya Rao during sponsor activations in Ahmedabad.",
+    "entities": [
+      [
+        27,
+        56,
+        "ORG"
+      ],
+      [
+        74,
+        83,
+        "PARTY"
+      ],
+      [
+        114,
+        123,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Red Bull India appointed Rahul Verma as brand ambassador for league promotions in Chennai.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        25,
+        36,
+        "PARTY"
+      ],
+      [
+        82,
+        89,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Ankit Sharma to Lucknow Super Giants shall apply across campaigns in Delhi.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        70,
+        "ORG"
+      ],
+      [
+        103,
+        108,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Red Bull India shall release the appearance fee to Varun Reddy after the event in Nagpur.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        51,
+        62,
+        "PARTY"
+      ],
+      [
+        82,
+        88,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Summit Sports Advisors LLP shall release the appearance fee to Nikhil Menon after the event in Cuttack.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        63,
+        75,
+        "PARTY"
+      ],
+      [
+        95,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Tata Sports Promotions Ltd and Nikhil Menon shall be referred to arbitration in Goa.",
+    "entities": [
+      [
+        20,
+        46,
+        "ORG"
+      ],
+      [
+        51,
+        63,
+        "PARTY"
+      ],
+      [
+        100,
+        103,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Orion Sports Entertainment Pvt Ltd and Harsh Vardhan shall keep all commercial terms confidential during events in Ranchi.",
+    "entities": [
+      [
+        0,
+        34,
+        "ORG"
+      ],
+      [
+        39,
+        52,
+        "PARTY"
+      ],
+      [
+        115,
+        121,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "BYJU Sports Marketing Pvt Ltd appointed Rohan Mehta as brand ambassador for league promotions in Goa.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        40,
+        51,
+        "PARTY"
+      ],
+      [
+        97,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Puma India will provide travel support to Virat Kohli for appearances in Indore.",
+    "entities": [
+      [
+        0,
+        10,
+        "ORG"
+      ],
+      [
+        42,
+        53,
+        "PARTY"
+      ],
+      [
+        73,
+        79,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Crescent Sports Foundation and Neha Kapoor shall keep all commercial terms confidential during events in Chandigarh.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        31,
+        42,
+        "PARTY"
+      ],
+      [
+        105,
+        115,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Chennai Super Kings shall pay Rs 1800000 to Sameer Joshi for 18 months in Cuttack.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        44,
+        56,
+        "PARTY"
+      ],
+      [
+        74,
+        81,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Samar Gill shall report to Rajasthan Royals for campaign activity in Nagpur.",
+    "entities": [
+      [
+        11,
+        21,
+        "PARTY"
+      ],
+      [
+        38,
+        54,
+        "ORG"
+      ],
+      [
+        80,
+        86,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Titan Sports Pvt Ltd may schedule media shoots with Riyan Malhotra at the stadium in Ahmedabad.",
+    "entities": [
+      [
+        0,
+        20,
+        "ORG"
+      ],
+      [
+        52,
+        66,
+        "PARTY"
+      ],
+      [
+        85,
+        94,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Jio Sports Media Pvt Ltd and Vivaan Desai shall be referred to arbitration in Lucknow.",
+    "entities": [
+      [
+        20,
+        44,
+        "ORG"
+      ],
+      [
+        49,
+        61,
+        "PARTY"
+      ],
+      [
+        98,
+        105,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Ishan Mehta shall not endorse competing brands without written approval from Summit Sports Advisors LLP.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        77,
+        103,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Red Bull India and Riyan Malhotra was executed in Kochi.",
+    "entities": [
+      [
+        34,
+        48,
+        "ORG"
+      ],
+      [
+        53,
+        67,
+        "PARTY"
+      ],
+      [
+        84,
+        89,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Royal Challengers Bengaluru shall pay Rs 750000 to Virat Kohli for 24 months in Pune.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        51,
+        62,
+        "PARTY"
+      ],
+      [
+        80,
+        84,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "CEAT Sports Division will provide travel support to Rajat Sharma for appearances in Pune.",
+    "entities": [
+      [
+        0,
+        20,
+        "ORG"
+      ],
+      [
+        52,
+        64,
+        "PARTY"
+      ],
+      [
+        84,
+        88,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Punjab Kings and Rishabh Bansal shall be referred to arbitration in Kolkata.",
+    "entities": [
+      [
+        20,
+        32,
+        "ORG"
+      ],
+      [
+        37,
+        51,
+        "PARTY"
+      ],
+      [
+        88,
+        95,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Neha Kapoor shall not endorse competing brands without written approval from Victory Brands Private Limited.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        77,
+        107,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Punjab Kings shall pay Rs 500000 to Neha Kapoor for 12 months in Jaipur.",
+    "entities": [
+      [
+        0,
+        12,
+        "ORG"
+      ],
+      [
+        36,
+        47,
+        "PARTY"
+      ],
+      [
+        65,
+        71,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Phoenix Sports Ventures Pvt Ltd may schedule media shoots with Rishabh Bansal at the stadium in Indore.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        63,
+        77,
+        "PARTY"
+      ],
+      [
+        96,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Lakshya Jain under the agreement with Delhi Capitals include digital campaigns in Pune.",
+    "entities": [
+      [
+        27,
+        39,
+        "PARTY"
+      ],
+      [
+        65,
+        79,
+        "ORG"
+      ],
+      [
+        109,
+        113,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Akhil Raj under the agreement with Phoenix Sports Ventures Pvt Ltd include digital campaigns in Dharamshala.",
+    "entities": [
+      [
+        27,
+        36,
+        "PARTY"
+      ],
+      [
+        62,
+        93,
+        "ORG"
+      ],
+      [
+        123,
+        134,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Tata Sports Promotions Ltd will provide travel support to Shubham Gill for appearances in Kochi.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        58,
+        70,
+        "PARTY"
+      ],
+      [
+        90,
+        95,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Victory Brands Private Limited shall pay Rs 2500000 to Arjun Singh for 8 months in Guwahati.",
+    "entities": [
+      [
+        0,
+        30,
+        "ORG"
+      ],
+      [
+        55,
+        66,
+        "PARTY"
+      ],
+      [
+        83,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Summit Sports Advisors LLP will provide travel support to Tanish Malhotra for appearances in Bengaluru.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        58,
+        73,
+        "PARTY"
+      ],
+      [
+        93,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Jio Sports Media Pvt Ltd and Rajat Sharma shall keep all commercial terms confidential during events in Nagpur.",
+    "entities": [
+      [
+        0,
+        24,
+        "ORG"
+      ],
+      [
+        29,
+        41,
+        "PARTY"
+      ],
+      [
+        104,
+        110,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Ayaan Khan shall report to Elite Cricket Agency LLP for campaign activity in Ranchi.",
+    "entities": [
+      [
+        11,
+        21,
+        "PARTY"
+      ],
+      [
+        38,
+        62,
+        "ORG"
+      ],
+      [
+        88,
+        94,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Star Sports Network may schedule media shoots with Lakshya Jain at the stadium in Ahmedabad.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        51,
+        63,
+        "PARTY"
+      ],
+      [
+        82,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Dev Patel shall report to Rajasthan Royals for campaign activity in Chandigarh.",
+    "entities": [
+      [
+        11,
+        20,
+        "PARTY"
+      ],
+      [
+        37,
+        53,
+        "ORG"
+      ],
+      [
+        79,
+        89,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Ayaan Khan shall report to Tata Sports Promotions Ltd for campaign activity in Indore.",
+    "entities": [
+      [
+        11,
+        21,
+        "PARTY"
+      ],
+      [
+        38,
+        64,
+        "ORG"
+      ],
+      [
+        90,
+        96,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Sanya Mehra under the agreement with Royal Tigers Cricket Sports Pvt Ltd include digital campaigns in Goa.",
+    "entities": [
+      [
+        27,
+        38,
+        "PARTY"
+      ],
+      [
+        64,
+        99,
+        "ORG"
+      ],
+      [
+        129,
+        132,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by National Sports Promotions Ltd shall be worn by Aryan Kapoor during sponsor activations in Ahmedabad.",
+    "entities": [
+      [
+        27,
+        57,
+        "ORG"
+      ],
+      [
+        75,
+        87,
+        "PARTY"
+      ],
+      [
+        118,
+        127,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Elite Cricket Agency LLP and Rudra Sharma was executed in Mumbai.",
+    "entities": [
+      [
+        34,
+        58,
+        "ORG"
+      ],
+      [
+        63,
+        75,
+        "PARTY"
+      ],
+      [
+        92,
+        98,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Zenith Cricket Holdings Pvt Ltd may schedule media shoots with Harsh Vardhan at the stadium in Goa.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        63,
+        76,
+        "PARTY"
+      ],
+      [
+        95,
+        98,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Dream Sports Brand Solutions Pvt Ltd shall pay Rs 1200000 to Samar Gill for 24 months in Goa.",
+    "entities": [
+      [
+        0,
+        36,
+        "ORG"
+      ],
+      [
+        61,
+        71,
+        "PARTY"
+      ],
+      [
+        89,
+        92,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Rajasthan Royals may schedule media shoots with Aarav Khanna at the stadium in Pune.",
+    "entities": [
+      [
+        0,
+        16,
+        "ORG"
+      ],
+      [
+        48,
+        60,
+        "PARTY"
+      ],
+      [
+        79,
+        83,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Phoenix Sports Ventures Pvt Ltd and Neil Fernandes shall keep all commercial terms confidential during events in Cuttack.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        36,
+        50,
+        "PARTY"
+      ],
+      [
+        113,
+        120,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Manav Bhatia to Adidas India shall apply across campaigns in Nagpur.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        62,
+        "ORG"
+      ],
+      [
+        95,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Global Sports Marketing Ltd and Tarun Shetty shall be referred to arbitration in Chandigarh.",
+    "entities": [
+      [
+        20,
+        47,
+        "ORG"
+      ],
+      [
+        52,
+        64,
+        "PARTY"
+      ],
+      [
+        101,
+        111,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Karan Malhotra shall not endorse competing brands without written approval from Prime Athlete Management Pvt Ltd.",
+    "entities": [
+      [
+        0,
+        14,
+        "PARTY"
+      ],
+      [
+        80,
+        112,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Tarun Shetty shall not endorse competing brands without written approval from Red Bull India.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        78,
+        92,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Dev Patel with Dream Sports Brand Solutions Pvt Ltd shall be governed for activities in Cuttack.",
+    "entities": [
+      [
+        23,
+        32,
+        "PARTY"
+      ],
+      [
+        38,
+        74,
+        "ORG"
+      ],
+      [
+        111,
+        118,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Aman Verma to Stadium Media Network Pvt Ltd shall apply across campaigns in Kolkata.",
+    "entities": [
+      [
+        34,
+        44,
+        "PARTY"
+      ],
+      [
+        48,
+        77,
+        "ORG"
+      ],
+      [
+        110,
+        117,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Kabir Sethi agrees to attend sponsor events organized by Titan Sports Pvt Ltd in Mumbai.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        57,
+        77,
+        "ORG"
+      ],
+      [
+        81,
+        87,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Shubham Gill shall not endorse competing brands without written approval from Elite Cricket Agency LLP.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        78,
+        102,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Gujarat Titans shall pay Rs 500000 to Omkar Patil for 24 months in Goa.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        38,
+        49,
+        "PARTY"
+      ],
+      [
+        67,
+        70,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Aarav Khanna to Tata Sports Promotions Ltd shall apply across campaigns in Goa.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        76,
+        "ORG"
+      ],
+      [
+        109,
+        112,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Titan Sports Pvt Ltd and Riyan Malhotra was executed in Ahmedabad.",
+    "entities": [
+      [
+        34,
+        54,
+        "ORG"
+      ],
+      [
+        59,
+        73,
+        "PARTY"
+      ],
+      [
+        90,
+        99,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Delhi Capitals will provide travel support to Sameer Joshi for appearances in Goa.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        46,
+        58,
+        "PARTY"
+      ],
+      [
+        78,
+        81,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Kolkata Knight Riders and Rajat Sharma shall be referred to arbitration in Chennai.",
+    "entities": [
+      [
+        20,
+        41,
+        "ORG"
+      ],
+      [
+        46,
+        58,
+        "PARTY"
+      ],
+      [
+        95,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Rajasthan Royals appointed Kavya Rao as brand ambassador for league promotions in Bengaluru.",
+    "entities": [
+      [
+        0,
+        16,
+        "ORG"
+      ],
+      [
+        27,
+        36,
+        "PARTY"
+      ],
+      [
+        82,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "BYJU Sports Marketing Pvt Ltd and Dhruv Kapoor shall keep all commercial terms confidential during events in Dharamshala.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        109,
+        120,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Aditya Nair with Orion Sports Entertainment Pvt Ltd shall be governed for activities in Chandigarh.",
+    "entities": [
+      [
+        23,
+        34,
+        "PARTY"
+      ],
+      [
+        40,
+        74,
+        "ORG"
+      ],
+      [
+        111,
+        121,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Kabir Sethi with Star Sports Network shall be governed for activities in Cuttack.",
+    "entities": [
+      [
+        23,
+        34,
+        "PARTY"
+      ],
+      [
+        40,
+        59,
+        "ORG"
+      ],
+      [
+        96,
+        103,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Sunrisers Hyderabad and Ankit Sharma was executed in Kolkata.",
+    "entities": [
+      [
+        34,
+        53,
+        "ORG"
+      ],
+      [
+        58,
+        70,
+        "PARTY"
+      ],
+      [
+        87,
+        94,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Kavya Rao agrees to attend sponsor events organized by Apex Cricket Ventures Pvt Ltd in Hyderabad.",
+    "entities": [
+      [
+        0,
+        9,
+        "PARTY"
+      ],
+      [
+        55,
+        84,
+        "ORG"
+      ],
+      [
+        88,
+        97,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Harsh Vardhan shall report to Mumbai Indians for campaign activity in Chandigarh.",
+    "entities": [
+      [
+        11,
+        24,
+        "PARTY"
+      ],
+      [
+        41,
+        55,
+        "ORG"
+      ],
+      [
+        81,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Stadium Media Network Pvt Ltd and Shubham Gill shall be referred to arbitration in Pune.",
+    "entities": [
+      [
+        20,
+        49,
+        "ORG"
+      ],
+      [
+        54,
+        66,
+        "PARTY"
+      ],
+      [
+        103,
+        107,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Arjun Singh under the agreement with Jio Sports Media Pvt Ltd include digital campaigns in Pune.",
+    "entities": [
+      [
+        27,
+        38,
+        "PARTY"
+      ],
+      [
+        64,
+        88,
+        "ORG"
+      ],
+      [
+        118,
+        122,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Hero Sports Sponsorship Pvt Ltd and Neil Fernandes shall keep all commercial terms confidential during events in Kolkata.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        36,
+        50,
+        "PARTY"
+      ],
+      [
+        113,
+        120,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Samar Gill agrees to attend sponsor events organized by Prime Athlete Management Pvt Ltd in Chennai.",
+    "entities": [
+      [
+        0,
+        10,
+        "PARTY"
+      ],
+      [
+        56,
+        88,
+        "ORG"
+      ],
+      [
+        92,
+        99,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Riyan Malhotra with Delhi Capitals shall be governed for activities in Hyderabad.",
+    "entities": [
+      [
+        23,
+        37,
+        "PARTY"
+      ],
+      [
+        43,
+        57,
+        "ORG"
+      ],
+      [
+        94,
+        103,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Aarav Khanna shall not endorse competing brands without written approval from Tata Sports Promotions Ltd.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        78,
+        104,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Phoenix Sports Ventures Pvt Ltd and Tarun Shetty shall keep all commercial terms confidential during events in Indore.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        36,
+        48,
+        "PARTY"
+      ],
+      [
+        111,
+        117,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Puma India shall be worn by Aditya Nair during sponsor activations in Delhi.",
+    "entities": [
+      [
+        27,
+        37,
+        "ORG"
+      ],
+      [
+        55,
+        66,
+        "PARTY"
+      ],
+      [
+        97,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Star Sports Network and Vivaan Desai was executed in Dharamshala.",
+    "entities": [
+      [
+        34,
+        53,
+        "ORG"
+      ],
+      [
+        58,
+        70,
+        "PARTY"
+      ],
+      [
+        87,
+        98,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Akhil Raj under the agreement with Prime Athlete Management Pvt Ltd include digital campaigns in Cuttack.",
+    "entities": [
+      [
+        27,
+        36,
+        "PARTY"
+      ],
+      [
+        62,
+        94,
+        "ORG"
+      ],
+      [
+        124,
+        131,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Rishabh Bansal agrees to attend sponsor events organized by Elite Cricket Agency LLP in New Delhi.",
+    "entities": [
+      [
+        0,
+        14,
+        "PARTY"
+      ],
+      [
+        60,
+        84,
+        "ORG"
+      ],
+      [
+        88,
+        97,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Abhay Singh with Dream Sports Brand Solutions Pvt Ltd shall be governed for activities in Chandigarh.",
+    "entities": [
+      [
+        23,
+        34,
+        "PARTY"
+      ],
+      [
+        40,
+        76,
+        "ORG"
+      ],
+      [
+        113,
+        123,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Omkar Patil to Star Sports Network shall apply across campaigns in Goa.",
+    "entities": [
+      [
+        34,
+        45,
+        "PARTY"
+      ],
+      [
+        49,
+        68,
+        "ORG"
+      ],
+      [
+        101,
+        104,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Summit Sports Advisors LLP shall release the appearance fee to Aryan Kapoor after the event in Lucknow.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        63,
+        75,
+        "PARTY"
+      ],
+      [
+        95,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Apex Cricket Ventures Pvt Ltd and Aryan Kapoor shall be referred to arbitration in Nagpur.",
+    "entities": [
+      [
+        20,
+        49,
+        "ORG"
+      ],
+      [
+        54,
+        66,
+        "PARTY"
+      ],
+      [
+        103,
+        109,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Rudra Sharma to Crescent Sports Foundation shall apply across campaigns in New Delhi.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        76,
+        "ORG"
+      ],
+      [
+        109,
+        118,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "National Sports Promotions Ltd shall release the appearance fee to Vivaan Desai after the event in Bengaluru.",
+    "entities": [
+      [
+        0,
+        30,
+        "ORG"
+      ],
+      [
+        67,
+        79,
+        "PARTY"
+      ],
+      [
+        99,
+        108,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Nike India Private Limited shall pay Rs 1200000 to Rohit Sharma for 10 months in Ranchi.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        51,
+        63,
+        "PARTY"
+      ],
+      [
+        81,
+        87,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Abhay Singh shall report to Velocity Sports Management LLP for campaign activity in Kochi.",
+    "entities": [
+      [
+        11,
+        22,
+        "PARTY"
+      ],
+      [
+        39,
+        69,
+        "ORG"
+      ],
+      [
+        95,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Riyan Malhotra agrees to attend sponsor events organized by Sony Sports Network in Kolkata.",
+    "entities": [
+      [
+        0,
+        14,
+        "PARTY"
+      ],
+      [
+        60,
+        79,
+        "ORG"
+      ],
+      [
+        83,
+        90,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Stadium Media Network Pvt Ltd will provide travel support to Aditya Nair for appearances in Goa.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        61,
+        72,
+        "PARTY"
+      ],
+      [
+        92,
+        95,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "BYJU Sports Marketing Pvt Ltd shall pay Rs 1000000 to Kavya Rao for 12 months in Hyderabad.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        54,
+        63,
+        "PARTY"
+      ],
+      [
+        81,
+        90,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Reliance Brands Limited shall be worn by Harsh Vardhan during sponsor activations in Delhi.",
+    "entities": [
+      [
+        27,
+        50,
+        "ORG"
+      ],
+      [
+        68,
+        81,
+        "PARTY"
+      ],
+      [
+        112,
+        117,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Varun Reddy agrees to attend sponsor events organized by Punjab Kings in Bengaluru.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        57,
+        69,
+        "ORG"
+      ],
+      [
+        73,
+        82,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Puma India appointed Aarav Khanna as brand ambassador for league promotions in Guwahati.",
+    "entities": [
+      [
+        0,
+        10,
+        "ORG"
+      ],
+      [
+        21,
+        33,
+        "PARTY"
+      ],
+      [
+        79,
+        87,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Mehul Shah agrees to attend sponsor events organized by Dream Sports Brand Solutions Pvt Ltd in Pune.",
+    "entities": [
+      [
+        0,
+        10,
+        "PARTY"
+      ],
+      [
+        56,
+        92,
+        "ORG"
+      ],
+      [
+        96,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Orion Sports Entertainment Pvt Ltd shall be worn by Priya Nair during sponsor activations in Dharamshala.",
+    "entities": [
+      [
+        27,
+        61,
+        "ORG"
+      ],
+      [
+        79,
+        89,
+        "PARTY"
+      ],
+      [
+        120,
+        131,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Gujarat Titans shall release the appearance fee to Arjun Singh after the event in Ahmedabad.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        51,
+        62,
+        "PARTY"
+      ],
+      [
+        82,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Summit Sports Advisors LLP shall pay Rs 1000000 to Aryan Kapoor for 24 months in Guwahati.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        51,
+        63,
+        "PARTY"
+      ],
+      [
+        81,
+        89,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Kabir Sethi shall report to Stadium Media Network Pvt Ltd for campaign activity in Cuttack.",
+    "entities": [
+      [
+        11,
+        22,
+        "PARTY"
+      ],
+      [
+        39,
+        68,
+        "ORG"
+      ],
+      [
+        94,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Aditya Nair to Lucknow Super Giants shall apply across campaigns in Ranchi.",
+    "entities": [
+      [
+        34,
+        45,
+        "PARTY"
+      ],
+      [
+        49,
+        69,
+        "ORG"
+      ],
+      [
+        102,
+        108,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Reliance Brands Limited shall release the appearance fee to Naman Gupta after the event in Indore.",
+    "entities": [
+      [
+        0,
+        23,
+        "ORG"
+      ],
+      [
+        60,
+        71,
+        "PARTY"
+      ],
+      [
+        91,
+        97,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Velocity Sports Management LLP may schedule media shoots with Tarun Shetty at the stadium in Pune.",
+    "entities": [
+      [
+        0,
+        30,
+        "ORG"
+      ],
+      [
+        62,
+        74,
+        "PARTY"
+      ],
+      [
+        93,
+        97,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Shubham Gill shall not endorse competing brands without written approval from Summit Sports Advisors LLP.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        78,
+        104,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Nikhil Menon agrees to attend sponsor events organized by Orion Sports Entertainment Pvt Ltd in Chennai.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        58,
+        92,
+        "ORG"
+      ],
+      [
+        96,
+        103,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Nike India Private Limited shall release the appearance fee to Lakshya Jain after the event in Lucknow.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        63,
+        75,
+        "PARTY"
+      ],
+      [
+        95,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Aman Verma shall not endorse competing brands without written approval from Sony Sports Network.",
+    "entities": [
+      [
+        0,
+        10,
+        "PARTY"
+      ],
+      [
+        76,
+        95,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Harsh Vardhan under the agreement with Lucknow Super Giants include digital campaigns in Chennai.",
+    "entities": [
+      [
+        27,
+        40,
+        "PARTY"
+      ],
+      [
+        66,
+        86,
+        "ORG"
+      ],
+      [
+        116,
+        123,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "National Sports Promotions Ltd will provide travel support to Aryan Kapoor for appearances in Dharamshala.",
+    "entities": [
+      [
+        0,
+        30,
+        "ORG"
+      ],
+      [
+        62,
+        74,
+        "PARTY"
+      ],
+      [
+        94,
+        105,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Rajasthan Royals will provide travel support to Aryan Kapoor for appearances in Ranchi.",
+    "entities": [
+      [
+        0,
+        16,
+        "ORG"
+      ],
+      [
+        48,
+        60,
+        "PARTY"
+      ],
+      [
+        80,
+        86,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Puma India may schedule media shoots with Naman Gupta at the stadium in New Delhi.",
+    "entities": [
+      [
+        0,
+        10,
+        "ORG"
+      ],
+      [
+        42,
+        53,
+        "PARTY"
+      ],
+      [
+        72,
+        81,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Rohan Mehta under the agreement with Stadium Media Network Pvt Ltd include digital campaigns in Delhi.",
+    "entities": [
+      [
+        27,
+        38,
+        "PARTY"
+      ],
+      [
+        64,
+        93,
+        "ORG"
+      ],
+      [
+        123,
+        128,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Sunrisers Hyderabad shall be worn by Aditya Nair during sponsor activations in Hyderabad.",
+    "entities": [
+      [
+        27,
+        46,
+        "ORG"
+      ],
+      [
+        64,
+        75,
+        "PARTY"
+      ],
+      [
+        106,
+        115,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Chennai Super Kings and Shubham Gill shall be referred to arbitration in Lucknow.",
+    "entities": [
+      [
+        20,
+        39,
+        "ORG"
+      ],
+      [
+        44,
+        56,
+        "PARTY"
+      ],
+      [
+        93,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Global Sports Marketing Ltd and Yuvraj Rana shall keep all commercial terms confidential during events in Nagpur.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        32,
+        43,
+        "PARTY"
+      ],
+      [
+        106,
+        112,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Summit Sports Advisors LLP and Rishabh Bansal was executed in Hyderabad.",
+    "entities": [
+      [
+        34,
+        60,
+        "ORG"
+      ],
+      [
+        65,
+        79,
+        "PARTY"
+      ],
+      [
+        96,
+        105,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Nikhil Menon shall report to CEAT Sports Division for campaign activity in Dharamshala.",
+    "entities": [
+      [
+        11,
+        23,
+        "PARTY"
+      ],
+      [
+        40,
+        60,
+        "ORG"
+      ],
+      [
+        86,
+        97,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Hero Sports Sponsorship Pvt Ltd and Rajat Sharma shall be referred to arbitration in Pune.",
+    "entities": [
+      [
+        20,
+        51,
+        "ORG"
+      ],
+      [
+        56,
+        68,
+        "PARTY"
+      ],
+      [
+        105,
+        109,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Jio Sports Media Pvt Ltd shall be worn by Ishan Mehta during sponsor activations in Mumbai.",
+    "entities": [
+      [
+        27,
+        51,
+        "ORG"
+      ],
+      [
+        69,
+        80,
+        "PARTY"
+      ],
+      [
+        111,
+        117,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Akhil Raj shall report to Stadium Media Network Pvt Ltd for campaign activity in Ranchi.",
+    "entities": [
+      [
+        11,
+        20,
+        "PARTY"
+      ],
+      [
+        37,
+        66,
+        "ORG"
+      ],
+      [
+        92,
+        98,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Lakshya Jain shall not endorse competing brands without written approval from Global Sports Marketing Ltd.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        78,
+        105,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "National Sports Promotions Ltd shall release the appearance fee to Varun Reddy after the event in Jaipur.",
+    "entities": [
+      [
+        0,
+        30,
+        "ORG"
+      ],
+      [
+        67,
+        78,
+        "PARTY"
+      ],
+      [
+        98,
+        104,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Aman Verma to Dream Sports Brand Solutions Pvt Ltd shall apply across campaigns in Pune.",
+    "entities": [
+      [
+        34,
+        44,
+        "PARTY"
+      ],
+      [
+        48,
+        84,
+        "ORG"
+      ],
+      [
+        117,
+        121,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Tata Sports Promotions Ltd will provide travel support to Aarav Khanna for appearances in Jaipur.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        58,
+        70,
+        "PARTY"
+      ],
+      [
+        90,
+        96,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Crescent Sports Foundation will provide travel support to Dev Patel for appearances in Mumbai.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        58,
+        67,
+        "PARTY"
+      ],
+      [
+        87,
+        93,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Dhruv Kapoor under the agreement with Kolkata Knight Riders include digital campaigns in Goa.",
+    "entities": [
+      [
+        27,
+        39,
+        "PARTY"
+      ],
+      [
+        65,
+        86,
+        "ORG"
+      ],
+      [
+        116,
+        119,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Prime Athlete Management Pvt Ltd may schedule media shoots with Dhruv Kapoor at the stadium in Kochi.",
+    "entities": [
+      [
+        0,
+        32,
+        "ORG"
+      ],
+      [
+        64,
+        76,
+        "PARTY"
+      ],
+      [
+        95,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by CEAT Sports Division shall be worn by Ishan Mehta during sponsor activations in Chennai.",
+    "entities": [
+      [
+        27,
+        47,
+        "ORG"
+      ],
+      [
+        65,
+        76,
+        "PARTY"
+      ],
+      [
+        107,
+        114,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Kabir Sethi to Royal Challengers Bengaluru shall apply across campaigns in Chandigarh.",
+    "entities": [
+      [
+        34,
+        45,
+        "PARTY"
+      ],
+      [
+        49,
+        76,
+        "ORG"
+      ],
+      [
+        109,
+        119,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Gujarat Titans appointed Rahul Verma as brand ambassador for league promotions in Jaipur.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        25,
+        36,
+        "PARTY"
+      ],
+      [
+        82,
+        88,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Titan Sports Pvt Ltd shall be worn by Priya Nair during sponsor activations in Chennai.",
+    "entities": [
+      [
+        27,
+        47,
+        "ORG"
+      ],
+      [
+        65,
+        75,
+        "PARTY"
+      ],
+      [
+        106,
+        113,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Abhay Singh agrees to attend sponsor events organized by Victory Brands Private Limited in Guwahati.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        57,
+        87,
+        "ORG"
+      ],
+      [
+        91,
+        99,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Mehul Shah to National Sports Promotions Ltd shall apply across campaigns in Jaipur.",
+    "entities": [
+      [
+        34,
+        44,
+        "PARTY"
+      ],
+      [
+        48,
+        78,
+        "ORG"
+      ],
+      [
+        111,
+        117,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Punjab Kings may schedule media shoots with Varun Reddy at the stadium in Delhi.",
+    "entities": [
+      [
+        0,
+        12,
+        "ORG"
+      ],
+      [
+        44,
+        55,
+        "PARTY"
+      ],
+      [
+        74,
+        79,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Crescent Sports Foundation appointed Rudra Sharma as brand ambassador for league promotions in Kochi.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        37,
+        49,
+        "PARTY"
+      ],
+      [
+        95,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Ishan Mehta to Mumbai Indians shall apply across campaigns in Ranchi.",
+    "entities": [
+      [
+        34,
+        45,
+        "PARTY"
+      ],
+      [
+        49,
+        63,
+        "ORG"
+      ],
+      [
+        96,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Lakshya Jain to National Sports Promotions Ltd shall apply across campaigns in Indore.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        80,
+        "ORG"
+      ],
+      [
+        113,
+        119,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Akhil Raj with Sunrisers Hyderabad shall be governed for activities in Pune.",
+    "entities": [
+      [
+        23,
+        32,
+        "PARTY"
+      ],
+      [
+        38,
+        57,
+        "ORG"
+      ],
+      [
+        94,
+        98,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Reliance Brands Limited and Vivaan Desai was executed in Dharamshala.",
+    "entities": [
+      [
+        34,
+        57,
+        "ORG"
+      ],
+      [
+        62,
+        74,
+        "PARTY"
+      ],
+      [
+        91,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Jio Sports Media Pvt Ltd and Tarun Shetty was executed in Jaipur.",
+    "entities": [
+      [
+        34,
+        58,
+        "ORG"
+      ],
+      [
+        63,
+        75,
+        "PARTY"
+      ],
+      [
+        92,
+        98,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Gujarat Titans and Shubham Gill was executed in New Delhi.",
+    "entities": [
+      [
+        34,
+        48,
+        "ORG"
+      ],
+      [
+        53,
+        65,
+        "PARTY"
+      ],
+      [
+        82,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Kavya Rao shall report to Sunrisers Hyderabad for campaign activity in Ranchi.",
+    "entities": [
+      [
+        11,
+        20,
+        "PARTY"
+      ],
+      [
+        37,
+        56,
+        "ORG"
+      ],
+      [
+        82,
+        88,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Neil Fernandes shall not endorse competing brands without written approval from Victory Brands Private Limited.",
+    "entities": [
+      [
+        0,
+        14,
+        "PARTY"
+      ],
+      [
+        80,
+        110,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Harsh Vardhan with Lucknow Super Giants shall be governed for activities in Bengaluru.",
+    "entities": [
+      [
+        23,
+        36,
+        "PARTY"
+      ],
+      [
+        42,
+        62,
+        "ORG"
+      ],
+      [
+        99,
+        108,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Summit Sports Advisors LLP may schedule media shoots with Dev Patel at the stadium in New Delhi.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        58,
+        67,
+        "PARTY"
+      ],
+      [
+        86,
+        95,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Sony Sports Network and Aditya Nair was executed in Pune.",
+    "entities": [
+      [
+        34,
+        53,
+        "ORG"
+      ],
+      [
+        58,
+        69,
+        "PARTY"
+      ],
+      [
+        86,
+        90,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Victory Brands Private Limited and Naman Gupta shall be referred to arbitration in Kochi.",
+    "entities": [
+      [
+        20,
+        50,
+        "ORG"
+      ],
+      [
+        55,
+        66,
+        "PARTY"
+      ],
+      [
+        103,
+        108,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Velocity Sports Management LLP may schedule media shoots with Karan Malhotra at the stadium in Chandigarh.",
+    "entities": [
+      [
+        0,
+        30,
+        "ORG"
+      ],
+      [
+        62,
+        76,
+        "PARTY"
+      ],
+      [
+        95,
+        105,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "BYJU Sports Marketing Pvt Ltd may schedule media shoots with Virat Kohli at the stadium in New Delhi.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        61,
+        72,
+        "PARTY"
+      ],
+      [
+        91,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Rishabh Bansal under the agreement with Gujarat Titans include digital campaigns in Kolkata.",
+    "entities": [
+      [
+        27,
+        41,
+        "PARTY"
+      ],
+      [
+        67,
+        81,
+        "ORG"
+      ],
+      [
+        111,
+        118,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Reliance Brands Limited shall release the appearance fee to Ankit Sharma after the event in Cuttack.",
+    "entities": [
+      [
+        0,
+        23,
+        "ORG"
+      ],
+      [
+        60,
+        72,
+        "PARTY"
+      ],
+      [
+        92,
+        99,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Prime Athlete Management Pvt Ltd shall pay Rs 3000000 to Aryan Kapoor for 12 months in Chennai.",
+    "entities": [
+      [
+        0,
+        32,
+        "ORG"
+      ],
+      [
+        57,
+        69,
+        "PARTY"
+      ],
+      [
+        87,
+        94,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Rajat Sharma under the agreement with Elite Cricket Agency LLP include digital campaigns in Chennai.",
+    "entities": [
+      [
+        27,
+        39,
+        "PARTY"
+      ],
+      [
+        65,
+        89,
+        "ORG"
+      ],
+      [
+        119,
+        126,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Karan Malhotra to Titan Sports Pvt Ltd shall apply across campaigns in Mumbai.",
+    "entities": [
+      [
+        34,
+        48,
+        "PARTY"
+      ],
+      [
+        52,
+        72,
+        "ORG"
+      ],
+      [
+        105,
+        111,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Zenith Cricket Holdings Pvt Ltd and Lakshya Jain shall be referred to arbitration in Lucknow.",
+    "entities": [
+      [
+        20,
+        51,
+        "ORG"
+      ],
+      [
+        56,
+        68,
+        "PARTY"
+      ],
+      [
+        105,
+        112,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Deepak Yadav shall not endorse competing brands without written approval from Kolkata Knight Riders.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        78,
+        99,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Delhi Capitals and Mehul Shah shall keep all commercial terms confidential during events in Chandigarh.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        19,
+        29,
+        "PARTY"
+      ],
+      [
+        92,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Aman Verma with Hero Sports Sponsorship Pvt Ltd shall be governed for activities in Chandigarh.",
+    "entities": [
+      [
+        23,
+        33,
+        "PARTY"
+      ],
+      [
+        39,
+        70,
+        "ORG"
+      ],
+      [
+        107,
+        117,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Royal Challengers Bengaluru will provide travel support to Neil Fernandes for appearances in Guwahati.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        59,
+        73,
+        "PARTY"
+      ],
+      [
+        93,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Chennai Super Kings appointed Riyan Malhotra as brand ambassador for league promotions in Goa.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        30,
+        44,
+        "PARTY"
+      ],
+      [
+        90,
+        93,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Tanish Malhotra to Sunrisers Hyderabad shall apply across campaigns in Chandigarh.",
+    "entities": [
+      [
+        34,
+        49,
+        "PARTY"
+      ],
+      [
+        53,
+        72,
+        "ORG"
+      ],
+      [
+        105,
+        115,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Rajat Sharma with BYJU Sports Marketing Pvt Ltd shall be governed for activities in Delhi.",
+    "entities": [
+      [
+        23,
+        35,
+        "PARTY"
+      ],
+      [
+        41,
+        70,
+        "ORG"
+      ],
+      [
+        107,
+        112,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Hero Sports Sponsorship Pvt Ltd and Rudra Sharma shall keep all commercial terms confidential during events in Lucknow.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        36,
+        48,
+        "PARTY"
+      ],
+      [
+        111,
+        118,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Stadium Media Network Pvt Ltd and Varun Reddy was executed in Guwahati.",
+    "entities": [
+      [
+        34,
+        63,
+        "ORG"
+      ],
+      [
+        68,
+        79,
+        "PARTY"
+      ],
+      [
+        96,
+        104,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Punjab Kings may schedule media shoots with Samar Gill at the stadium in Ranchi.",
+    "entities": [
+      [
+        0,
+        12,
+        "ORG"
+      ],
+      [
+        44,
+        54,
+        "PARTY"
+      ],
+      [
+        73,
+        79,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Star Sports Network shall release the appearance fee to Aditya Nair after the event in Pune.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        56,
+        67,
+        "PARTY"
+      ],
+      [
+        87,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Sameer Joshi to Jio Sports Media Pvt Ltd shall apply across campaigns in Nagpur.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        74,
+        "ORG"
+      ],
+      [
+        107,
+        113,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Star Sports Network will provide travel support to Vivaan Desai for appearances in Ahmedabad.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        51,
+        63,
+        "PARTY"
+      ],
+      [
+        83,
+        92,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Dream Sports Brand Solutions Pvt Ltd and Arjun Singh was executed in Delhi.",
+    "entities": [
+      [
+        34,
+        70,
+        "ORG"
+      ],
+      [
+        75,
+        86,
+        "PARTY"
+      ],
+      [
+        103,
+        108,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Star Sports Network and Aman Verma shall keep all commercial terms confidential during events in Kochi.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        24,
+        34,
+        "PARTY"
+      ],
+      [
+        97,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Kolkata Knight Riders will provide travel support to Lakshya Jain for appearances in Ranchi.",
+    "entities": [
+      [
+        0,
+        21,
+        "ORG"
+      ],
+      [
+        53,
+        65,
+        "PARTY"
+      ],
+      [
+        85,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Harsh Vardhan under the agreement with Punjab Kings include digital campaigns in Kochi.",
+    "entities": [
+      [
+        27,
+        40,
+        "PARTY"
+      ],
+      [
+        66,
+        78,
+        "ORG"
+      ],
+      [
+        108,
+        113,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Riyan Malhotra to Star Sports Network shall apply across campaigns in Jaipur.",
+    "entities": [
+      [
+        34,
+        48,
+        "PARTY"
+      ],
+      [
+        52,
+        71,
+        "ORG"
+      ],
+      [
+        104,
+        110,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Sunrisers Hyderabad will provide travel support to Rishabh Bansal for appearances in Guwahati.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        51,
+        65,
+        "PARTY"
+      ],
+      [
+        85,
+        93,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Dream Sports Brand Solutions Pvt Ltd and Rohan Mehta shall keep all commercial terms confidential during events in Bengaluru.",
+    "entities": [
+      [
+        0,
+        36,
+        "ORG"
+      ],
+      [
+        41,
+        52,
+        "PARTY"
+      ],
+      [
+        115,
+        124,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Karan Malhotra under the agreement with Victory Brands Private Limited include digital campaigns in Ahmedabad.",
+    "entities": [
+      [
+        27,
+        41,
+        "PARTY"
+      ],
+      [
+        67,
+        97,
+        "ORG"
+      ],
+      [
+        127,
+        136,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Star Sports Network will provide travel support to Rudra Sharma for appearances in Dharamshala.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        51,
+        63,
+        "PARTY"
+      ],
+      [
+        83,
+        94,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Virat Kohli shall not endorse competing brands without written approval from Reliance Brands Limited.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        77,
+        100,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Virat Kohli under the agreement with Elite Cricket Agency LLP include digital campaigns in Hyderabad.",
+    "entities": [
+      [
+        27,
+        38,
+        "PARTY"
+      ],
+      [
+        64,
+        88,
+        "ORG"
+      ],
+      [
+        118,
+        127,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Phoenix Sports Ventures Pvt Ltd shall release the appearance fee to Aryan Kapoor after the event in Kochi.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        68,
+        80,
+        "PARTY"
+      ],
+      [
+        100,
+        105,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Rishabh Bansal shall not endorse competing brands without written approval from Lucknow Super Giants.",
+    "entities": [
+      [
+        0,
+        14,
+        "PARTY"
+      ],
+      [
+        80,
+        100,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Chennai Super Kings appointed Rahul Verma as brand ambassador for league promotions in Guwahati.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        30,
+        41,
+        "PARTY"
+      ],
+      [
+        87,
+        95,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Aryan Kapoor shall not endorse competing brands without written approval from Jio Sports Media Pvt Ltd.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        78,
+        102,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Rishabh Bansal agrees to attend sponsor events organized by Royal Tigers Cricket Sports Pvt Ltd in Dharamshala.",
+    "entities": [
+      [
+        0,
+        14,
+        "PARTY"
+      ],
+      [
+        60,
+        95,
+        "ORG"
+      ],
+      [
+        99,
+        110,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Apex Cricket Ventures Pvt Ltd and Ayaan Khan shall be referred to arbitration in New Delhi.",
+    "entities": [
+      [
+        20,
+        49,
+        "ORG"
+      ],
+      [
+        54,
+        64,
+        "PARTY"
+      ],
+      [
+        101,
+        110,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Neil Fernandes shall report to Sony Sports Network for campaign activity in Nagpur.",
+    "entities": [
+      [
+        11,
+        25,
+        "PARTY"
+      ],
+      [
+        42,
+        61,
+        "ORG"
+      ],
+      [
+        87,
+        93,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Summit Sports Advisors LLP and Dev Patel was executed in Kolkata.",
+    "entities": [
+      [
+        34,
+        60,
+        "ORG"
+      ],
+      [
+        65,
+        74,
+        "PARTY"
+      ],
+      [
+        91,
+        98,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Global Sports Marketing Ltd will provide travel support to Pranav Iyer for appearances in Bengaluru.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        59,
+        70,
+        "PARTY"
+      ],
+      [
+        90,
+        99,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Hero Sports Sponsorship Pvt Ltd shall pay Rs 2500000 to Tanish Malhotra for 8 months in Guwahati.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        56,
+        71,
+        "PARTY"
+      ],
+      [
+        88,
+        96,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Prime Athlete Management Pvt Ltd may schedule media shoots with Sameer Joshi at the stadium in Dharamshala.",
+    "entities": [
+      [
+        0,
+        32,
+        "ORG"
+      ],
+      [
+        64,
+        76,
+        "PARTY"
+      ],
+      [
+        95,
+        106,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Phoenix Sports Ventures Pvt Ltd and Ankit Sharma shall be referred to arbitration in Chennai.",
+    "entities": [
+      [
+        20,
+        51,
+        "ORG"
+      ],
+      [
+        56,
+        68,
+        "PARTY"
+      ],
+      [
+        105,
+        112,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Royal Tigers Cricket Sports Pvt Ltd appointed Karan Malhotra as brand ambassador for league promotions in Mumbai.",
+    "entities": [
+      [
+        0,
+        35,
+        "ORG"
+      ],
+      [
+        46,
+        60,
+        "PARTY"
+      ],
+      [
+        106,
+        112,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Titan Sports Pvt Ltd may schedule media shoots with Deepak Yadav at the stadium in Indore.",
+    "entities": [
+      [
+        0,
+        20,
+        "ORG"
+      ],
+      [
+        52,
+        64,
+        "PARTY"
+      ],
+      [
+        83,
+        89,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Nike India Private Limited shall release the appearance fee to Rudra Sharma after the event in Kochi.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        63,
+        75,
+        "PARTY"
+      ],
+      [
+        95,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Royal Challengers Bengaluru shall release the appearance fee to Pranav Iyer after the event in Mumbai.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        64,
+        75,
+        "PARTY"
+      ],
+      [
+        95,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Rishabh Bansal shall not endorse competing brands without written approval from Royal Tigers Cricket Sports Pvt Ltd.",
+    "entities": [
+      [
+        0,
+        14,
+        "PARTY"
+      ],
+      [
+        80,
+        115,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Aarav Khanna to Summit Sports Advisors LLP shall apply across campaigns in Bengaluru.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        76,
+        "ORG"
+      ],
+      [
+        109,
+        118,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Apex Cricket Ventures Pvt Ltd shall be worn by Ayaan Khan during sponsor activations in Chandigarh.",
+    "entities": [
+      [
+        27,
+        56,
+        "ORG"
+      ],
+      [
+        74,
+        84,
+        "PARTY"
+      ],
+      [
+        115,
+        125,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Victory Brands Private Limited may schedule media shoots with Rahul Verma at the stadium in Nagpur.",
+    "entities": [
+      [
+        0,
+        30,
+        "ORG"
+      ],
+      [
+        62,
+        73,
+        "PARTY"
+      ],
+      [
+        92,
+        98,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Star Sports Network appointed Lakshya Jain as brand ambassador for league promotions in Indore.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        30,
+        42,
+        "PARTY"
+      ],
+      [
+        88,
+        94,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Aryan Kapoor agrees to attend sponsor events organized by Phoenix Sports Ventures Pvt Ltd in Pune.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        58,
+        89,
+        "ORG"
+      ],
+      [
+        93,
+        97,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Delhi Capitals may schedule media shoots with Siddharth Rao at the stadium in Bengaluru.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        46,
+        59,
+        "PARTY"
+      ],
+      [
+        78,
+        87,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Manav Bhatia agrees to attend sponsor events organized by Global Sports Marketing Ltd in Chennai.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        58,
+        85,
+        "ORG"
+      ],
+      [
+        89,
+        96,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Priya Nair under the agreement with National Sports Promotions Ltd include digital campaigns in Hyderabad.",
+    "entities": [
+      [
+        27,
+        37,
+        "PARTY"
+      ],
+      [
+        63,
+        93,
+        "ORG"
+      ],
+      [
+        123,
+        132,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Sanya Mehra with Delhi Capitals shall be governed for activities in Goa.",
+    "entities": [
+      [
+        23,
+        34,
+        "PARTY"
+      ],
+      [
+        40,
+        54,
+        "ORG"
+      ],
+      [
+        91,
+        94,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Aditya Nair with Hero Sports Sponsorship Pvt Ltd shall be governed for activities in Cuttack.",
+    "entities": [
+      [
+        23,
+        34,
+        "PARTY"
+      ],
+      [
+        40,
+        71,
+        "ORG"
+      ],
+      [
+        108,
+        115,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Royal Tigers Cricket Sports Pvt Ltd and Omkar Patil was executed in Lucknow.",
+    "entities": [
+      [
+        34,
+        69,
+        "ORG"
+      ],
+      [
+        74,
+        85,
+        "PARTY"
+      ],
+      [
+        102,
+        109,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Aditya Nair with Dream Sports Brand Solutions Pvt Ltd shall be governed for activities in Jaipur.",
+    "entities": [
+      [
+        23,
+        34,
+        "PARTY"
+      ],
+      [
+        40,
+        76,
+        "ORG"
+      ],
+      [
+        113,
+        119,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Manav Bhatia shall report to Kolkata Knight Riders for campaign activity in Guwahati.",
+    "entities": [
+      [
+        11,
+        23,
+        "PARTY"
+      ],
+      [
+        40,
+        61,
+        "ORG"
+      ],
+      [
+        87,
+        95,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Sony Sports Network and Shubham Gill shall be referred to arbitration in New Delhi.",
+    "entities": [
+      [
+        20,
+        39,
+        "ORG"
+      ],
+      [
+        44,
+        56,
+        "PARTY"
+      ],
+      [
+        93,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Delhi Capitals and Samar Gill shall keep all commercial terms confidential during events in Delhi.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        19,
+        29,
+        "PARTY"
+      ],
+      [
+        92,
+        97,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Varun Reddy shall not endorse competing brands without written approval from Orion Sports Entertainment Pvt Ltd.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        77,
+        111,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Aditya Nair to Royal Challengers Bengaluru shall apply across campaigns in Cuttack.",
+    "entities": [
+      [
+        34,
+        45,
+        "PARTY"
+      ],
+      [
+        49,
+        76,
+        "ORG"
+      ],
+      [
+        109,
+        116,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Mehul Shah shall report to BYJU Sports Marketing Pvt Ltd for campaign activity in Guwahati.",
+    "entities": [
+      [
+        11,
+        21,
+        "PARTY"
+      ],
+      [
+        38,
+        67,
+        "ORG"
+      ],
+      [
+        93,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Aryan Kapoor agrees to attend sponsor events organized by Sunrisers Hyderabad in Delhi.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        58,
+        77,
+        "ORG"
+      ],
+      [
+        81,
+        86,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Royal Challengers Bengaluru and Kavya Rao shall keep all commercial terms confidential during events in Chandigarh.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        32,
+        41,
+        "PARTY"
+      ],
+      [
+        104,
+        114,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "CEAT Sports Division appointed Neha Kapoor as brand ambassador for league promotions in Kochi.",
+    "entities": [
+      [
+        0,
+        20,
+        "ORG"
+      ],
+      [
+        31,
+        42,
+        "PARTY"
+      ],
+      [
+        88,
+        93,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Summit Sports Advisors LLP will provide travel support to Aryan Kapoor for appearances in Dharamshala.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        58,
+        70,
+        "PARTY"
+      ],
+      [
+        90,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Metro League Sports Pvt Ltd will provide travel support to Arjun Singh for appearances in Lucknow.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        59,
+        70,
+        "PARTY"
+      ],
+      [
+        90,
+        97,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Orion Sports Entertainment Pvt Ltd will provide travel support to Aarav Khanna for appearances in Ahmedabad.",
+    "entities": [
+      [
+        0,
+        34,
+        "ORG"
+      ],
+      [
+        66,
+        78,
+        "PARTY"
+      ],
+      [
+        98,
+        107,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "BYJU Sports Marketing Pvt Ltd will provide travel support to Rajat Sharma for appearances in Lucknow.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        61,
+        73,
+        "PARTY"
+      ],
+      [
+        93,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Lucknow Super Giants will provide travel support to Manav Bhatia for appearances in Jaipur.",
+    "entities": [
+      [
+        0,
+        20,
+        "ORG"
+      ],
+      [
+        52,
+        64,
+        "PARTY"
+      ],
+      [
+        84,
+        90,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Crescent Sports Foundation and Deepak Yadav shall be referred to arbitration in Dharamshala.",
+    "entities": [
+      [
+        20,
+        46,
+        "ORG"
+      ],
+      [
+        51,
+        63,
+        "PARTY"
+      ],
+      [
+        100,
+        111,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Reliance Brands Limited will provide travel support to Nikhil Menon for appearances in Lucknow.",
+    "entities": [
+      [
+        0,
+        23,
+        "ORG"
+      ],
+      [
+        55,
+        67,
+        "PARTY"
+      ],
+      [
+        87,
+        94,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Adidas India shall pay Rs 1800000 to Rahul Verma for 8 months in Nagpur.",
+    "entities": [
+      [
+        0,
+        12,
+        "ORG"
+      ],
+      [
+        37,
+        48,
+        "PARTY"
+      ],
+      [
+        65,
+        71,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Kabir Sethi under the agreement with Victory Brands Private Limited include digital campaigns in Hyderabad.",
+    "entities": [
+      [
+        27,
+        38,
+        "PARTY"
+      ],
+      [
+        64,
+        94,
+        "ORG"
+      ],
+      [
+        124,
+        133,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Puma India and Priya Nair was executed in Pune.",
+    "entities": [
+      [
+        34,
+        44,
+        "ORG"
+      ],
+      [
+        49,
+        59,
+        "PARTY"
+      ],
+      [
+        76,
+        80,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Stadium Media Network Pvt Ltd shall release the appearance fee to Aman Verma after the event in Guwahati.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        66,
+        76,
+        "PARTY"
+      ],
+      [
+        96,
+        104,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Shubham Gill agrees to attend sponsor events organized by Adidas India in Lucknow.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        58,
+        70,
+        "ORG"
+      ],
+      [
+        74,
+        81,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "BYJU Sports Marketing Pvt Ltd shall release the appearance fee to Nikhil Menon after the event in Chennai.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        66,
+        78,
+        "PARTY"
+      ],
+      [
+        98,
+        105,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Neha Kapoor to CEAT Sports Division shall apply across campaigns in Chandigarh.",
+    "entities": [
+      [
+        34,
+        45,
+        "PARTY"
+      ],
+      [
+        49,
+        69,
+        "ORG"
+      ],
+      [
+        102,
+        112,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Aditya Nair shall not endorse competing brands without written approval from Zenith Cricket Holdings Pvt Ltd.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        77,
+        108,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Rohan Mehta under the agreement with Sony Sports Network include digital campaigns in Ranchi.",
+    "entities": [
+      [
+        27,
+        38,
+        "PARTY"
+      ],
+      [
+        64,
+        83,
+        "ORG"
+      ],
+      [
+        113,
+        119,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Priya Nair shall report to Dream Sports Brand Solutions Pvt Ltd for campaign activity in Kochi.",
+    "entities": [
+      [
+        11,
+        21,
+        "PARTY"
+      ],
+      [
+        38,
+        74,
+        "ORG"
+      ],
+      [
+        100,
+        105,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Jio Sports Media Pvt Ltd appointed Aarav Khanna as brand ambassador for league promotions in Indore.",
+    "entities": [
+      [
+        0,
+        24,
+        "ORG"
+      ],
+      [
+        35,
+        47,
+        "PARTY"
+      ],
+      [
+        93,
+        99,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Apex Cricket Ventures Pvt Ltd and Priya Nair shall be referred to arbitration in Dharamshala.",
+    "entities": [
+      [
+        20,
+        49,
+        "ORG"
+      ],
+      [
+        54,
+        64,
+        "PARTY"
+      ],
+      [
+        101,
+        112,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Kolkata Knight Riders and Samar Gill shall keep all commercial terms confidential during events in Goa.",
+    "entities": [
+      [
+        0,
+        21,
+        "ORG"
+      ],
+      [
+        26,
+        36,
+        "PARTY"
+      ],
+      [
+        99,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Abhay Singh under the agreement with Sunrisers Hyderabad include digital campaigns in Bengaluru.",
+    "entities": [
+      [
+        27,
+        38,
+        "PARTY"
+      ],
+      [
+        64,
+        83,
+        "ORG"
+      ],
+      [
+        113,
+        122,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Apex Cricket Ventures Pvt Ltd shall release the appearance fee to Dev Patel after the event in Chandigarh.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        66,
+        75,
+        "PARTY"
+      ],
+      [
+        95,
+        105,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Star Sports Network shall be worn by Rahul Verma during sponsor activations in Pune.",
+    "entities": [
+      [
+        27,
+        46,
+        "ORG"
+      ],
+      [
+        64,
+        75,
+        "PARTY"
+      ],
+      [
+        106,
+        110,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Global Sports Marketing Ltd and Virat Kohli shall keep all commercial terms confidential during events in Nagpur.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        32,
+        43,
+        "PARTY"
+      ],
+      [
+        106,
+        112,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Victory Brands Private Limited may schedule media shoots with Kavya Rao at the stadium in Indore.",
+    "entities": [
+      [
+        0,
+        30,
+        "ORG"
+      ],
+      [
+        62,
+        71,
+        "PARTY"
+      ],
+      [
+        90,
+        96,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Chennai Super Kings will provide travel support to Vivaan Desai for appearances in Bengaluru.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        51,
+        63,
+        "PARTY"
+      ],
+      [
+        83,
+        92,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Metro League Sports Pvt Ltd shall be worn by Rajat Sharma during sponsor activations in Chennai.",
+    "entities": [
+      [
+        27,
+        54,
+        "ORG"
+      ],
+      [
+        72,
+        84,
+        "PARTY"
+      ],
+      [
+        115,
+        122,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Tarun Shetty shall report to Dream Sports Brand Solutions Pvt Ltd for campaign activity in Chennai.",
+    "entities": [
+      [
+        11,
+        23,
+        "PARTY"
+      ],
+      [
+        40,
+        76,
+        "ORG"
+      ],
+      [
+        102,
+        109,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Sony Sports Network and Ayaan Khan shall be referred to arbitration in Mumbai.",
+    "entities": [
+      [
+        20,
+        39,
+        "ORG"
+      ],
+      [
+        44,
+        54,
+        "PARTY"
+      ],
+      [
+        91,
+        97,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "BlueWave Sports Pvt Ltd and Rajat Sharma shall keep all commercial terms confidential during events in Ranchi.",
+    "entities": [
+      [
+        0,
+        23,
+        "ORG"
+      ],
+      [
+        28,
+        40,
+        "PARTY"
+      ],
+      [
+        103,
+        109,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Star Sports Network and Karan Malhotra was executed in Jaipur.",
+    "entities": [
+      [
+        34,
+        53,
+        "ORG"
+      ],
+      [
+        58,
+        72,
+        "PARTY"
+      ],
+      [
+        89,
+        95,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Kavya Rao with Kolkata Knight Riders shall be governed for activities in Nagpur.",
+    "entities": [
+      [
+        23,
+        32,
+        "PARTY"
+      ],
+      [
+        38,
+        59,
+        "ORG"
+      ],
+      [
+        96,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Arjun Singh with Jio Sports Media Pvt Ltd shall be governed for activities in Bengaluru.",
+    "entities": [
+      [
+        23,
+        34,
+        "PARTY"
+      ],
+      [
+        40,
+        64,
+        "ORG"
+      ],
+      [
+        101,
+        110,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Virat Kohli shall not endorse competing brands without written approval from Red Bull India.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        77,
+        91,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Aarav Khanna to Lucknow Super Giants shall apply across campaigns in Nagpur.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        70,
+        "ORG"
+      ],
+      [
+        103,
+        109,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Zenith Cricket Holdings Pvt Ltd will provide travel support to Rishabh Bansal for appearances in Nagpur.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        63,
+        77,
+        "PARTY"
+      ],
+      [
+        97,
+        103,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Rajasthan Royals and Abhay Singh shall keep all commercial terms confidential during events in Kochi.",
+    "entities": [
+      [
+        0,
+        16,
+        "ORG"
+      ],
+      [
+        21,
+        32,
+        "PARTY"
+      ],
+      [
+        95,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Nike India Private Limited shall release the appearance fee to Siddharth Rao after the event in Ranchi.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        63,
+        76,
+        "PARTY"
+      ],
+      [
+        96,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Shubham Gill shall not endorse competing brands without written approval from Dream Sports Brand Solutions Pvt Ltd.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        78,
+        114,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Manav Bhatia shall not endorse competing brands without written approval from Chennai Super Kings.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        78,
+        97,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Lakshya Jain to Sunrisers Hyderabad shall apply across campaigns in Lucknow.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        69,
+        "ORG"
+      ],
+      [
+        102,
+        109,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Red Bull India will provide travel support to Aryan Kapoor for appearances in Hyderabad.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        46,
+        58,
+        "PARTY"
+      ],
+      [
+        78,
+        87,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Tarun Shetty under the agreement with Jio Sports Media Pvt Ltd include digital campaigns in Goa.",
+    "entities": [
+      [
+        27,
+        39,
+        "PARTY"
+      ],
+      [
+        65,
+        89,
+        "ORG"
+      ],
+      [
+        119,
+        122,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Gujarat Titans may schedule media shoots with Arjun Singh at the stadium in Chandigarh.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        46,
+        57,
+        "PARTY"
+      ],
+      [
+        76,
+        86,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Royal Challengers Bengaluru and Priya Nair shall keep all commercial terms confidential during events in New Delhi.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        32,
+        42,
+        "PARTY"
+      ],
+      [
+        105,
+        114,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Naman Gupta under the agreement with Crescent Sports Foundation include digital campaigns in Goa.",
+    "entities": [
+      [
+        27,
+        38,
+        "PARTY"
+      ],
+      [
+        64,
+        90,
+        "ORG"
+      ],
+      [
+        120,
+        123,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Velocity Sports Management LLP shall pay Rs 3000000 to Aarav Khanna for 24 months in Kochi.",
+    "entities": [
+      [
+        0,
+        30,
+        "ORG"
+      ],
+      [
+        55,
+        67,
+        "PARTY"
+      ],
+      [
+        85,
+        90,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Metro League Sports Pvt Ltd appointed Dev Patel as brand ambassador for league promotions in Bengaluru.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        38,
+        47,
+        "PARTY"
+      ],
+      [
+        93,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Aditya Nair shall report to Crescent Sports Foundation for campaign activity in Indore.",
+    "entities": [
+      [
+        11,
+        22,
+        "PARTY"
+      ],
+      [
+        39,
+        65,
+        "ORG"
+      ],
+      [
+        91,
+        97,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Puma India and Yuvraj Rana was executed in Guwahati.",
+    "entities": [
+      [
+        34,
+        44,
+        "ORG"
+      ],
+      [
+        49,
+        60,
+        "PARTY"
+      ],
+      [
+        77,
+        85,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Rahul Verma agrees to attend sponsor events organized by Star Sports Network in Nagpur.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        57,
+        76,
+        "ORG"
+      ],
+      [
+        80,
+        86,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Aarav Khanna to Red Bull India shall apply across campaigns in Lucknow.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        64,
+        "ORG"
+      ],
+      [
+        97,
+        104,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Stadium Media Network Pvt Ltd appointed Kabir Sethi as brand ambassador for league promotions in Chandigarh.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        40,
+        51,
+        "PARTY"
+      ],
+      [
+        97,
+        107,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Apex Cricket Ventures Pvt Ltd shall pay Rs 1000000 to Tarun Shetty for 10 months in Chandigarh.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        54,
+        66,
+        "PARTY"
+      ],
+      [
+        84,
+        94,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Ayaan Khan under the agreement with Global Sports Marketing Ltd include digital campaigns in Nagpur.",
+    "entities": [
+      [
+        27,
+        37,
+        "PARTY"
+      ],
+      [
+        63,
+        90,
+        "ORG"
+      ],
+      [
+        120,
+        126,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Arjun Singh under the agreement with Kolkata Knight Riders include digital campaigns in Indore.",
+    "entities": [
+      [
+        27,
+        38,
+        "PARTY"
+      ],
+      [
+        64,
+        85,
+        "ORG"
+      ],
+      [
+        115,
+        121,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Apex Cricket Ventures Pvt Ltd will provide travel support to Virat Kohli for appearances in Chennai.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        61,
+        72,
+        "PARTY"
+      ],
+      [
+        92,
+        99,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Shubham Gill under the agreement with Sony Sports Network include digital campaigns in Chennai.",
+    "entities": [
+      [
+        27,
+        39,
+        "PARTY"
+      ],
+      [
+        65,
+        84,
+        "ORG"
+      ],
+      [
+        114,
+        121,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Yuvraj Rana with Victory Brands Private Limited shall be governed for activities in Indore.",
+    "entities": [
+      [
+        23,
+        34,
+        "PARTY"
+      ],
+      [
+        40,
+        70,
+        "ORG"
+      ],
+      [
+        107,
+        113,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Akhil Raj shall report to Lucknow Super Giants for campaign activity in Chandigarh.",
+    "entities": [
+      [
+        11,
+        20,
+        "PARTY"
+      ],
+      [
+        37,
+        57,
+        "ORG"
+      ],
+      [
+        83,
+        93,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Delhi Capitals appointed Rishabh Bansal as brand ambassador for league promotions in Chennai.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        25,
+        39,
+        "PARTY"
+      ],
+      [
+        85,
+        92,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Royal Tigers Cricket Sports Pvt Ltd shall pay Rs 750000 to Samar Gill for 3 months in Ahmedabad.",
+    "entities": [
+      [
+        0,
+        35,
+        "ORG"
+      ],
+      [
+        59,
+        69,
+        "PARTY"
+      ],
+      [
+        86,
+        95,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Titan Sports Pvt Ltd and Tanish Malhotra was executed in Guwahati.",
+    "entities": [
+      [
+        34,
+        54,
+        "ORG"
+      ],
+      [
+        59,
+        74,
+        "PARTY"
+      ],
+      [
+        91,
+        99,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between National Sports Promotions Ltd and Ishan Mehta shall be referred to arbitration in Chandigarh.",
+    "entities": [
+      [
+        20,
+        50,
+        "ORG"
+      ],
+      [
+        55,
+        66,
+        "PARTY"
+      ],
+      [
+        103,
+        113,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Puma India and Priya Nair was executed in Bengaluru.",
+    "entities": [
+      [
+        34,
+        44,
+        "ORG"
+      ],
+      [
+        49,
+        59,
+        "PARTY"
+      ],
+      [
+        76,
+        85,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Sony Sports Network will provide travel support to Sanya Mehra for appearances in Chandigarh.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        51,
+        62,
+        "PARTY"
+      ],
+      [
+        82,
+        92,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Royal Tigers Cricket Sports Pvt Ltd and Neil Fernandes shall keep all commercial terms confidential during events in Kochi.",
+    "entities": [
+      [
+        0,
+        35,
+        "ORG"
+      ],
+      [
+        40,
+        54,
+        "PARTY"
+      ],
+      [
+        117,
+        122,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Aarav Khanna shall not endorse competing brands without written approval from Red Bull India.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        78,
+        92,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Titan Sports Pvt Ltd may schedule media shoots with Yuvraj Rana at the stadium in Guwahati.",
+    "entities": [
+      [
+        0,
+        20,
+        "ORG"
+      ],
+      [
+        52,
+        63,
+        "PARTY"
+      ],
+      [
+        82,
+        90,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Gujarat Titans and Kavya Rao shall keep all commercial terms confidential during events in Goa.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        19,
+        28,
+        "PARTY"
+      ],
+      [
+        91,
+        94,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Yuvraj Rana agrees to attend sponsor events organized by Tata Sports Promotions Ltd in Chandigarh.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        57,
+        83,
+        "ORG"
+      ],
+      [
+        87,
+        97,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Rahul Verma shall not endorse competing brands without written approval from CEAT Sports Division.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        77,
+        97,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Dream Sports Brand Solutions Pvt Ltd shall release the appearance fee to Abhay Singh after the event in Nagpur.",
+    "entities": [
+      [
+        0,
+        36,
+        "ORG"
+      ],
+      [
+        73,
+        84,
+        "PARTY"
+      ],
+      [
+        104,
+        110,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Tata Sports Promotions Ltd and Arjun Singh was executed in Chennai.",
+    "entities": [
+      [
+        34,
+        60,
+        "ORG"
+      ],
+      [
+        65,
+        76,
+        "PARTY"
+      ],
+      [
+        93,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Sony Sports Network shall be worn by Varun Reddy during sponsor activations in Guwahati.",
+    "entities": [
+      [
+        27,
+        46,
+        "ORG"
+      ],
+      [
+        64,
+        75,
+        "PARTY"
+      ],
+      [
+        106,
+        114,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Omkar Patil agrees to attend sponsor events organized by Reliance Brands Limited in Cuttack.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        57,
+        80,
+        "ORG"
+      ],
+      [
+        84,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Star Sports Network and Siddharth Rao shall keep all commercial terms confidential during events in New Delhi.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        24,
+        37,
+        "PARTY"
+      ],
+      [
+        100,
+        109,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Lucknow Super Giants shall be worn by Kabir Sethi during sponsor activations in Hyderabad.",
+    "entities": [
+      [
+        27,
+        47,
+        "ORG"
+      ],
+      [
+        65,
+        76,
+        "PARTY"
+      ],
+      [
+        107,
+        116,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Prime Athlete Management Pvt Ltd and Manav Bhatia was executed in Guwahati.",
+    "entities": [
+      [
+        34,
+        66,
+        "ORG"
+      ],
+      [
+        71,
+        83,
+        "PARTY"
+      ],
+      [
+        100,
+        108,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "National Sports Promotions Ltd will provide travel support to Priya Nair for appearances in Ranchi.",
+    "entities": [
+      [
+        0,
+        30,
+        "ORG"
+      ],
+      [
+        62,
+        72,
+        "PARTY"
+      ],
+      [
+        92,
+        98,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Phoenix Sports Ventures Pvt Ltd will provide travel support to Ayaan Khan for appearances in Ranchi.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        63,
+        73,
+        "PARTY"
+      ],
+      [
+        93,
+        99,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Apex Cricket Ventures Pvt Ltd will provide travel support to Lakshya Jain for appearances in Cuttack.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        61,
+        73,
+        "PARTY"
+      ],
+      [
+        93,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "CEAT Sports Division shall pay Rs 3000000 to Dhruv Kapoor for 12 months in Lucknow.",
+    "entities": [
+      [
+        0,
+        20,
+        "ORG"
+      ],
+      [
+        45,
+        57,
+        "PARTY"
+      ],
+      [
+        75,
+        82,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Rahul Verma with Chennai Super Kings shall be governed for activities in New Delhi.",
+    "entities": [
+      [
+        23,
+        34,
+        "PARTY"
+      ],
+      [
+        40,
+        59,
+        "ORG"
+      ],
+      [
+        96,
+        105,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "National Sports Promotions Ltd appointed Samar Gill as brand ambassador for league promotions in Kolkata.",
+    "entities": [
+      [
+        0,
+        30,
+        "ORG"
+      ],
+      [
+        41,
+        51,
+        "PARTY"
+      ],
+      [
+        97,
+        104,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "CEAT Sports Division and Omkar Patil shall keep all commercial terms confidential during events in Mumbai.",
+    "entities": [
+      [
+        0,
+        20,
+        "ORG"
+      ],
+      [
+        25,
+        36,
+        "PARTY"
+      ],
+      [
+        99,
+        105,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Samar Gill under the agreement with Stadium Media Network Pvt Ltd include digital campaigns in Jaipur.",
+    "entities": [
+      [
+        27,
+        37,
+        "PARTY"
+      ],
+      [
+        63,
+        92,
+        "ORG"
+      ],
+      [
+        122,
+        128,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Crescent Sports Foundation shall pay Rs 500000 to Kabir Sethi for 18 months in Chandigarh.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        50,
+        61,
+        "PARTY"
+      ],
+      [
+        79,
+        89,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Apex Cricket Ventures Pvt Ltd may schedule media shoots with Aditya Nair at the stadium in Nagpur.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        61,
+        72,
+        "PARTY"
+      ],
+      [
+        91,
+        97,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Dhruv Kapoor shall not endorse competing brands without written approval from Metro League Sports Pvt Ltd.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        78,
+        105,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Manav Bhatia to Royal Tigers Cricket Sports Pvt Ltd shall apply across campaigns in Indore.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        85,
+        "ORG"
+      ],
+      [
+        118,
+        124,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Rudra Sharma shall report to Nike India Private Limited for campaign activity in Bengaluru.",
+    "entities": [
+      [
+        11,
+        23,
+        "PARTY"
+      ],
+      [
+        40,
+        66,
+        "ORG"
+      ],
+      [
+        92,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Punjab Kings and Dev Patel was executed in Chandigarh.",
+    "entities": [
+      [
+        34,
+        46,
+        "ORG"
+      ],
+      [
+        51,
+        60,
+        "PARTY"
+      ],
+      [
+        77,
+        87,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Kolkata Knight Riders appointed Aarav Khanna as brand ambassador for league promotions in Indore.",
+    "entities": [
+      [
+        0,
+        21,
+        "ORG"
+      ],
+      [
+        32,
+        44,
+        "PARTY"
+      ],
+      [
+        90,
+        96,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Neha Kapoor to Zenith Cricket Holdings Pvt Ltd shall apply across campaigns in Lucknow.",
+    "entities": [
+      [
+        34,
+        45,
+        "PARTY"
+      ],
+      [
+        49,
+        80,
+        "ORG"
+      ],
+      [
+        113,
+        120,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Neha Kapoor shall report to Velocity Sports Management LLP for campaign activity in Goa.",
+    "entities": [
+      [
+        11,
+        22,
+        "PARTY"
+      ],
+      [
+        39,
+        69,
+        "ORG"
+      ],
+      [
+        95,
+        98,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Phoenix Sports Ventures Pvt Ltd and Tanish Malhotra shall keep all commercial terms confidential during events in Mumbai.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        36,
+        51,
+        "PARTY"
+      ],
+      [
+        114,
+        120,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Jio Sports Media Pvt Ltd shall pay Rs 1800000 to Kavya Rao for 8 months in Kolkata.",
+    "entities": [
+      [
+        0,
+        24,
+        "ORG"
+      ],
+      [
+        49,
+        58,
+        "PARTY"
+      ],
+      [
+        75,
+        82,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Kolkata Knight Riders will provide travel support to Aarav Khanna for appearances in Goa.",
+    "entities": [
+      [
+        0,
+        21,
+        "ORG"
+      ],
+      [
+        53,
+        65,
+        "PARTY"
+      ],
+      [
+        85,
+        88,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Dream Sports Brand Solutions Pvt Ltd and Aarav Khanna was executed in Ranchi.",
+    "entities": [
+      [
+        34,
+        70,
+        "ORG"
+      ],
+      [
+        75,
+        87,
+        "PARTY"
+      ],
+      [
+        104,
+        110,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Deepak Yadav under the agreement with Star Sports Network include digital campaigns in Ahmedabad.",
+    "entities": [
+      [
+        27,
+        39,
+        "PARTY"
+      ],
+      [
+        65,
+        84,
+        "ORG"
+      ],
+      [
+        114,
+        123,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Yuvraj Rana with Crescent Sports Foundation shall be governed for activities in New Delhi.",
+    "entities": [
+      [
+        23,
+        34,
+        "PARTY"
+      ],
+      [
+        40,
+        66,
+        "ORG"
+      ],
+      [
+        103,
+        112,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Reliance Brands Limited and Priya Nair was executed in Kochi.",
+    "entities": [
+      [
+        34,
+        57,
+        "ORG"
+      ],
+      [
+        62,
+        72,
+        "PARTY"
+      ],
+      [
+        89,
+        94,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Orion Sports Entertainment Pvt Ltd and Siddharth Rao shall be referred to arbitration in Chandigarh.",
+    "entities": [
+      [
+        20,
+        54,
+        "ORG"
+      ],
+      [
+        59,
+        72,
+        "PARTY"
+      ],
+      [
+        109,
+        119,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between CEAT Sports Division and Akhil Raj was executed in Dharamshala.",
+    "entities": [
+      [
+        34,
+        54,
+        "ORG"
+      ],
+      [
+        59,
+        68,
+        "PARTY"
+      ],
+      [
+        85,
+        96,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Yuvraj Rana under the agreement with Crescent Sports Foundation include digital campaigns in Lucknow.",
+    "entities": [
+      [
+        27,
+        38,
+        "PARTY"
+      ],
+      [
+        64,
+        90,
+        "ORG"
+      ],
+      [
+        120,
+        127,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Lucknow Super Giants and Priya Nair shall keep all commercial terms confidential during events in Dharamshala.",
+    "entities": [
+      [
+        0,
+        20,
+        "ORG"
+      ],
+      [
+        25,
+        35,
+        "PARTY"
+      ],
+      [
+        98,
+        109,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Shubham Gill to Royal Challengers Bengaluru shall apply across campaigns in New Delhi.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        77,
+        "ORG"
+      ],
+      [
+        110,
+        119,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Dream Sports Brand Solutions Pvt Ltd shall be worn by Abhay Singh during sponsor activations in Chandigarh.",
+    "entities": [
+      [
+        27,
+        63,
+        "ORG"
+      ],
+      [
+        81,
+        92,
+        "PARTY"
+      ],
+      [
+        123,
+        133,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Deepak Yadav agrees to attend sponsor events organized by Nike India Private Limited in Lucknow.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        58,
+        84,
+        "ORG"
+      ],
+      [
+        88,
+        95,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Crescent Sports Foundation and Ayaan Khan shall keep all commercial terms confidential during events in Jaipur.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        31,
+        41,
+        "PARTY"
+      ],
+      [
+        104,
+        110,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Nike India Private Limited and Naman Gupta shall be referred to arbitration in Goa.",
+    "entities": [
+      [
+        20,
+        46,
+        "ORG"
+      ],
+      [
+        51,
+        62,
+        "PARTY"
+      ],
+      [
+        99,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Dream Sports Brand Solutions Pvt Ltd and Virat Kohli was executed in Kochi.",
+    "entities": [
+      [
+        34,
+        70,
+        "ORG"
+      ],
+      [
+        75,
+        86,
+        "PARTY"
+      ],
+      [
+        103,
+        108,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Summit Sports Advisors LLP shall release the appearance fee to Lakshya Jain after the event in Jaipur.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        63,
+        75,
+        "PARTY"
+      ],
+      [
+        95,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Dhruv Kapoor under the agreement with Chennai Super Kings include digital campaigns in Goa.",
+    "entities": [
+      [
+        27,
+        39,
+        "PARTY"
+      ],
+      [
+        65,
+        84,
+        "ORG"
+      ],
+      [
+        114,
+        117,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Rishabh Bansal with Hero Sports Sponsorship Pvt Ltd shall be governed for activities in Pune.",
+    "entities": [
+      [
+        23,
+        37,
+        "PARTY"
+      ],
+      [
+        43,
+        74,
+        "ORG"
+      ],
+      [
+        111,
+        115,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Neha Kapoor with Dream Sports Brand Solutions Pvt Ltd shall be governed for activities in Guwahati.",
+    "entities": [
+      [
+        23,
+        34,
+        "PARTY"
+      ],
+      [
+        40,
+        76,
+        "ORG"
+      ],
+      [
+        113,
+        121,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Rajat Sharma shall not endorse competing brands without written approval from Orion Sports Entertainment Pvt Ltd.",
+    "entities": [
+      [
+        0,
+        12,
+        "PARTY"
+      ],
+      [
+        78,
+        112,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Punjab Kings appointed Priya Nair as brand ambassador for league promotions in Mumbai.",
+    "entities": [
+      [
+        0,
+        12,
+        "ORG"
+      ],
+      [
+        23,
+        33,
+        "PARTY"
+      ],
+      [
+        79,
+        85,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Harsh Vardhan under the agreement with Lucknow Super Giants include digital campaigns in Kolkata.",
+    "entities": [
+      [
+        27,
+        40,
+        "PARTY"
+      ],
+      [
+        66,
+        86,
+        "ORG"
+      ],
+      [
+        116,
+        123,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "CEAT Sports Division and Mehul Shah shall keep all commercial terms confidential during events in New Delhi.",
+    "entities": [
+      [
+        0,
+        20,
+        "ORG"
+      ],
+      [
+        25,
+        35,
+        "PARTY"
+      ],
+      [
+        98,
+        107,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "BlueWave Sports Pvt Ltd and Rudra Sharma shall keep all commercial terms confidential during events in Lucknow.",
+    "entities": [
+      [
+        0,
+        23,
+        "ORG"
+      ],
+      [
+        28,
+        40,
+        "PARTY"
+      ],
+      [
+        103,
+        110,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Vivaan Desai to Orion Sports Entertainment Pvt Ltd shall apply across campaigns in Hyderabad.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        84,
+        "ORG"
+      ],
+      [
+        117,
+        126,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Red Bull India may schedule media shoots with Manav Bhatia at the stadium in Ahmedabad.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        46,
+        58,
+        "PARTY"
+      ],
+      [
+        77,
+        86,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Zenith Cricket Holdings Pvt Ltd and Dev Patel shall be referred to arbitration in Ranchi.",
+    "entities": [
+      [
+        20,
+        51,
+        "ORG"
+      ],
+      [
+        56,
+        65,
+        "PARTY"
+      ],
+      [
+        102,
+        108,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Ankit Sharma to Stadium Media Network Pvt Ltd shall apply across campaigns in Goa.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        79,
+        "ORG"
+      ],
+      [
+        112,
+        115,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Reliance Brands Limited will provide travel support to Dev Patel for appearances in Jaipur.",
+    "entities": [
+      [
+        0,
+        23,
+        "ORG"
+      ],
+      [
+        55,
+        64,
+        "PARTY"
+      ],
+      [
+        84,
+        90,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Nikhil Menon under the agreement with Red Bull India include digital campaigns in Indore.",
+    "entities": [
+      [
+        27,
+        39,
+        "PARTY"
+      ],
+      [
+        65,
+        79,
+        "ORG"
+      ],
+      [
+        109,
+        115,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Lucknow Super Giants and Aarav Khanna was executed in New Delhi.",
+    "entities": [
+      [
+        34,
+        54,
+        "ORG"
+      ],
+      [
+        59,
+        71,
+        "PARTY"
+      ],
+      [
+        88,
+        97,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Global Sports Marketing Ltd may schedule media shoots with Aditya Nair at the stadium in Ahmedabad.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        59,
+        70,
+        "PARTY"
+      ],
+      [
+        89,
+        98,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Velocity Sports Management LLP and Naman Gupta shall be referred to arbitration in Ahmedabad.",
+    "entities": [
+      [
+        20,
+        50,
+        "ORG"
+      ],
+      [
+        55,
+        66,
+        "PARTY"
+      ],
+      [
+        103,
+        112,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Gujarat Titans may schedule media shoots with Aman Verma at the stadium in Dharamshala.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        46,
+        56,
+        "PARTY"
+      ],
+      [
+        75,
+        86,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Zenith Cricket Holdings Pvt Ltd may schedule media shoots with Riyan Malhotra at the stadium in Guwahati.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        63,
+        77,
+        "PARTY"
+      ],
+      [
+        96,
+        104,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Aman Verma shall report to Kolkata Knight Riders for campaign activity in Nagpur.",
+    "entities": [
+      [
+        11,
+        21,
+        "PARTY"
+      ],
+      [
+        38,
+        59,
+        "ORG"
+      ],
+      [
+        85,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Sunrisers Hyderabad shall be worn by Akhil Raj during sponsor activations in Chennai.",
+    "entities": [
+      [
+        27,
+        46,
+        "ORG"
+      ],
+      [
+        64,
+        73,
+        "PARTY"
+      ],
+      [
+        104,
+        111,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Apex Cricket Ventures Pvt Ltd may schedule media shoots with Harsh Vardhan at the stadium in Goa.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        61,
+        74,
+        "PARTY"
+      ],
+      [
+        93,
+        96,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Stadium Media Network Pvt Ltd shall be worn by Vivaan Desai during sponsor activations in Jaipur.",
+    "entities": [
+      [
+        27,
+        56,
+        "ORG"
+      ],
+      [
+        74,
+        86,
+        "PARTY"
+      ],
+      [
+        117,
+        123,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Samar Gill shall not endorse competing brands without written approval from Rajasthan Royals.",
+    "entities": [
+      [
+        0,
+        10,
+        "PARTY"
+      ],
+      [
+        76,
+        92,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Royal Challengers Bengaluru shall be worn by Sanya Mehra during sponsor activations in Nagpur.",
+    "entities": [
+      [
+        27,
+        54,
+        "ORG"
+      ],
+      [
+        72,
+        83,
+        "PARTY"
+      ],
+      [
+        114,
+        120,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Royal Challengers Bengaluru shall release the appearance fee to Sameer Joshi after the event in Goa.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        64,
+        76,
+        "PARTY"
+      ],
+      [
+        96,
+        99,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Shubham Gill with Stadium Media Network Pvt Ltd shall be governed for activities in Mumbai.",
+    "entities": [
+      [
+        23,
+        35,
+        "PARTY"
+      ],
+      [
+        41,
+        70,
+        "ORG"
+      ],
+      [
+        107,
+        113,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Sunrisers Hyderabad and Aryan Kapoor shall keep all commercial terms confidential during events in Jaipur.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        24,
+        36,
+        "PARTY"
+      ],
+      [
+        99,
+        105,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Tanish Malhotra shall report to Adidas India for campaign activity in Chennai.",
+    "entities": [
+      [
+        11,
+        26,
+        "PARTY"
+      ],
+      [
+        43,
+        55,
+        "ORG"
+      ],
+      [
+        81,
+        88,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Priya Nair shall not endorse competing brands without written approval from Elite Cricket Agency LLP.",
+    "entities": [
+      [
+        0,
+        10,
+        "PARTY"
+      ],
+      [
+        76,
+        100,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Jio Sports Media Pvt Ltd shall pay Rs 2500000 to Samar Gill for 6 months in Ahmedabad.",
+    "entities": [
+      [
+        0,
+        24,
+        "ORG"
+      ],
+      [
+        49,
+        59,
+        "PARTY"
+      ],
+      [
+        76,
+        85,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Metro League Sports Pvt Ltd may schedule media shoots with Aarav Khanna at the stadium in Cuttack.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        59,
+        71,
+        "PARTY"
+      ],
+      [
+        90,
+        97,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Titan Sports Pvt Ltd and Ayaan Khan shall keep all commercial terms confidential during events in Indore.",
+    "entities": [
+      [
+        0,
+        20,
+        "ORG"
+      ],
+      [
+        25,
+        35,
+        "PARTY"
+      ],
+      [
+        98,
+        104,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Rahul Verma agrees to attend sponsor events organized by Royal Tigers Cricket Sports Pvt Ltd in Indore.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        57,
+        92,
+        "ORG"
+      ],
+      [
+        96,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Gujarat Titans and Mehul Shah shall be referred to arbitration in Lucknow.",
+    "entities": [
+      [
+        20,
+        34,
+        "ORG"
+      ],
+      [
+        39,
+        49,
+        "PARTY"
+      ],
+      [
+        86,
+        93,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Kavya Rao to Orion Sports Entertainment Pvt Ltd shall apply across campaigns in Chandigarh.",
+    "entities": [
+      [
+        34,
+        43,
+        "PARTY"
+      ],
+      [
+        47,
+        81,
+        "ORG"
+      ],
+      [
+        114,
+        124,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Phoenix Sports Ventures Pvt Ltd will provide travel support to Lakshya Jain for appearances in Cuttack.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        63,
+        75,
+        "PARTY"
+      ],
+      [
+        95,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Victory Brands Private Limited and Tarun Shetty was executed in Pune.",
+    "entities": [
+      [
+        34,
+        64,
+        "ORG"
+      ],
+      [
+        69,
+        81,
+        "PARTY"
+      ],
+      [
+        98,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Jio Sports Media Pvt Ltd and Kabir Sethi shall keep all commercial terms confidential during events in Hyderabad.",
+    "entities": [
+      [
+        0,
+        24,
+        "ORG"
+      ],
+      [
+        29,
+        40,
+        "PARTY"
+      ],
+      [
+        103,
+        112,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Tarun Shetty to Phoenix Sports Ventures Pvt Ltd shall apply across campaigns in Bengaluru.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        81,
+        "ORG"
+      ],
+      [
+        114,
+        123,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Rohan Mehta agrees to attend sponsor events organized by CEAT Sports Division in Pune.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        57,
+        77,
+        "ORG"
+      ],
+      [
+        81,
+        85,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Jio Sports Media Pvt Ltd and Dhruv Kapoor shall keep all commercial terms confidential during events in Kochi.",
+    "entities": [
+      [
+        0,
+        24,
+        "ORG"
+      ],
+      [
+        29,
+        41,
+        "PARTY"
+      ],
+      [
+        104,
+        109,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Dream Sports Brand Solutions Pvt Ltd will provide travel support to Naman Gupta for appearances in Kolkata.",
+    "entities": [
+      [
+        0,
+        36,
+        "ORG"
+      ],
+      [
+        68,
+        79,
+        "PARTY"
+      ],
+      [
+        99,
+        106,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Rahul Verma shall not endorse competing brands without written approval from BYJU Sports Marketing Pvt Ltd.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        77,
+        106,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Victory Brands Private Limited shall release the appearance fee to Arjun Singh after the event in Cuttack.",
+    "entities": [
+      [
+        0,
+        30,
+        "ORG"
+      ],
+      [
+        67,
+        78,
+        "PARTY"
+      ],
+      [
+        98,
+        105,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Siddharth Rao agrees to attend sponsor events organized by Reliance Brands Limited in Kolkata.",
+    "entities": [
+      [
+        0,
+        13,
+        "PARTY"
+      ],
+      [
+        59,
+        82,
+        "ORG"
+      ],
+      [
+        86,
+        93,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Apex Cricket Ventures Pvt Ltd will provide travel support to Vivaan Desai for appearances in Guwahati.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        61,
+        73,
+        "PARTY"
+      ],
+      [
+        93,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Lakshya Jain shall report to BlueWave Sports Pvt Ltd for campaign activity in Goa.",
+    "entities": [
+      [
+        11,
+        23,
+        "PARTY"
+      ],
+      [
+        40,
+        63,
+        "ORG"
+      ],
+      [
+        89,
+        92,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Varun Reddy shall report to Kolkata Knight Riders for campaign activity in Chennai.",
+    "entities": [
+      [
+        11,
+        22,
+        "PARTY"
+      ],
+      [
+        39,
+        60,
+        "ORG"
+      ],
+      [
+        86,
+        93,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Riyan Malhotra under the agreement with Tata Sports Promotions Ltd include digital campaigns in Ranchi.",
+    "entities": [
+      [
+        27,
+        41,
+        "PARTY"
+      ],
+      [
+        67,
+        93,
+        "ORG"
+      ],
+      [
+        123,
+        129,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Phoenix Sports Ventures Pvt Ltd shall pay Rs 1000000 to Virat Kohli for 24 months in Indore.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        56,
+        67,
+        "PARTY"
+      ],
+      [
+        85,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Lakshya Jain to BlueWave Sports Pvt Ltd shall apply across campaigns in Delhi.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        73,
+        "ORG"
+      ],
+      [
+        106,
+        111,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Delhi Capitals shall pay Rs 500000 to Naman Gupta for 10 months in New Delhi.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        38,
+        49,
+        "PARTY"
+      ],
+      [
+        67,
+        76,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Harsh Vardhan under the agreement with Stadium Media Network Pvt Ltd include digital campaigns in Hyderabad.",
+    "entities": [
+      [
+        27,
+        40,
+        "PARTY"
+      ],
+      [
+        66,
+        95,
+        "ORG"
+      ],
+      [
+        125,
+        134,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Summit Sports Advisors LLP shall be worn by Yuvraj Rana during sponsor activations in Indore.",
+    "entities": [
+      [
+        27,
+        53,
+        "ORG"
+      ],
+      [
+        71,
+        82,
+        "PARTY"
+      ],
+      [
+        113,
+        119,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Orion Sports Entertainment Pvt Ltd shall release the appearance fee to Nikhil Menon after the event in Delhi.",
+    "entities": [
+      [
+        0,
+        34,
+        "ORG"
+      ],
+      [
+        71,
+        83,
+        "PARTY"
+      ],
+      [
+        103,
+        108,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Red Bull India and Deepak Yadav shall keep all commercial terms confidential during events in Kochi.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        19,
+        31,
+        "PARTY"
+      ],
+      [
+        94,
+        99,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Crescent Sports Foundation shall release the appearance fee to Abhay Singh after the event in Chennai.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        63,
+        74,
+        "PARTY"
+      ],
+      [
+        94,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Virat Kohli shall not endorse competing brands without written approval from Mumbai Indians.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        77,
+        91,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Red Bull India may schedule media shoots with Pranav Iyer at the stadium in Ranchi.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        46,
+        57,
+        "PARTY"
+      ],
+      [
+        76,
+        82,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Zenith Cricket Holdings Pvt Ltd may schedule media shoots with Varun Reddy at the stadium in Kochi.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        63,
+        74,
+        "PARTY"
+      ],
+      [
+        93,
+        98,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Punjab Kings shall be worn by Shubham Gill during sponsor activations in Nagpur.",
+    "entities": [
+      [
+        27,
+        39,
+        "ORG"
+      ],
+      [
+        57,
+        69,
+        "PARTY"
+      ],
+      [
+        100,
+        106,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Kavya Rao with Chennai Super Kings shall be governed for activities in Kolkata.",
+    "entities": [
+      [
+        23,
+        32,
+        "PARTY"
+      ],
+      [
+        38,
+        57,
+        "ORG"
+      ],
+      [
+        94,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Royal Challengers Bengaluru shall release the appearance fee to Aditya Nair after the event in Dharamshala.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        64,
+        75,
+        "PARTY"
+      ],
+      [
+        95,
+        106,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Kolkata Knight Riders may schedule media shoots with Kavya Rao at the stadium in New Delhi.",
+    "entities": [
+      [
+        0,
+        21,
+        "ORG"
+      ],
+      [
+        53,
+        62,
+        "PARTY"
+      ],
+      [
+        81,
+        90,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Red Bull India and Ankit Sharma shall be referred to arbitration in New Delhi.",
+    "entities": [
+      [
+        20,
+        34,
+        "ORG"
+      ],
+      [
+        39,
+        51,
+        "PARTY"
+      ],
+      [
+        88,
+        97,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Rishabh Bansal under the agreement with Prime Athlete Management Pvt Ltd include digital campaigns in Lucknow.",
+    "entities": [
+      [
+        27,
+        41,
+        "PARTY"
+      ],
+      [
+        67,
+        99,
+        "ORG"
+      ],
+      [
+        129,
+        136,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Royal Tigers Cricket Sports Pvt Ltd and Kavya Rao shall keep all commercial terms confidential during events in Jaipur.",
+    "entities": [
+      [
+        0,
+        35,
+        "ORG"
+      ],
+      [
+        40,
+        49,
+        "PARTY"
+      ],
+      [
+        112,
+        118,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Prime Athlete Management Pvt Ltd and Harsh Vardhan shall keep all commercial terms confidential during events in Jaipur.",
+    "entities": [
+      [
+        0,
+        32,
+        "ORG"
+      ],
+      [
+        37,
+        50,
+        "PARTY"
+      ],
+      [
+        113,
+        119,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Hero Sports Sponsorship Pvt Ltd shall pay Rs 1800000 to Sanya Mehra for 10 months in Nagpur.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        56,
+        67,
+        "PARTY"
+      ],
+      [
+        85,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Samar Gill to Global Sports Marketing Ltd shall apply across campaigns in Indore.",
+    "entities": [
+      [
+        34,
+        44,
+        "PARTY"
+      ],
+      [
+        48,
+        75,
+        "ORG"
+      ],
+      [
+        108,
+        114,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Harsh Vardhan agrees to attend sponsor events organized by Summit Sports Advisors LLP in Chennai.",
+    "entities": [
+      [
+        0,
+        13,
+        "PARTY"
+      ],
+      [
+        59,
+        85,
+        "ORG"
+      ],
+      [
+        89,
+        96,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Red Bull India and Mehul Shah shall be referred to arbitration in Pune.",
+    "entities": [
+      [
+        20,
+        34,
+        "ORG"
+      ],
+      [
+        39,
+        49,
+        "PARTY"
+      ],
+      [
+        86,
+        90,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Lucknow Super Giants appointed Varun Reddy as brand ambassador for league promotions in New Delhi.",
+    "entities": [
+      [
+        0,
+        20,
+        "ORG"
+      ],
+      [
+        31,
+        42,
+        "PARTY"
+      ],
+      [
+        88,
+        97,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Any dispute between Reliance Brands Limited and Abhay Singh shall be referred to arbitration in Chennai.",
+    "entities": [
+      [
+        20,
+        43,
+        "ORG"
+      ],
+      [
+        48,
+        59,
+        "PARTY"
+      ],
+      [
+        96,
+        103,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Aryan Kapoor to BlueWave Sports Pvt Ltd shall apply across campaigns in Delhi.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        73,
+        "ORG"
+      ],
+      [
+        106,
+        111,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Rajasthan Royals appointed Naman Gupta as brand ambassador for league promotions in Kolkata.",
+    "entities": [
+      [
+        0,
+        16,
+        "ORG"
+      ],
+      [
+        27,
+        38,
+        "PARTY"
+      ],
+      [
+        84,
+        91,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "BYJU Sports Marketing Pvt Ltd may schedule media shoots with Dhruv Kapoor at the stadium in New Delhi.",
+    "entities": [
+      [
+        0,
+        29,
+        "ORG"
+      ],
+      [
+        61,
+        73,
+        "PARTY"
+      ],
+      [
+        92,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Hero Sports Sponsorship Pvt Ltd may schedule media shoots with Neil Fernandes at the stadium in Ranchi.",
+    "entities": [
+      [
+        0,
+        31,
+        "ORG"
+      ],
+      [
+        63,
+        77,
+        "PARTY"
+      ],
+      [
+        96,
+        102,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Kabir Sethi shall not endorse competing brands without written approval from Metro League Sports Pvt Ltd.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        77,
+        104,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Mehul Shah shall not endorse competing brands without written approval from Punjab Kings.",
+    "entities": [
+      [
+        0,
+        10,
+        "PARTY"
+      ],
+      [
+        76,
+        88,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "Promotional obligations of Sameer Joshi under the agreement with BlueWave Sports Pvt Ltd include digital campaigns in Pune.",
+    "entities": [
+      [
+        27,
+        39,
+        "PARTY"
+      ],
+      [
+        65,
+        88,
+        "ORG"
+      ],
+      [
+        118,
+        122,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Nikhil Menon to Stadium Media Network Pvt Ltd shall apply across campaigns in Chandigarh.",
+    "entities": [
+      [
+        34,
+        46,
+        "PARTY"
+      ],
+      [
+        50,
+        79,
+        "ORG"
+      ],
+      [
+        112,
+        122,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Ishan Mehta shall report to Phoenix Sports Ventures Pvt Ltd for campaign activity in Kochi.",
+    "entities": [
+      [
+        11,
+        22,
+        "PARTY"
+      ],
+      [
+        39,
+        70,
+        "ORG"
+      ],
+      [
+        96,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Mehul Shah to Sunrisers Hyderabad shall apply across campaigns in Lucknow.",
+    "entities": [
+      [
+        34,
+        44,
+        "PARTY"
+      ],
+      [
+        48,
+        67,
+        "ORG"
+      ],
+      [
+        100,
+        107,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Virat Kohli with Lucknow Super Giants shall be governed for activities in Ahmedabad.",
+    "entities": [
+      [
+        23,
+        34,
+        "PARTY"
+      ],
+      [
+        40,
+        60,
+        "ORG"
+      ],
+      [
+        97,
+        106,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Summit Sports Advisors LLP may schedule media shoots with Aarav Khanna at the stadium in Chennai.",
+    "entities": [
+      [
+        0,
+        26,
+        "ORG"
+      ],
+      [
+        58,
+        70,
+        "PARTY"
+      ],
+      [
+        89,
+        96,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Orion Sports Entertainment Pvt Ltd will provide travel support to Rishabh Bansal for appearances in Pune.",
+    "entities": [
+      [
+        0,
+        34,
+        "ORG"
+      ],
+      [
+        66,
+        80,
+        "PARTY"
+      ],
+      [
+        100,
+        104,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Ishan Mehta shall not endorse competing brands without written approval from Metro League Sports Pvt Ltd.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        77,
+        104,
+        "ORG"
+      ]
+    ]
+  },
+  {
+    "text": "The promotional rights granted by Varun Reddy to Puma India shall apply across campaigns in Hyderabad.",
+    "entities": [
+      [
+        34,
+        45,
+        "PARTY"
+      ],
+      [
+        49,
+        59,
+        "ORG"
+      ],
+      [
+        92,
+        101,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Brand material supplied by Apex Cricket Ventures Pvt Ltd shall be worn by Deepak Yadav during sponsor activations in Ranchi.",
+    "entities": [
+      [
+        27,
+        56,
+        "ORG"
+      ],
+      [
+        74,
+        86,
+        "PARTY"
+      ],
+      [
+        117,
+        123,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Red Bull India shall release the appearance fee to Samar Gill after the event in New Delhi.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        51,
+        61,
+        "PARTY"
+      ],
+      [
+        81,
+        90,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Delhi Capitals appointed Neil Fernandes as brand ambassador for league promotions in New Delhi.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        25,
+        39,
+        "PARTY"
+      ],
+      [
+        85,
+        94,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Omkar Patil agrees to attend sponsor events organized by Gujarat Titans in Pune.",
+    "entities": [
+      [
+        0,
+        11,
+        "PARTY"
+      ],
+      [
+        57,
+        71,
+        "ORG"
+      ],
+      [
+        75,
+        79,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Mumbai Indians shall pay Rs 1200000 to Ankit Sharma for 8 months in Guwahati.",
+    "entities": [
+      [
+        0,
+        14,
+        "ORG"
+      ],
+      [
+        39,
+        51,
+        "PARTY"
+      ],
+      [
+        68,
+        76,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The player Omkar Patil shall report to CEAT Sports Division for campaign activity in Dharamshala.",
+    "entities": [
+      [
+        11,
+        22,
+        "PARTY"
+      ],
+      [
+        39,
+        59,
+        "ORG"
+      ],
+      [
+        85,
+        96,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Chennai Super Kings shall pay Rs 1800000 to Rohit Sharma for 10 months in Ranchi.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        44,
+        56,
+        "PARTY"
+      ],
+      [
+        74,
+        80,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Chennai Super Kings shall pay Rs 1800000 to Abhay Singh for 8 months in Ahmedabad.",
+    "entities": [
+      [
+        0,
+        19,
+        "ORG"
+      ],
+      [
+        44,
+        55,
+        "PARTY"
+      ],
+      [
+        72,
+        81,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The endorsement agreement between Nike India Private Limited and Tarun Shetty was executed in Nagpur.",
+    "entities": [
+      [
+        34,
+        60,
+        "ORG"
+      ],
+      [
+        65,
+        77,
+        "PARTY"
+      ],
+      [
+        94,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "The contract signed by Abhay Singh with Sunrisers Hyderabad shall be governed for activities in Chennai.",
+    "entities": [
+      [
+        23,
+        34,
+        "PARTY"
+      ],
+      [
+        40,
+        59,
+        "ORG"
+      ],
+      [
+        96,
+        103,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Adidas India appointed Ishan Mehta as brand ambassador for league promotions in Kochi.",
+    "entities": [
+      [
+        0,
+        12,
+        "ORG"
+      ],
+      [
+        23,
+        34,
+        "PARTY"
+      ],
+      [
+        80,
+        85,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Rajasthan Royals may schedule media shoots with Yuvraj Rana at the stadium in Indore.",
+    "entities": [
+      [
+        0,
+        16,
+        "ORG"
+      ],
+      [
+        48,
+        59,
+        "PARTY"
+      ],
+      [
+        78,
+        84,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Prime Athlete Management Pvt Ltd will provide travel support to Kabir Sethi for appearances in Delhi.",
+    "entities": [
+      [
+        0,
+        32,
+        "ORG"
+      ],
+      [
+        64,
+        75,
+        "PARTY"
+      ],
+      [
+        95,
+        100,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "Royal Challengers Bengaluru and Rahul Verma shall keep all commercial terms confidential during events in Indore.",
+    "entities": [
+      [
+        0,
+        27,
+        "ORG"
+      ],
+      [
+        32,
+        43,
+        "PARTY"
+      ],
+      [
+        106,
+        112,
+        "LOCATION"
+      ]
+    ]
+  },
+  {
+    "text": "This agreement shall be governed by Indian law.",
+    "entities": []
+  },
+  {
+    "text": "All commercial terms shall remain confidential.",
+    "entities": []
+  },
+  {
+    "text": "Any breach of confidentiality may result in legal action.",
+    "entities": []
+  },
+  {
+    "text": "The contract shall remain valid for twelve months.",
+    "entities": []
+  },
+  {
+    "text": "Payment shall be released within thirty business days.",
+    "entities": []
+  },
+  {
+    "text": "Campaign strategies and brand fees shall not be disclosed.",
+    "entities": []
+  },
+  {
+    "text": "The parties shall cooperate in good faith.",
+    "entities": []
+  },
+  {
+    "text": "Penalty of 15% may be imposed for non-compliance.",
+    "entities": []
+  },
+  {
+    "text": "The agreement may terminate immediately without notice.",
+    "entities": []
+  },
+  {
+    "text": "Disputes shall be resolved through arbitration under Indian law.",
+    "entities": []
   }
 ]
