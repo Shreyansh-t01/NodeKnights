@@ -4,6 +4,7 @@ const { env, featureFlags } = require('../config/env');
 const { getDriveWatchStatus } = require('../services/drive.service');
 const { getGmailPollStatus } = require('../services/gmail.service');
 const { getGoogleConnectorStatus } = require('../services/googleAuth.service');
+const { getCircuitBreakerStatus } = require('../services/genAi.service');
 
 function buildPineconeBaseUrl() {
   return env.pineconeIndexHost.startsWith('http')
@@ -390,6 +391,7 @@ async function getHealth(req, res) {
         configuredProvider: env.genAiProvider,
         model: featureFlags.externalGenAi ? env.genAiModel : null,
         mode: featureFlags.externalGenAi ? 'external-genai' : 'template-fallback',
+        circuitBreaker: getCircuitBreakerStatus(),
       },
     },
   });

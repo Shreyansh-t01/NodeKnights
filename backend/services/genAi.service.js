@@ -20,12 +20,66 @@ const DEFAULT_GEMINI_RESPONSE_MODELS = [
   'gemini-2.5-flash',
 ];
 const GEMINI_RESPONSE_CACHE_LIMIT = 300;
+const GEMINI_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 const geminiResponseCachePath = path.join(env.tempStorageDir, 'local-store', 'gemini-response-cache.json');
 const pendingStructuredRequests = new Map();
 const completedStructuredRequests = new Map();
 let geminiResponseCacheLoaded = false;
 let geminiResponseCacheLoadPromise = null;
 let geminiResponseCachePersistChain = Promise.resolve();
+
+// Circuit breaker for Gemini API
+const CIRCUIT_BREAKER_FAILURE_THRESHOLD = 5;
+const CIRCUIT_BREAKER_TIMEOUT_MS = 60000; // 1 minute
+let circuitBreakerFailures = 0;
+let circuitBreakerLastFailureTime = 0;
+let circuitBreakerState = 'closed'; // 'closed', 'open', 'half-open'
+
+function isCircuitBreakerOpen() {
+  if (circuitBreakerState === 'closed') {
+    return false;
+  }
+
+  if (circuitBreakerState === 'open') {
+    const timeSinceLastFailure = Date.now() - circuitBreakerLastFailureTime;
+    if (timeSinceLastFailure >= CIRCUIT_BREAKER_TIMEOUT_MS) {
+      circuitBreakerState = 'half-open';
+      console.log('Gemini circuit breaker entering half-open state');
+      return false;
+    }
+    return true;
+  }
+
+  return false; // half-open allows one request
+}
+
+function recordCircuitBreakerSuccess() {
+  if (circuitBreakerState === 'half-open') {
+    circuitBreakerState = 'closed';
+    circuitBreakerFailures = 0;
+    console.log('Gemini circuit breaker closed - service recovered');
+  }
+}
+
+function recordCircuitBreakerFailure() {
+  circuitBreakerFailures++;
+  circuitBreakerLastFailureTime = Date.now();
+
+  if (circuitBreakerFailures >= CIRCUIT_BREAKER_FAILURE_THRESHOLD) {
+    circuitBreakerState = 'open';
+    console.warn(`Gemini circuit breaker opened after ${circuitBreakerFailures} failures`);
+  }
+}
+
+function getCircuitBreakerStatus() {
+  return {
+    state: circuitBreakerState,
+    failures: circuitBreakerFailures,
+    lastFailureTime: circuitBreakerLastFailureTime,
+    threshold: CIRCUIT_BREAKER_FAILURE_THRESHOLD,
+    timeoutMs: CIRCUIT_BREAKER_TIMEOUT_MS,
+  };
+}
 
 function isGeminiEnabled() {
   return featureFlags.externalGenAi && env.genAiProvider === 'gemini';
@@ -112,16 +166,21 @@ async function ensureGeminiResponseCacheLoaded() {
 }
 
 async function persistGeminiResponseCache() {
-  const entries = [...completedStructuredRequests.values()]
+  const now = new Date();
+  const validEntries = [...completedStructuredRequests.values()]
+    .filter((entry) => {
+      const cachedAt = new Date(entry.cachedAt || 0);
+      return now - cachedAt <= GEMINI_CACHE_EXPIRY_MS;
+    })
     .sort((left, right) => new Date(right.cachedAt || 0) - new Date(left.cachedAt || 0))
     .slice(0, GEMINI_RESPONSE_CACHE_LIMIT);
 
   completedStructuredRequests.clear();
-  entries.forEach((entry) => {
+  validEntries.forEach((entry) => {
     completedStructuredRequests.set(entry.key, entry);
   });
 
-  await writeJsonFile(geminiResponseCachePath, { entries });
+  await writeJsonFile(geminiResponseCachePath, { entries: validEntries });
 }
 
 function queueGeminiResponseCachePersist() {
@@ -134,7 +193,21 @@ function queueGeminiResponseCachePersist() {
 
 async function getCompletedStructuredRequest(requestKey) {
   await ensureGeminiResponseCacheLoaded();
-  return completedStructuredRequests.get(requestKey)?.value;
+  const cached = completedStructuredRequests.get(requestKey);
+
+  if (!cached) {
+    return undefined;
+  }
+
+  // Check if cache entry has expired
+  const cachedAt = new Date(cached.cachedAt || 0);
+  const now = new Date();
+  if (now - cachedAt > GEMINI_CACHE_EXPIRY_MS) {
+    completedStructuredRequests.delete(requestKey);
+    return undefined;
+  }
+
+  return cached.value;
 }
 
 async function setCompletedStructuredRequest(requestKey, payload = {}) {
@@ -516,6 +589,15 @@ async function generateStructuredObject({
     });
   }
 
+  // Check circuit breaker
+  if (isCircuitBreakerOpen()) {
+    throw new AppError(503, 'Gemini service is temporarily unavailable due to repeated failures.', {
+      circuitBreakerState,
+      failures: circuitBreakerFailures,
+      lastFailureTime: circuitBreakerLastFailureTime,
+    });
+  }
+
   const requestKey = buildRequestKey({ prompt, responseSchema, label, requestOptions });
   const cachedResponse = await getCompletedStructuredRequest(requestKey);
 
@@ -533,12 +615,16 @@ async function generateStructuredObject({
     label,
     requestOptions,
   }).then(async (value) => {
+    recordCircuitBreakerSuccess();
     await setCompletedStructuredRequest(requestKey, {
       label,
       value,
     });
 
     return value;
+  }).catch(async (error) => {
+    recordCircuitBreakerFailure();
+    throw error;
   }).finally(() => {
     pendingStructuredRequests.delete(requestKey);
   });
@@ -550,4 +636,5 @@ async function generateStructuredObject({
 module.exports = {
   generateStructuredObject,
   isGeminiEnabled,
+  getCircuitBreakerStatus,
 };
