@@ -1325,6 +1325,20 @@ button {
   margin-top: 1rem;
 }
 
+.insight-generated-copy {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.insight-generated-copy p {
+  margin: 0 0 0.55rem;
+}
+
+.insight-generated-copy p:last-child {
+  margin-bottom: 0;
+}
+
 .insight-rule-item + .insight-rule-item {
   margin-top: 0.75rem;
 }

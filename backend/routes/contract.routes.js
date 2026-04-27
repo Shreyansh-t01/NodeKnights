@@ -6,6 +6,7 @@ const {
   listContracts,
   getContract,
   getInsights,
+  generateInsights,
   deleteContract,
 } = require('../controllers/contract.controller');
 
@@ -16,6 +17,6 @@ router.get('/', listContracts);
 router.get('/:contractId', getContract);
 router.delete('/:contractId', deleteContract);
 router.get('/:contractId/insights', getInsights);
-router.post('/:contractId/insights', getInsights);
+router.post('/:contractId/insights/generate', generateInsights);
 
 module.exports = router;

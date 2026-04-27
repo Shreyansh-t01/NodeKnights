@@ -41,7 +41,7 @@ function ContractsPage({
         </div>
 
         <p className="contract-meta">
-          Each tracked contract now carries its own clause-level review. Open a contract to inspect the clause board, or jump straight into side-by-side AI insights from the card itself.
+          Each tracked contract now carries its own clause-level review. Open a contract to inspect the clause board, or jump into the insights workspace when you want on-demand AI review for its high-risk clauses.
         </p>
       </section>
 

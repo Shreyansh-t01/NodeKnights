@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import StatusPill from './StatusPill';
+import { getInsightNotice, getInsightStatus } from '../lib/contractInsights';
 
 function formatClauseLabel(clause) {
   return clause.clauseLabel || clause.clauseType?.replace(/_/g, ' ') || 'Clause';
@@ -26,16 +27,6 @@ function formatExtractedValues(extractedValues = {}) {
   }).join(' | ');
 }
 
-function getInsightPipelineMessage(contract = {}) {
-  const step = (contract.pipeline || []).find((item) => item.key === 'insights');
-
-  if (step && ['pending', 'warning', 'failed'].includes(step.status)) {
-    return step.detail || 'Gemini insights are not generated yet for this contract.';
-  }
-
-  return '';
-}
-
 function ContractReviewCard({
   contract,
   isExpanded,
@@ -53,7 +44,8 @@ function ContractReviewCard({
 
   const clauses = detailContract?.clauses || [];
   const isDetailLoaded = selectedContract?.id === contract.id;
-  const insightMessage = getInsightPipelineMessage(detailContract || contract);
+  const insightStatus = getInsightStatus(detailContract || contract);
+  const insightMessage = insightStatus === 'ready' ? '' : getInsightNotice(detailContract || contract);
 
   function handleClauseToggle(clauseId) {
     setOpenClauseId((current) => (current === clauseId ? null : clauseId));

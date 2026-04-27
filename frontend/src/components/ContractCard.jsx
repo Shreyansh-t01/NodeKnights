@@ -1,14 +1,5 @@
 import StatusPill from './StatusPill';
-
-function getInsightPipelineMessage(contract = {}) {
-  const step = (contract.pipeline || []).find((item) => item.key === 'insights');
-
-  if (step && ['pending', 'warning', 'failed'].includes(step.status)) {
-    return step.detail || 'Gemini insights are not generated yet for this contract.';
-  }
-
-  return '';
-}
+import { getInsightNotice, getInsightStatus } from '../lib/contractInsights';
 
 function ContractCard({
   contract,
@@ -33,9 +24,9 @@ function ContractCard({
       <p className="contract-meta">
         Dates: {contract.dates.length ? contract.dates.join(', ') : 'Awaiting extraction'}
       </p>
-      {getInsightPipelineMessage(contract) ? (
+      {getInsightStatus(contract) !== 'ready' ? (
         <p className="contract-meta contract-insight-note">
-          {getInsightPipelineMessage(contract)}
+          {getInsightNotice(contract)}
         </p>
       ) : null}
       <div className="contract-card-footer">

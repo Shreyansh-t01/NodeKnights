@@ -5,6 +5,7 @@ function InsightsPage({
   insights,
   insightsPending,
   insightsError,
+  onGenerateInsights,
   onNavigate,
 }) {
   return (
@@ -13,13 +14,13 @@ function InsightsPage({
         <section className="panel">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">AI Insights</p>
+              <p className="eyebrow">Insights Workspace</p>
               <h3>Open insights from a contract card</h3>
             </div>
           </div>
 
           <p className="empty-state">
-            Choose a contract from the Contracts page and use the Get Insights button to open the full comparison and AI review flow here.
+            Choose a contract from the Contracts page to open the review workspace here. AI insight generation happens only after you explicitly request it for that contract.
           </p>
 
           <div className="hero-actions">
@@ -34,6 +35,7 @@ function InsightsPage({
           insights={insights}
           pending={insightsPending}
           error={insightsError}
+          onGenerateInsights={onGenerateInsights}
         />
       ) : null}
     </section>

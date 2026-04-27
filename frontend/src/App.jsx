@@ -2,6 +2,7 @@ import { startTransition, useDeferredValue, useEffect, useEffectEvent, useMemo, 
 
 import AppNav from './components/AppNav';
 import { api } from './lib/api';
+import { buildLocalInsightsWorkspace } from './lib/contractInsights';
 import {
   dashboardMetrics,
   connectorCards,
@@ -40,6 +41,7 @@ function normalizeContractSummary(contract) {
     dates: contract.metadata?.dates || contract.dates || [],
     riskCounts: contract.metadata?.riskCounts || contract.riskCounts || { low: 0, medium: 0, high: 0 },
     pipeline: contract.pipeline || [],
+    insightState: contract.insightState || null,
     clauses: contract.clauses || [],
     risks: contract.risks || [],
     textPreview: contract.textPreview || '',
@@ -58,64 +60,8 @@ function normalizeContractDetail(bundle) {
     clauses: bundle.clauses || [],
     risks: bundle.risks || [],
     pipeline: bundle.contract?.pipeline || [],
+    insightState: bundle.contract?.insightState || summary.insightState || null,
     artifacts: bundle.contract?.artifacts || summary.artifacts || {},
-  };
-}
-
-function getContractPipelineStep(contract = null, key = '') {
-  return (contract?.pipeline || []).find((step) => step.key === key) || null;
-}
-
-function getContractInsightNotice(contract = null, insights = null) {
-  const insightStep = getContractPipelineStep(contract, 'insights');
-
-  if (insightStep && ['pending', 'warning', 'failed'].includes(insightStep.status)) {
-    return insightStep.detail || 'Gemini insights are not generated yet for this contract.';
-  }
-
-  if (insights?.degraded && insights?.geminiError) {
-    return 'Gemini insights are not generated yet for this contract.';
-  }
-
-  return '';
-}
-
-function buildEmptyInsights(contract = null, options = {}) {
-  if (!contract) {
-    return {
-      headline: 'Upload a contract to generate AI insights.',
-      summary: 'The insights workspace will populate after a live contract is processed by the backend.',
-      topRiskItems: [],
-      nextSteps: ['Open Intake and upload a contract to start the analysis pipeline.'],
-      clauseInsights: [],
-    };
-  }
-
-  const unavailableMessage = options.message || getContractInsightNotice(contract);
-  const insightStep = getContractPipelineStep(contract, 'insights');
-  const insightsPending = insightStep?.status === 'pending' || Boolean(options.pending);
-
-  return {
-    headline: `${contract.title} is ready for review.`,
-    summary: unavailableMessage || 'No live insight response is available yet for this contract.',
-    topRiskItems: [],
-    nextSteps: insightsPending
-      ? [
-        'Review the extracted clauses from the contract card.',
-        'Refresh this workspace shortly for Gemini-backed clause insights.',
-        'Use semantic search or manual review in the meantime.',
-      ]
-      : unavailableMessage
-      ? [
-        'Review the extracted clauses from the contract card.',
-        'Retry Gemini insights later for this contract.',
-        'Use semantic search or manual review in the meantime.',
-      ]
-      : [
-        'Refresh this view after processing completes.',
-        'Run semantic search to inspect clause language manually.',
-      ],
-    clauseInsights: [],
   };
 }
 
@@ -460,7 +406,7 @@ function WorkspaceApp({ authUser, onLogout }) {
   const [contracts, setContracts] = useState([]);
   const [selectedContractId, setSelectedContractId] = useState(null);
   const [selectedContract, setSelectedContract] = useState(null);
-  const [contractInsights, setContractInsights] = useState(() => buildEmptyInsights());
+  const [contractInsights, setContractInsights] = useState(() => buildLocalInsightsWorkspace());
   const [insightsPending, setInsightsPending] = useState(false);
   const [insightsError, setInsightsError] = useState('');
   const [bootMode, setBootMode] = useState('loading');
@@ -502,6 +448,60 @@ function WorkspaceApp({ authUser, onLogout }) {
     () => documentResults.find((document) => document.id === selectedDocumentId) || documentResults[0] || null,
     [documentResults, selectedDocumentId],
   );
+
+  function applyInsightPayload(payload, options = {}) {
+    const hydratedContract = normalizeContractDetail({
+      contract: payload.contract,
+      clauses: payload.clauses,
+      risks: payload.risks,
+    });
+    const normalizedSummary = normalizeContractSummary(hydratedContract);
+    const nextInsights = payload.insights || buildLocalInsightsWorkspace(hydratedContract);
+    const nextDocument = buildDocumentRecordFromContract(hydratedContract);
+
+    freshInsightsRef.current = {
+      contractId: hydratedContract.id,
+      updatedAt: hydratedContract.updatedAt || '',
+    };
+
+    startTransition(() => {
+      setContracts((current) => {
+        const hasExistingContract = current.some((item) => item.id === hydratedContract.id);
+
+        if (options.promote || !hasExistingContract) {
+          return [normalizedSummary, ...current.filter((item) => item.id !== hydratedContract.id)];
+        }
+
+        return current.map((item) => (
+          item.id === hydratedContract.id
+            ? normalizedSummary
+            : item
+        ));
+      });
+
+      setSelectedContractId(hydratedContract.id);
+      setSelectedContract(hydratedContract);
+      setContractInsights(nextInsights);
+
+      if (options.updateDocumentResults) {
+        setDocumentResults((current) => {
+          const hasExistingDocument = current.some((item) => item.id === hydratedContract.id);
+
+          if (options.promote || !hasExistingDocument) {
+            return [nextDocument, ...current.filter((item) => item.id !== hydratedContract.id)];
+          }
+
+          return current.map((item) => (
+            item.id === hydratedContract.id
+              ? nextDocument
+              : item
+          ));
+        });
+      }
+    });
+
+    return hydratedContract;
+  }
 
   useEffect(() => {
     if (connectorNotice?.tone === 'success') {
@@ -556,7 +556,7 @@ function WorkspaceApp({ authUser, onLogout }) {
         } else {
           setSelectedContractId(null);
           setSelectedContract(null);
-          setContractInsights(buildEmptyInsights());
+          setContractInsights(buildLocalInsightsWorkspace());
           setSearchResult(buildEmptySearchResult(query));
           setInsightsError('');
           setSearchError('');
@@ -597,9 +597,43 @@ function WorkspaceApp({ authUser, onLogout }) {
     freshInsightsRef.current = { contractId: '', updatedAt: '' };
     setSelectedContractId(contractId);
     setSelectedContract(summary);
-    setContractInsights(buildEmptyInsights(summary));
+    setContractInsights(buildLocalInsightsWorkspace(summary));
     setInsightsError('');
     navigate('/insights');
+  }
+
+  async function handleGenerateInsights() {
+    if (!selectedContractId || insightsPending) {
+      return;
+    }
+
+    setInsightsPending(true);
+    setInsightsError('');
+
+    if (selectedContract) {
+      startTransition(() => {
+        setContractInsights(buildLocalInsightsWorkspace({
+          ...selectedContract,
+          insightState: {
+            ...(selectedContract.insightState || {}),
+            status: 'generating',
+          },
+        }));
+      });
+    }
+
+    try {
+      const response = await api.generateContractInsights(selectedContractId);
+      applyInsightPayload(response.data);
+      setInsightsError('');
+    } catch (error) {
+      startTransition(() => {
+        setContractInsights(buildLocalInsightsWorkspace(selectedContract));
+      });
+      setInsightsError(error.message || 'Insight generation is unavailable right now.');
+    } finally {
+      setInsightsPending(false);
+    }
   }
 
   async function handleConnectorAction(connector) {
@@ -664,7 +698,7 @@ function WorkspaceApp({ authUser, onLogout }) {
           setContracts([]);
           setSelectedContractId(null);
           setSelectedContract(null);
-          setContractInsights(buildEmptyInsights());
+          setContractInsights(buildLocalInsightsWorkspace());
           setSearchResult(buildEmptySearchResult(query));
           setInsightsError('');
           setSearchError('');
@@ -696,7 +730,7 @@ function WorkspaceApp({ authUser, onLogout }) {
           } else {
             setSelectedContractId(null);
             setSelectedContract(null);
-            setContractInsights(buildEmptyInsights());
+            setContractInsights(buildLocalInsightsWorkspace());
             setSearchResult(buildEmptySearchResult(query));
             setInsightsError('');
             setSearchError('');
@@ -708,7 +742,7 @@ function WorkspaceApp({ authUser, onLogout }) {
           setContracts([]);
           setSelectedContractId(null);
           setSelectedContract(null);
-          setContractInsights(buildEmptyInsights());
+          setContractInsights(buildLocalInsightsWorkspace());
           setSearchResult(buildEmptySearchResult(query));
           setInsightsError('');
           setSearchError('');
@@ -807,7 +841,7 @@ function WorkspaceApp({ authUser, onLogout }) {
       setInsightsPending(false);
       setInsightsError('');
       if (!selectedContractId) {
-        setContractInsights(buildEmptyInsights());
+        setContractInsights(buildLocalInsightsWorkspace());
       }
       return undefined;
     }
@@ -830,15 +864,14 @@ function WorkspaceApp({ authUser, onLogout }) {
         const response = await api.getContractInsights(selectedContractId);
 
         if (!ignore) {
-          startTransition(() => {
-            setContractInsights(response.data);
-            setInsightsError('');
-          });
+          applyInsightPayload(response.data);
+          setInsightsError('');
         }
       } catch (error) {
         if (!ignore) {
           startTransition(() => {
-            setInsightsError(error.message || 'Live insights are unavailable right now.');
+            setContractInsights(buildLocalInsightsWorkspace(selectedContract));
+            setInsightsError(error.message || 'Stored insights are unavailable right now.');
           });
         }
       } finally {
@@ -1082,26 +1115,13 @@ function WorkspaceApp({ authUser, onLogout }) {
       formData.append('file', uploadFile);
 
       const response = await api.uploadContract(formData);
-      const uploadedContract = normalizeContractDetail({
-        contract: response.data.contract,
-        clauses: response.data.clauses,
-        risks: response.data.risks,
+      const uploadedContract = applyInsightPayload(response.data, {
+        promote: true,
+        updateDocumentResults: true,
       });
-      freshInsightsRef.current = {
-        contractId: uploadedContract.id,
-        updatedAt: uploadedContract.updatedAt || '',
-      };
 
       startTransition(() => {
-        setContracts((current) => [uploadedContract, ...current.filter((item) => item.id !== uploadedContract.id)]);
-        setSelectedContractId(uploadedContract.id);
-        setSelectedContract(uploadedContract);
-        setContractInsights(response.data.insights || buildEmptyInsights(uploadedContract));
         setSearchResult(buildEmptySearchResult(query));
-        setDocumentResults((current) => [
-          buildDocumentRecordFromContract(uploadedContract),
-          ...current.filter((item) => item.id !== uploadedContract.id),
-        ]);
         setSelectedDocumentId(uploadedContract.id);
         setBootMode('live');
         setUploadFile(null);
@@ -1162,7 +1182,7 @@ function WorkspaceApp({ authUser, onLogout }) {
         setDocumentError('');
 
         if (selectedContractId === contractId) {
-          setContractInsights(nextSelectedSummary ? buildEmptyInsights(nextSelectedSummary) : buildEmptyInsights());
+          setContractInsights(nextSelectedSummary ? buildLocalInsightsWorkspace(nextSelectedSummary) : buildLocalInsightsWorkspace());
         }
 
         setDocumentResults((current) => current.filter((document) => document.id !== contractId));
@@ -1226,7 +1246,7 @@ function WorkspaceApp({ authUser, onLogout }) {
       if (summary) {
         setSelectedContractId(summary.id);
         setSelectedContract(summary);
-        setContractInsights(buildEmptyInsights(summary));
+        setContractInsights(buildLocalInsightsWorkspace(summary));
       } else {
         try {
           const response = await api.getContractById(notification.contractId);
@@ -1239,7 +1259,7 @@ function WorkspaceApp({ authUser, onLogout }) {
             ]);
             setSelectedContractId(hydratedContract.id);
             setSelectedContract(hydratedContract);
-            setContractInsights(buildEmptyInsights(hydratedContract));
+            setContractInsights(buildLocalInsightsWorkspace(hydratedContract));
             setDocumentResults((current) => [
               buildDocumentRecordFromContract(hydratedContract),
               ...current.filter((item) => item.id !== hydratedContract.id),
@@ -1288,6 +1308,7 @@ function WorkspaceApp({ authUser, onLogout }) {
         insights={contractInsights}
         insightsPending={insightsPending}
         insightsError={insightsError}
+        onGenerateInsights={handleGenerateInsights}
         onNavigate={navigate}
       />
     );

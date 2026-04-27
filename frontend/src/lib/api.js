@@ -122,11 +122,11 @@ export const api = {
   deleteContract: (contractId) => request(`/contracts/${contractId}`, {
     method: 'DELETE',
   }),
-  getContractInsights: (contractId, clauseId) => request(
-    clauseId
-      ? `/contracts/${contractId}/insights?clauseId=${encodeURIComponent(clauseId)}`
-      : `/contracts/${contractId}/insights`
-  ),
+  getContractInsights: (contractId) => request(`/contracts/${contractId}/insights`),
+  generateContractInsights: (contractId) => request(`/contracts/${contractId}/insights/generate`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  }),
   semanticSearch: (payload) => request('/search/semantic', {
     method: 'POST',
     body: JSON.stringify(payload),
