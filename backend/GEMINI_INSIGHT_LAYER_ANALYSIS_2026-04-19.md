@@ -1,5 +1,7 @@
 # Gemini Insight Layer Analysis
 
+Historical note: this file describes an older backend state from April 19, 2026. The current runtime no longer uses Gemini for embeddings; embeddings now resolve through Pinecone integrated text indexing/search or the deterministic local fallback path.
+
 Date: 2026-04-19
 
 ## Short Answer

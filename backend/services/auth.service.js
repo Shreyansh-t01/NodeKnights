@@ -2,6 +2,7 @@ const crypto = require('node:crypto');
 
 const AppError = require('../errors/AppError');
 const { env } = require('../config/env');
+const { firestore, firestoreStatus } = require('../config/firebase');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
 
 const STORE_FALLBACK = {
@@ -102,6 +103,23 @@ function parseToken(token = '') {
 }
 
 async function readAuthStore() {
+  if (firestoreStatus.enabled && firestore) {
+    try {
+      const usersSnapshot = await firestore.collection('auth').doc('users').get();
+      const sessionsSnapshot = await firestore.collection('auth').doc('sessions').get();
+      
+      const users = usersSnapshot.exists ? usersSnapshot.data().users || [] : [];
+      const sessions = sessionsSnapshot.exists ? sessionsSnapshot.data().sessions || [] : [];
+      
+      return {
+        users: Array.isArray(users) ? users : [],
+        sessions: Array.isArray(sessions) ? sessions : [],
+      };
+    } catch (error) {
+      console.warn('Failed to read auth store from Firestore, falling back to local:', error.message);
+    }
+  }
+
   const store = await readJsonFile(env.authUserStorePath, STORE_FALLBACK);
 
   return {
@@ -111,6 +129,18 @@ async function readAuthStore() {
 }
 
 async function writeAuthStore(store) {
+  if (firestoreStatus.enabled && firestore) {
+    try {
+      const batch = firestore.batch();
+      batch.set(firestore.collection('auth').doc('users'), { users: store.users || [] });
+      batch.set(firestore.collection('auth').doc('sessions'), { sessions: store.sessions || [] });
+      await batch.commit();
+      return;
+    } catch (error) {
+      console.warn('Failed to write auth store to Firestore, falling back to local:', error.message);
+    }
+  }
+
   await writeJsonFile(env.authUserStorePath, {
     users: store.users || [],
     sessions: store.sessions || [],
