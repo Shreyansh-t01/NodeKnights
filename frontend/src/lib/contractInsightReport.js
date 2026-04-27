@@ -1,3 +1,5 @@
+import { getInsightNotice, getInsightStatus } from './contractInsights';
+
 const PDF_PAGE_WIDTH = 595.28;
 const PDF_PAGE_HEIGHT = 841.89;
 const PDF_MARGIN_X = 48;
@@ -22,20 +24,6 @@ function formatClauseType(value = 'Clause') {
 
 function renderClauseBody(clause, fallback = 'Clause text is unavailable.') {
   return clause?.clauseTextFull || clause?.clauseTextSummary || clause?.clauseText || fallback;
-}
-
-function getInsightNotice(contract, insights) {
-  const step = (contract?.pipeline || []).find((item) => item.key === 'insights');
-
-  if (step && ['warning', 'failed'].includes(step.status)) {
-    return step.detail || 'Gemini insights are not generated yet for this contract.';
-  }
-
-  if (insights?.degraded && insights?.geminiError) {
-    return 'Gemini insights are not generated yet for this contract.';
-  }
-
-  return '';
 }
 
 function normalizePdfText(value = '') {
@@ -248,8 +236,11 @@ function formatRiskCounts(contract = {}) {
 }
 
 function buildInsightReportBlocks({ contract, insights, pending, error }) {
-  const summaryHeadline = pending ? 'Refreshing insights...' : insights?.headline || 'Contract insight summary';
-  const summaryText = error || insights?.summary || 'Insight summary will appear here after analysis completes.';
+  const insightStatus = getInsightStatus(contract, insights);
+  const summaryHeadline = insightStatus === 'generating'
+    ? 'Generating insights...'
+    : insights?.headline || 'Contract insight summary';
+  const summaryText = error || insights?.summary || 'Insight content will appear here after you request generation.';
   const insightNotice = getInsightNotice(contract, insights);
   const blocks = [
     buildTextBlock('Contract Analysis Report', {
@@ -333,8 +324,8 @@ function buildInsightReportBlocks({ contract, insights, pending, error }) {
     }),
   );
 
-  if (pending) {
-    blocks.push(buildTextBlock('The latest insight refresh was still running when this report was generated.', {
+  if (pending || insightStatus === 'generating') {
+    blocks.push(buildTextBlock('Insight generation was still running when this report was generated.', {
       marginAfter: 6,
     }));
   }
@@ -489,7 +480,7 @@ function buildInsightReportBlocks({ contract, insights, pending, error }) {
     });
   } else {
     blocks.push(buildTextBlock(
-      insightNotice || 'No automatic clause insights were generated because this contract does not currently have any high-risk clauses.',
+      insightNotice || 'No clause insight cards are available yet for this contract.',
       {
         marginAfter: 4,
       },

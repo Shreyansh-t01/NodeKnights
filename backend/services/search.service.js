@@ -10,6 +10,7 @@ const { saveContractCachedInsights } = require('./contract.repository');
 const { getContractDetails } = require('./contract.service');
 
 const SEMANTIC_ANSWER_CACHE_LIMIT = 20;
+const SEMANTIC_FALLBACK_CACHE_TTL_MS = 10 * 60 * 1000;
 
 function normalizeSearchMatch(match = {}) {
   return {
@@ -35,6 +36,46 @@ function isReusableGeminiSemanticAnswer(reasoning) {
       && !reasoning.degraded
       && reasoning.answer,
   );
+}
+
+function hasSemanticAnswerPayload(reasoning) {
+  return Boolean(
+    reasoning
+      && typeof reasoning.answer === 'string'
+      && reasoning.answer.trim()
+      && Array.isArray(reasoning.recommendations)
+      && Array.isArray(reasoning.supportingMatches),
+  );
+}
+
+function isReusableCachedFallbackSemanticAnswer(reasoning) {
+  if (!hasSemanticAnswerPayload(reasoning)) {
+    return false;
+  }
+
+  const provider = String(reasoning.provider || '');
+
+  if (!['local-derived', 'template-fallback', 'retrieval-only'].includes(provider)) {
+    return false;
+  }
+
+  const cachedAtMs = Date.parse(reasoning.cachedAt || '');
+
+  return Number.isFinite(cachedAtMs)
+    && (Date.now() - cachedAtMs) <= SEMANTIC_FALLBACK_CACHE_TTL_MS;
+}
+
+function isReusableCachedSemanticAnswer(reasoning) {
+  return isReusableGeminiSemanticAnswer(reasoning)
+    || isReusableCachedFallbackSemanticAnswer(reasoning);
+}
+
+function shouldPersistSemanticAnswer(reasoning) {
+  return isReusableGeminiSemanticAnswer(reasoning)
+    || (
+      hasSemanticAnswerPayload(reasoning)
+      && ['local-derived', 'template-fallback', 'retrieval-only'].includes(String(reasoning.provider || ''))
+    );
 }
 
 function buildSemanticCacheKey({ query, matches = [] }) {
@@ -138,7 +179,7 @@ async function runSemanticSearch({ query, contractId, topK = 5 }) {
     ? contractBundle?.contract?.cachedInsights?.semanticAnswers?.[semanticCacheKey]
     : null;
 
-  if (isReusableGeminiSemanticAnswer(cachedReasoning)) {
+  if (isReusableCachedSemanticAnswer(cachedReasoning)) {
     return {
       query,
       matches: normalizedMatches,
@@ -152,7 +193,7 @@ async function runSemanticSearch({ query, contractId, topK = 5 }) {
     contract,
   });
 
-  if (contractId && semanticCacheKey && isReusableGeminiSemanticAnswer(reasoning)) {
+  if (contractId && semanticCacheKey && shouldPersistSemanticAnswer(reasoning)) {
     await saveContractCachedInsights(contractId, {
       semanticAnswers: buildSemanticAnswersPatch(
         contractBundle?.contract?.cachedInsights?.semanticAnswers || {},

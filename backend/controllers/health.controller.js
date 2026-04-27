@@ -4,6 +4,7 @@ const { env, featureFlags } = require('../config/env');
 const { getDriveWatchStatus } = require('../services/drive.service');
 const { getGmailPollStatus } = require('../services/gmail.service');
 const { getGoogleConnectorStatus } = require('../services/googleAuth.service');
+const { getCircuitBreakerStatus } = require('../services/genAi.service');
 
 function buildPineconeBaseUrl() {
   return env.pineconeIndexHost.startsWith('http')
@@ -358,7 +359,11 @@ async function getHealth(req, res) {
       mlService: mlServiceStatus,
       pinecone: {
         enabled: featureFlags.pinecone,
-        mode: featureFlags.pinecone ? 'pinecone' : 'local-vector-fallback',
+        mode: featureFlags.pinecone
+          ? (featureFlags.pineconeIntegratedEmbedding ? 'pinecone-integrated' : 'pinecone')
+          : 'local-vector-fallback',
+        embeddingProvider: env.embeddingProvider,
+        embeddingModel: env.pineconeIntegratedModel || null,
         namespaces: {
           contracts: env.pineconeContractNamespace,
           precedents: env.pineconePrecedentNamespace,
@@ -386,6 +391,7 @@ async function getHealth(req, res) {
         configuredProvider: env.genAiProvider,
         model: featureFlags.externalGenAi ? env.genAiModel : null,
         mode: featureFlags.externalGenAi ? 'external-genai' : 'template-fallback',
+        circuitBreaker: getCircuitBreakerStatus(),
       },
     },
   });

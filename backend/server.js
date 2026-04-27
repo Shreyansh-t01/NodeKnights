@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const { env } = require('./config/env');
 const healthRoutes = require('./routes/health.routes');
 const authRoutes = require('./routes/auth.routes');
+const publicConnectorRoutes = require('./routes/publicConnector.routes');
 const contractRoutes = require('./routes/contract.routes');
 const connectorRoutes = require('./routes/connector.routes');
 const notificationRoutes = require('./routes/notification.routes');
@@ -64,6 +65,7 @@ app.get('/', (req, res) => {
 });
 
 app.use(`${env.apiPrefix}/auth`, authRoutes);
+app.use(`${env.apiPrefix}/connectors`, publicConnectorRoutes);
 app.use(env.apiPrefix, authenticate);
 app.use(`${env.apiPrefix}/health`, healthRoutes);
 app.use(`${env.apiPrefix}/contracts`, contractRoutes);

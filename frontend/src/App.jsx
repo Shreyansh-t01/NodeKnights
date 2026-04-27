@@ -3,6 +3,7 @@ import { startTransition, useDeferredValue, useEffect, useEffectEvent, useMemo, 
 
 import AppNav from './components/AppNav';
 import { api } from './lib/api';
+import { buildLocalInsightsWorkspace } from './lib/contractInsights';
 import {
   dashboardMetrics,
   connectorCards,
@@ -42,6 +43,7 @@ function normalizeContractSummary(contract) {
     dates: contract.metadata?.dates || contract.dates || [],
     riskCounts: contract.metadata?.riskCounts || contract.riskCounts || { low: 0, medium: 0, high: 0 },
     pipeline: contract.pipeline || [],
+    insightState: contract.insightState || null,
     clauses: contract.clauses || [],
     risks: contract.risks || [],
     textPreview: contract.textPreview || '',
@@ -60,56 +62,8 @@ function normalizeContractDetail(bundle) {
     clauses: bundle.clauses || [],
     risks: bundle.risks || [],
     pipeline: bundle.contract?.pipeline || [],
+    insightState: bundle.contract?.insightState || summary.insightState || null,
     artifacts: bundle.contract?.artifacts || summary.artifacts || {},
-  };
-}
-
-function getContractPipelineStep(contract = null, key = '') {
-  return (contract?.pipeline || []).find((step) => step.key === key) || null;
-}
-
-function getContractInsightNotice(contract = null, insights = null) {
-  const insightStep = getContractPipelineStep(contract, 'insights');
-
-  if (insightStep && ['warning', 'failed'].includes(insightStep.status)) {
-    return insightStep.detail || 'Gemini insights are not generated yet for this contract.';
-  }
-
-  if (insights?.degraded && insights?.geminiError) {
-    return 'Gemini insights are not generated yet for this contract.';
-  }
-
-  return '';
-}
-
-function buildEmptyInsights(contract = null, options = {}) {
-  if (!contract) {
-    return {
-      headline: 'Upload a contract to generate AI insights.',
-      summary: 'The insights workspace will populate after a live contract is processed by the backend.',
-      topRiskItems: [],
-      nextSteps: ['Open Intake and upload a contract to start the analysis pipeline.'],
-      clauseInsights: [],
-    };
-  }
-
-  const unavailableMessage = options.message || getContractInsightNotice(contract);
-
-  return {
-    headline: `${contract.title} is ready for review.`,
-    summary: unavailableMessage || 'No live insight response is available yet for this contract.',
-    topRiskItems: [],
-    nextSteps: unavailableMessage
-      ? [
-        'Review the extracted clauses from the contract card.',
-        'Retry Gemini insights later for this contract.',
-        'Use semantic search or manual review in the meantime.',
-      ]
-      : [
-        'Refresh this view after processing completes.',
-        'Run semantic search to inspect clause language manually.',
-      ],
-    clauseInsights: [],
   };
 }
 
@@ -127,7 +81,62 @@ function buildEmptySearchResult(query = '') {
   };
 }
 
-function buildConnectorState(health) {
+function buildGoogleOAuthNoticeFromUrl() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const url = new URL(window.location.href);
+  const status = String(url.searchParams.get('google_oauth') || '').trim().toLowerCase();
+
+  if (!status) {
+    return null;
+  }
+
+  const message = String(url.searchParams.get('google_oauth_message') || '').trim();
+
+  return {
+    tone: status === 'success' ? 'success' : 'error',
+    message: message || (
+      status === 'success'
+        ? 'Google Drive and Gmail access is connected.'
+        : 'Google consent did not complete. Please try again.'
+    ),
+  };
+}
+
+function consumeGoogleOAuthNotice() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const notice = buildGoogleOAuthNoticeFromUrl();
+
+  if (!notice) {
+    return null;
+  }
+
+  const url = new URL(window.location.href);
+  url.searchParams.delete('google_oauth');
+  url.searchParams.delete('google_oauth_message');
+  const nextSearch = url.searchParams.toString();
+  const nextUrl = `${url.pathname}${nextSearch ? `?${nextSearch}` : ''}${url.hash}`;
+
+  window.history.replaceState({}, '', nextUrl);
+  return notice;
+}
+
+function buildGoogleConnectorAction(returnTo = '/intake') {
+  return {
+    actionId: 'connect-google',
+    actionLabel: 'Connect Google',
+    actionPendingLabel: 'Opening Google...',
+    actionHint: 'Lexora will send you to Google and return you to this workspace after consent finishes.',
+    actionReturnTo: returnTo,
+  };
+}
+
+function buildConnectorState(health, returnTo = '/intake') {
   if (!health) {
     return connectorCards.map((connector) => ({
       ...connector,
@@ -151,6 +160,7 @@ function buildConnectorState(health) {
           ...connector,
           status: 'configure',
           description: 'Google OAuth is configured, but the backend still needs to complete the browser consent flow.',
+          ...buildGoogleConnectorAction(returnTo),
         };
       }
 
@@ -191,6 +201,7 @@ function buildConnectorState(health) {
           ...connector,
           status: 'configure',
           description: 'Google OAuth is configured, but the backend still needs to complete the browser consent flow.',
+          ...buildGoogleConnectorAction(returnTo),
         };
       }
 
@@ -397,7 +408,7 @@ function WorkspaceApp({ authUser, onLogout }) {
   const [contracts, setContracts] = useState([]);
   const [selectedContractId, setSelectedContractId] = useState(null);
   const [selectedContract, setSelectedContract] = useState(null);
-  const [contractInsights, setContractInsights] = useState(() => buildEmptyInsights());
+  const [contractInsights, setContractInsights] = useState(() => buildLocalInsightsWorkspace());
   const [insightsPending, setInsightsPending] = useState(false);
   const [insightsError, setInsightsError] = useState('');
   const [bootMode, setBootMode] = useState('loading');
@@ -414,17 +425,21 @@ function WorkspaceApp({ authUser, onLogout }) {
   const [uploading, setUploading] = useState(false);
   const [deletingContractId, setDeletingContractId] = useState('');
   const [uploadError, setUploadError] = useState('');
+  const [connectorNotice, setConnectorNotice] = useState(() => consumeGoogleOAuthNotice());
+  const [connectorActionPendingId, setConnectorActionPendingId] = useState('');
   const [notifications, setNotifications] = useState([]);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [selectedDocumentViewerUrl, setSelectedDocumentViewerUrl] = useState(null);
+  const [selectedDocumentViewerPending, setSelectedDocumentViewerPending] = useState(false);
+  const [selectedDocumentViewerError, setSelectedDocumentViewerError] = useState('');
   const viewerObjectUrlRef = useRef(null);
   const freshInsightsRef = useRef({ contractId: '', updatedAt: '' });
   const deferredQuery = useDeferredValue(query);
   const deferredDocumentQuery = useDeferredValue(documentQuery);
 
   const safePath = KNOWN_ROUTES.has(currentPath) ? currentPath : '/';
-  const connectors = buildConnectorState(health);
+  const connectors = buildConnectorState(health, safePath === '/' ? '/intake' : safePath);
   const metrics = useMemo(() => buildLiveMetrics(contracts), [contracts]);
   const modeLabel = bootMode === 'live'
     ? 'Live backend mode'
@@ -435,7 +450,66 @@ function WorkspaceApp({ authUser, onLogout }) {
     () => documentResults.find((document) => document.id === selectedDocumentId) || documentResults[0] || null,
     [documentResults, selectedDocumentId],
   );
-  const selectedDocumentDownloadUrl = selectedDocument ? api.getDocumentContentUrl(selectedDocument.id, { download: true }) : '';
+
+  function applyInsightPayload(payload, options = {}) {
+    const hydratedContract = normalizeContractDetail({
+      contract: payload.contract,
+      clauses: payload.clauses,
+      risks: payload.risks,
+    });
+    const normalizedSummary = normalizeContractSummary(hydratedContract);
+    const nextInsights = payload.insights || buildLocalInsightsWorkspace(hydratedContract);
+    const nextDocument = buildDocumentRecordFromContract(hydratedContract);
+
+    freshInsightsRef.current = {
+      contractId: hydratedContract.id,
+      updatedAt: hydratedContract.updatedAt || '',
+    };
+
+    startTransition(() => {
+      setContracts((current) => {
+        const hasExistingContract = current.some((item) => item.id === hydratedContract.id);
+
+        if (options.promote || !hasExistingContract) {
+          return [normalizedSummary, ...current.filter((item) => item.id !== hydratedContract.id)];
+        }
+
+        return current.map((item) => (
+          item.id === hydratedContract.id
+            ? normalizedSummary
+            : item
+        ));
+      });
+
+      setSelectedContractId(hydratedContract.id);
+      setSelectedContract(hydratedContract);
+      setContractInsights(nextInsights);
+
+      if (options.updateDocumentResults) {
+        setDocumentResults((current) => {
+          const hasExistingDocument = current.some((item) => item.id === hydratedContract.id);
+
+          if (options.promote || !hasExistingDocument) {
+            return [nextDocument, ...current.filter((item) => item.id !== hydratedContract.id)];
+          }
+
+          return current.map((item) => (
+            item.id === hydratedContract.id
+              ? nextDocument
+              : item
+          ));
+        });
+      }
+    });
+
+    return hydratedContract;
+  }
+
+  useEffect(() => {
+    if (connectorNotice?.tone === 'success') {
+      void refreshLiveDashboard();
+    }
+  }, [connectorNotice?.tone]);
 
   const refreshLiveDashboard = useEffectEvent(async () => {
     if (document.visibilityState === 'hidden') {
@@ -484,7 +558,7 @@ function WorkspaceApp({ authUser, onLogout }) {
         } else {
           setSelectedContractId(null);
           setSelectedContract(null);
-          setContractInsights(buildEmptyInsights());
+          setContractInsights(buildLocalInsightsWorkspace());
           setSearchResult(buildEmptySearchResult(query));
           setInsightsError('');
           setSearchError('');
@@ -525,9 +599,70 @@ function WorkspaceApp({ authUser, onLogout }) {
     freshInsightsRef.current = { contractId: '', updatedAt: '' };
     setSelectedContractId(contractId);
     setSelectedContract(summary);
-    setContractInsights(buildEmptyInsights(summary));
+    setContractInsights(buildLocalInsightsWorkspace(summary));
     setInsightsError('');
     navigate('/insights');
+  }
+
+  async function handleGenerateInsights() {
+    if (!selectedContractId || insightsPending) {
+      return;
+    }
+
+    setInsightsPending(true);
+    setInsightsError('');
+
+    if (selectedContract) {
+      startTransition(() => {
+        setContractInsights(buildLocalInsightsWorkspace({
+          ...selectedContract,
+          insightState: {
+            ...(selectedContract.insightState || {}),
+            status: 'generating',
+          },
+        }));
+      });
+    }
+
+    try {
+      const response = await api.generateContractInsights(selectedContractId);
+      applyInsightPayload(response.data);
+      setInsightsError('');
+    } catch (error) {
+      startTransition(() => {
+        setContractInsights(buildLocalInsightsWorkspace(selectedContract));
+      });
+      setInsightsError(error.message || 'Insight generation is unavailable right now.');
+    } finally {
+      setInsightsPending(false);
+    }
+  }
+
+  async function handleConnectorAction(connector) {
+    if (!connector?.actionId || connectorActionPendingId) {
+      return;
+    }
+
+    if (connector.actionId !== 'connect-google') {
+      return;
+    }
+
+    setConnectorActionPendingId(connector.actionId);
+    setConnectorNotice(null);
+
+    try {
+      const response = await api.getGoogleAuthUrl({
+        returnTo: connector.actionReturnTo || '/intake',
+      });
+
+      window.location.assign(response.data.url);
+    } catch (error) {
+      setConnectorNotice({
+        tone: 'error',
+        message: error.message || 'Google consent could not be started.',
+      });
+      setConnectorActionPendingId('');
+    }
   }
 
   useEffect(() => {
@@ -565,7 +700,7 @@ function WorkspaceApp({ authUser, onLogout }) {
           setContracts([]);
           setSelectedContractId(null);
           setSelectedContract(null);
-          setContractInsights(buildEmptyInsights());
+          setContractInsights(buildLocalInsightsWorkspace());
           setSearchResult(buildEmptySearchResult(query));
           setInsightsError('');
           setSearchError('');
@@ -597,7 +732,7 @@ function WorkspaceApp({ authUser, onLogout }) {
           } else {
             setSelectedContractId(null);
             setSelectedContract(null);
-            setContractInsights(buildEmptyInsights());
+            setContractInsights(buildLocalInsightsWorkspace());
             setSearchResult(buildEmptySearchResult(query));
             setInsightsError('');
             setSearchError('');
@@ -609,7 +744,7 @@ function WorkspaceApp({ authUser, onLogout }) {
           setContracts([]);
           setSelectedContractId(null);
           setSelectedContract(null);
-          setContractInsights(buildEmptyInsights());
+          setContractInsights(buildLocalInsightsWorkspace());
           setSearchResult(buildEmptySearchResult(query));
           setInsightsError('');
           setSearchError('');
@@ -708,7 +843,7 @@ function WorkspaceApp({ authUser, onLogout }) {
       setInsightsPending(false);
       setInsightsError('');
       if (!selectedContractId) {
-        setContractInsights(buildEmptyInsights());
+        setContractInsights(buildLocalInsightsWorkspace());
       }
       return undefined;
     }
@@ -731,15 +866,14 @@ function WorkspaceApp({ authUser, onLogout }) {
         const response = await api.getContractInsights(selectedContractId);
 
         if (!ignore) {
-          startTransition(() => {
-            setContractInsights(response.data);
-            setInsightsError('');
-          });
+          applyInsightPayload(response.data);
+          setInsightsError('');
         }
       } catch (error) {
         if (!ignore) {
           startTransition(() => {
-            setInsightsError(error.message || 'Live insights are unavailable right now.');
+            setContractInsights(buildLocalInsightsWorkspace(selectedContract));
+            setInsightsError(error.message || 'Stored insights are unavailable right now.');
           });
         }
       } finally {
@@ -818,7 +952,7 @@ function WorkspaceApp({ authUser, onLogout }) {
 
   useEffect(() => {
     let ignore = false;
-    let createdObjectUrl = '';
+    const abortController = new AbortController();
 
     async function hydrateSelectedDocumentViewer() {
       if (!selectedDocument?.id || !selectedDocument?.available) {
@@ -828,20 +962,26 @@ function WorkspaceApp({ authUser, onLogout }) {
         }
 
         setSelectedDocumentViewerUrl(null);
+        setSelectedDocumentViewerPending(false);
+        setSelectedDocumentViewerError('');
         return;
       }
 
       try {
-        const response = await fetch(api.getDocumentContentUrl(selectedDocument.id), {
-          method: 'GET',
-        });
+        setSelectedDocumentViewerPending(true);
+        setSelectedDocumentViewerError('');
 
-        if (!response.ok) {
-          throw new Error(`Failed to load document preview: ${response.status}`);
+        if (viewerObjectUrlRef.current) {
+          URL.revokeObjectURL(viewerObjectUrlRef.current);
+          viewerObjectUrlRef.current = null;
         }
 
-        const blob = await response.blob();
-        createdObjectUrl = URL.createObjectURL(blob);
+        setSelectedDocumentViewerUrl(null);
+
+        const blob = await api.fetchDocumentContent(selectedDocument.id, {
+          signal: abortController.signal,
+        });
+        const createdObjectUrl = URL.createObjectURL(blob);
 
         if (ignore) {
           URL.revokeObjectURL(createdObjectUrl);
@@ -855,13 +995,18 @@ function WorkspaceApp({ authUser, onLogout }) {
         viewerObjectUrlRef.current = createdObjectUrl;
         setSelectedDocumentViewerUrl(createdObjectUrl);
       } catch (error) {
-        if (!ignore) {
+        if (!ignore && error.name !== 'AbortError') {
           if (viewerObjectUrlRef.current) {
             URL.revokeObjectURL(viewerObjectUrlRef.current);
             viewerObjectUrlRef.current = null;
           }
 
           setSelectedDocumentViewerUrl(null);
+          setSelectedDocumentViewerError(error.message || 'Failed to load document preview.');
+        }
+      } finally {
+        if (!ignore) {
+          setSelectedDocumentViewerPending(false);
         }
       }
     }
@@ -870,9 +1015,7 @@ function WorkspaceApp({ authUser, onLogout }) {
 
     return () => {
       ignore = true;
-      if (createdObjectUrl) {
-        URL.revokeObjectURL(createdObjectUrl);
-      }
+      abortController.abort();
     };
   }, [selectedDocument]);
 
@@ -974,26 +1117,13 @@ function WorkspaceApp({ authUser, onLogout }) {
       formData.append('file', uploadFile);
 
       const response = await api.uploadContract(formData);
-      const uploadedContract = normalizeContractDetail({
-        contract: response.data.contract,
-        clauses: response.data.clauses,
-        risks: response.data.risks,
+      const uploadedContract = applyInsightPayload(response.data, {
+        promote: true,
+        updateDocumentResults: true,
       });
-      freshInsightsRef.current = {
-        contractId: uploadedContract.id,
-        updatedAt: uploadedContract.updatedAt || '',
-      };
 
       startTransition(() => {
-        setContracts((current) => [uploadedContract, ...current.filter((item) => item.id !== uploadedContract.id)]);
-        setSelectedContractId(uploadedContract.id);
-        setSelectedContract(uploadedContract);
-        setContractInsights(response.data.insights || buildEmptyInsights(uploadedContract));
         setSearchResult(buildEmptySearchResult(query));
-        setDocumentResults((current) => [
-          buildDocumentRecordFromContract(uploadedContract),
-          ...current.filter((item) => item.id !== uploadedContract.id),
-        ]);
         setSelectedDocumentId(uploadedContract.id);
         setBootMode('live');
         setUploadFile(null);
@@ -1054,7 +1184,7 @@ function WorkspaceApp({ authUser, onLogout }) {
         setDocumentError('');
 
         if (selectedContractId === contractId) {
-          setContractInsights(nextSelectedSummary ? buildEmptyInsights(nextSelectedSummary) : buildEmptyInsights());
+          setContractInsights(nextSelectedSummary ? buildLocalInsightsWorkspace(nextSelectedSummary) : buildLocalInsightsWorkspace());
         }
 
         setDocumentResults((current) => current.filter((document) => document.id !== contractId));
@@ -1118,7 +1248,7 @@ function WorkspaceApp({ authUser, onLogout }) {
       if (summary) {
         setSelectedContractId(summary.id);
         setSelectedContract(summary);
-        setContractInsights(buildEmptyInsights(summary));
+        setContractInsights(buildLocalInsightsWorkspace(summary));
       } else {
         try {
           const response = await api.getContractById(notification.contractId);
@@ -1131,7 +1261,7 @@ function WorkspaceApp({ authUser, onLogout }) {
             ]);
             setSelectedContractId(hydratedContract.id);
             setSelectedContract(hydratedContract);
-            setContractInsights(buildEmptyInsights(hydratedContract));
+            setContractInsights(buildLocalInsightsWorkspace(hydratedContract));
             setDocumentResults((current) => [
               buildDocumentRecordFromContract(hydratedContract),
               ...current.filter((item) => item.id !== hydratedContract.id),
@@ -1164,7 +1294,10 @@ function WorkspaceApp({ authUser, onLogout }) {
         uploadFile={uploadFile}
         uploading={uploading}
         uploadError={uploadError}
+        connectorNotice={connectorNotice}
+        connectorActionPendingId={connectorActionPendingId}
         onFileChange={(event) => setUploadFile(event.target.files?.[0] || null)}
+        onConnectorAction={handleConnectorAction}
         onUpload={handleUpload}
       />
     );
@@ -1177,6 +1310,7 @@ function WorkspaceApp({ authUser, onLogout }) {
         insights={contractInsights}
         insightsPending={insightsPending}
         insightsError={insightsError}
+        onGenerateInsights={handleGenerateInsights}
         onNavigate={navigate}
       />
     );
@@ -1206,7 +1340,8 @@ function WorkspaceApp({ authUser, onLogout }) {
         selectedDocumentId={selectedDocument?.id || null}
         selectedDocument={selectedDocument}
         viewerUrl={selectedDocumentViewerUrl}
-        downloadUrl={selectedDocumentDownloadUrl}
+        viewerPending={selectedDocumentViewerPending}
+        viewerError={selectedDocumentViewerError}
         onQueryChange={setDocumentQuery}
         onSubmit={handleDocumentSearch}
         onSelectDocument={setSelectedDocumentId}

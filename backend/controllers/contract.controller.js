@@ -3,7 +3,8 @@ const {
   ingestManualContract,
   listContractSummaries,
   getContractDetails,
-  buildContractInsights,
+  getContractInsights,
+  generateContractInsights,
   deleteContractRecord,
 } = require('../services/contract.service');
 
@@ -39,10 +40,16 @@ const getContract = asyncHandler(async (req, res) => {
 });
 
 const getInsights = asyncHandler(async (req, res) => {
-  const insights = await buildContractInsights(
-    req.params.contractId,
-    req.body?.clauseId || req.query.clauseId,
-  );
+  const insights = await getContractInsights(req.params.contractId);
+
+  res.json({
+    success: true,
+    data: insights,
+  });
+});
+
+const generateInsights = asyncHandler(async (req, res) => {
+  const insights = await generateContractInsights(req.params.contractId);
 
   res.json({
     success: true,
@@ -63,6 +70,7 @@ const deleteContract = asyncHandler(async (req, res) => {
 module.exports = {
   deleteContract,
   getContract,
+  generateInsights,
   getInsights,
   listContracts,
   uploadContract,

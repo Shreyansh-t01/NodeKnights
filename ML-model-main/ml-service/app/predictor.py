@@ -79,6 +79,7 @@ def get_clause_model():
             _clause_model = None
     else:
         log_status("WARN", "Clause model not found")
+        print("clause not found")
 
     return _clause_model
 

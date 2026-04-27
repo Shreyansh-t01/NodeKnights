@@ -13,19 +13,259 @@ const {
   sleep,
 } = require('../utils/geminiRetry');
 
-const PRIMARY_GEMINI_RESPONSE_MODEL = 'gemini-2.5-flash';
+const PRIMARY_GEMINI_RESPONSE_MODEL = 'gemini-2.0-flash-lite';
 const DEFAULT_GEMINI_RESPONSE_MODELS = [
   PRIMARY_GEMINI_RESPONSE_MODEL,
   'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
+  'gemini-2.5-flash',
 ];
 const GEMINI_RESPONSE_CACHE_LIMIT = 300;
+const GEMINI_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+const GEMINI_RATE_LIMIT_COOLDOWN_MS = 2 * 60 * 1000;
+const GEMINI_HARD_QUOTA_COOLDOWN_MS = 15 * 60 * 1000;
+const GEMINI_INVALID_MODEL_COOLDOWN_MS = 30 * 60 * 1000;
 const geminiResponseCachePath = path.join(env.tempStorageDir, 'local-store', 'gemini-response-cache.json');
 const pendingStructuredRequests = new Map();
 const completedStructuredRequests = new Map();
+const geminiModelCooldowns = new Map();
 let geminiResponseCacheLoaded = false;
 let geminiResponseCacheLoadPromise = null;
 let geminiResponseCachePersistChain = Promise.resolve();
+
+// Circuit breaker for Gemini API
+const CIRCUIT_BREAKER_FAILURE_THRESHOLD = 5;
+const CIRCUIT_BREAKER_TIMEOUT_MS = 60000; // 1 minute
+let circuitBreakerFailures = 0;
+let circuitBreakerLastFailureTime = 0;
+let circuitBreakerOpenUntil = 0;
+let circuitBreakerState = 'closed'; // 'closed', 'open', 'half-open'
+
+function isCircuitBreakerOpen() {
+  if (circuitBreakerState === 'closed') {
+    return false;
+  }
+
+  if (circuitBreakerState === 'open') {
+    const openUntil = circuitBreakerOpenUntil || (circuitBreakerLastFailureTime + CIRCUIT_BREAKER_TIMEOUT_MS);
+
+    if (Date.now() >= openUntil) {
+      circuitBreakerState = 'half-open';
+      console.log('Gemini circuit breaker entering half-open state');
+      return false;
+    }
+
+    return true;
+  }
+
+  return false; // half-open allows one request
+}
+
+function recordCircuitBreakerSuccess() {
+  const wasRecovering = circuitBreakerState !== 'closed';
+
+  circuitBreakerState = 'closed';
+  circuitBreakerFailures = 0;
+  circuitBreakerLastFailureTime = 0;
+  circuitBreakerOpenUntil = 0;
+
+  if (wasRecovering) {
+    console.log('Gemini circuit breaker closed - service recovered');
+  }
+}
+
+function getErrorStatus(error) {
+  return Number(error?.details?.status || error?.statusCode || 0);
+}
+
+function getGeminiPayloadDetails(error) {
+  return Array.isArray(error?.details?.payload?.error?.details)
+    ? error.details.payload.error.details
+    : [];
+}
+
+function getGeminiErrorMessage(error) {
+  return String(
+    error?.details?.payload?.error?.message
+      || error?.details?.response
+      || error?.message
+      || '',
+  ).toLowerCase();
+}
+
+function getGeminiQuotaViolations(error) {
+  const quotaFailureDetail = getGeminiPayloadDetails(error)
+    .find((detail) => String(detail?.['@type'] || '').includes('QuotaFailure'));
+
+  return Array.isArray(quotaFailureDetail?.violations)
+    ? quotaFailureDetail.violations
+    : [];
+}
+
+function isQuotaExceededGeminiError(error) {
+  return getErrorStatus(error) === 429
+    || String(error?.details?.payload?.error?.status || '').toUpperCase() === 'RESOURCE_EXHAUSTED'
+    || getGeminiErrorMessage(error).includes('quota exceeded');
+}
+
+function hasHardQuotaExhaustion(error) {
+  if (!isQuotaExceededGeminiError(error)) {
+    return false;
+  }
+
+  const message = getGeminiErrorMessage(error);
+  const violations = getGeminiQuotaViolations(error);
+
+  return violations.some((violation) => /perday/i.test(String(violation?.quotaId || '')))
+    || /limit:\s*0\b/.test(message)
+    || /requests per day/i.test(message);
+}
+
+function isModelScopedGeminiFailure(error) {
+  const status = getErrorStatus(error);
+
+  return isQuotaExceededGeminiError(error)
+    || [400, 403, 404].includes(status);
+}
+
+function computeGeminiFailureCooldownMs(error) {
+  const retryDelayMs = Number(error?.details?.retryDelayMs || 0);
+  const status = getErrorStatus(error);
+
+  if (hasHardQuotaExhaustion(error)) {
+    return Math.max(retryDelayMs, GEMINI_HARD_QUOTA_COOLDOWN_MS);
+  }
+
+  if (isQuotaExceededGeminiError(error)) {
+    return Math.max(retryDelayMs, GEMINI_RATE_LIMIT_COOLDOWN_MS);
+  }
+
+  if ([400, 403, 404].includes(status)) {
+    return GEMINI_INVALID_MODEL_COOLDOWN_MS;
+  }
+
+  if (isRetryableGeminiFailure(error)) {
+    return Math.max(retryDelayMs, CIRCUIT_BREAKER_TIMEOUT_MS);
+  }
+
+  return 0;
+}
+
+function shouldOpenCircuitImmediately(error) {
+  if (isModelScopedGeminiFailure(error)) {
+    return false;
+  }
+
+  return isRetryableGeminiFailure(error);
+}
+
+function pruneExpiredModelCooldowns() {
+  const now = Date.now();
+
+  for (const [modelName, entry] of geminiModelCooldowns.entries()) {
+    if (!entry?.unavailableUntil || entry.unavailableUntil <= now) {
+      geminiModelCooldowns.delete(modelName);
+    }
+  }
+}
+
+function getModelCooldownEntry(modelName) {
+  if (!modelName) {
+    return null;
+  }
+
+  pruneExpiredModelCooldowns();
+  return geminiModelCooldowns.get(modelName) || null;
+}
+
+function clearModelCooldown(modelName) {
+  if (modelName) {
+    geminiModelCooldowns.delete(modelName);
+  }
+}
+
+function markModelCoolingDown(modelName, error) {
+  const cooldownMs = computeGeminiFailureCooldownMs(error);
+
+  if (!modelName || cooldownMs <= 0) {
+    return null;
+  }
+
+  const unavailableUntil = Date.now() + cooldownMs;
+  const nextEntry = {
+    model: modelName,
+    statusCode: getErrorStatus(error) || null,
+    message: error?.message || 'Gemini model is temporarily unavailable.',
+    availableAt: new Date(unavailableUntil).toISOString(),
+    unavailableUntil,
+  };
+
+  geminiModelCooldowns.set(modelName, nextEntry);
+  return nextEntry;
+}
+
+function getModelCooldownStatus() {
+  pruneExpiredModelCooldowns();
+
+  return [...geminiModelCooldowns.values()]
+    .sort((left, right) => left.unavailableUntil - right.unavailableUntil)
+    .map((entry) => ({
+      model: entry.model,
+      statusCode: entry.statusCode,
+      message: entry.message,
+      availableAt: entry.availableAt,
+      remainingMs: Math.max(0, entry.unavailableUntil - Date.now()),
+    }));
+}
+
+function getGeminiModelCandidateState(requestOptions = {}) {
+  const requestedModels = getGeminiModelCandidates(requestOptions);
+  const unavailableModels = requestedModels
+    .map((modelName) => getModelCooldownEntry(modelName))
+    .filter(Boolean);
+  const availableModels = requestedModels.filter((modelName) => !getModelCooldownEntry(modelName));
+
+  return {
+    requestedModels,
+    availableModels,
+    unavailableModels: unavailableModels.map((entry) => ({
+      model: entry.model,
+      statusCode: entry.statusCode,
+      message: entry.message,
+      availableAt: entry.availableAt,
+      remainingMs: Math.max(0, entry.unavailableUntil - Date.now()),
+    })),
+  };
+}
+
+function recordCircuitBreakerFailure(error) {
+  if (isModelScopedGeminiFailure(error)) {
+    return;
+  }
+
+  circuitBreakerFailures++;
+  circuitBreakerLastFailureTime = Date.now();
+  const cooldownMs = computeGeminiFailureCooldownMs(error) || CIRCUIT_BREAKER_TIMEOUT_MS;
+  const shouldOpenNow = shouldOpenCircuitImmediately(error)
+    || circuitBreakerFailures >= CIRCUIT_BREAKER_FAILURE_THRESHOLD;
+
+  if (shouldOpenNow) {
+    circuitBreakerState = 'open';
+    circuitBreakerOpenUntil = Math.max(circuitBreakerOpenUntil, Date.now() + cooldownMs);
+    console.warn(`Gemini circuit breaker opened after ${circuitBreakerFailures} failure(s)`);
+  }
+}
+
+function getCircuitBreakerStatus() {
+  return {
+    state: circuitBreakerState,
+    failures: circuitBreakerFailures,
+    lastFailureTime: circuitBreakerLastFailureTime,
+    openUntil: circuitBreakerOpenUntil || null,
+    threshold: CIRCUIT_BREAKER_FAILURE_THRESHOLD,
+    timeoutMs: CIRCUIT_BREAKER_TIMEOUT_MS,
+    modelCooldowns: getModelCooldownStatus(),
+  };
+}
 
 function isGeminiEnabled() {
   return featureFlags.externalGenAi && env.genAiProvider === 'gemini';
@@ -112,16 +352,21 @@ async function ensureGeminiResponseCacheLoaded() {
 }
 
 async function persistGeminiResponseCache() {
-  const entries = [...completedStructuredRequests.values()]
+  const now = new Date();
+  const validEntries = [...completedStructuredRequests.values()]
+    .filter((entry) => {
+      const cachedAt = new Date(entry.cachedAt || 0);
+      return now - cachedAt <= GEMINI_CACHE_EXPIRY_MS;
+    })
     .sort((left, right) => new Date(right.cachedAt || 0) - new Date(left.cachedAt || 0))
     .slice(0, GEMINI_RESPONSE_CACHE_LIMIT);
 
   completedStructuredRequests.clear();
-  entries.forEach((entry) => {
+  validEntries.forEach((entry) => {
     completedStructuredRequests.set(entry.key, entry);
   });
 
-  await writeJsonFile(geminiResponseCachePath, { entries });
+  await writeJsonFile(geminiResponseCachePath, { entries: validEntries });
 }
 
 function queueGeminiResponseCachePersist() {
@@ -134,7 +379,21 @@ function queueGeminiResponseCachePersist() {
 
 async function getCompletedStructuredRequest(requestKey) {
   await ensureGeminiResponseCacheLoaded();
-  return completedStructuredRequests.get(requestKey)?.value;
+  const cached = completedStructuredRequests.get(requestKey);
+
+  if (!cached) {
+    return undefined;
+  }
+
+  // Check if cache entry has expired
+  const cachedAt = new Date(cached.cachedAt || 0);
+  const now = new Date();
+  if (now - cachedAt > GEMINI_CACHE_EXPIRY_MS) {
+    completedStructuredRequests.delete(requestKey);
+    return undefined;
+  }
+
+  return cached.value;
 }
 
 async function setCompletedStructuredRequest(requestKey, payload = {}) {
@@ -210,7 +469,7 @@ function buildGenerationConfig({
   };
 
   if (mode === 'schema' && responseSchema) {
-    generationConfig.responseJsonSchema = responseSchema;
+    generationConfig.responseSchema = responseSchema;
   }
 
   if (thinkingBudget > 0 && !lowLatencyMode) {
@@ -290,7 +549,11 @@ function shouldTryNextModel(error) {
 
   const status = Number(error.details?.status || error.statusCode || 0);
 
-  return (isRetryableGeminiFailure(error) && status !== 429)
+  if (status === 429) {
+    return true;
+  }
+
+  return isRetryableGeminiFailure(error)
     || error.message.includes('invalid JSON')
     || [400, 403, 404].includes(status);
 }
@@ -303,7 +566,11 @@ function shouldRetrySameModel(error) {
   const status = Number(error.details?.status || error.statusCode || 0);
 
   if (status === 429) {
-    return false;
+    if (hasHardQuotaExhaustion(error)) {
+      return false;
+    }
+
+    return Number(error.details?.retryDelayMs || 0) > 0;
   }
 
   return true;
@@ -436,10 +703,20 @@ async function generateStructuredObjectInternal({
   label = 'response',
   requestOptions = {},
 }) {
+  const modelState = getGeminiModelCandidateState(requestOptions);
   const attemptedModels = [];
   let lastError = null;
 
-  for (const modelName of getGeminiModelCandidates(requestOptions)) {
+  if (!modelState.availableModels.length) {
+    throw new AppError(503, 'Gemini models are temporarily cooling down after recent failures.', {
+      requestedModels: modelState.requestedModels,
+      unavailableModels: modelState.unavailableModels,
+      circuitBreakerState,
+      openUntil: circuitBreakerOpenUntil || null,
+    });
+  }
+
+  for (const modelName of modelState.availableModels) {
     attemptedModels.push(modelName);
 
     try {
@@ -452,6 +729,7 @@ async function generateStructuredObjectInternal({
         requestOptions,
       });
 
+      clearModelCooldown(result.model || modelName);
       return result.value;
     } catch (error) {
       lastError = error;
@@ -469,11 +747,14 @@ async function generateStructuredObjectInternal({
           requestOptions,
         });
 
+        clearModelCooldown(result.model || modelName);
         return result.value;
       } catch (error) {
         lastError = error;
       }
     }
+
+    markModelCoolingDown(modelName, lastError);
 
     if (!shouldTryNextModel(lastError)) {
       break;
@@ -484,6 +765,7 @@ async function generateStructuredObjectInternal({
     lastError.details = {
       ...(lastError.details || {}),
       attemptedModels,
+      unavailableModels: modelState.unavailableModels,
     };
   }
 
@@ -527,18 +809,32 @@ async function generateStructuredObject({
     return pendingStructuredRequests.get(requestKey);
   }
 
+  if (isCircuitBreakerOpen()) {
+    throw new AppError(503, 'Gemini service is temporarily unavailable due to repeated failures.', {
+      circuitBreakerState,
+      failures: circuitBreakerFailures,
+      lastFailureTime: circuitBreakerLastFailureTime,
+      openUntil: circuitBreakerOpenUntil || null,
+      modelCooldowns: getModelCooldownStatus(),
+    });
+  }
+
   const pendingRequest = generateStructuredObjectInternal({
     prompt,
     responseSchema,
     label,
     requestOptions,
   }).then(async (value) => {
+    recordCircuitBreakerSuccess();
     await setCompletedStructuredRequest(requestKey, {
       label,
       value,
     });
 
     return value;
+  }).catch(async (error) => {
+    recordCircuitBreakerFailure(error);
+    throw error;
   }).finally(() => {
     pendingStructuredRequests.delete(requestKey);
   });
@@ -550,4 +846,5 @@ async function generateStructuredObject({
 module.exports = {
   generateStructuredObject,
   isGeminiEnabled,
+  getCircuitBreakerStatus,
 };

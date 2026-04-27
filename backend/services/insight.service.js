@@ -5,6 +5,8 @@ const { env } = require('../config/env');
 const { formatClauseType } = require('./contract.helpers');
 const { generateStructuredObject, isGeminiEnabled } = require('./genAi.service');
 
+const CONTRACT_INSIGHT_PROMPT_VERSION = 'on-demand-v1';
+
 const fallbackRulebook = [
   {
     clauseType: 'other',
@@ -13,6 +15,44 @@ const fallbackRulebook = [
     recommendedAction: 'Ask legal counsel to clarify the clause and align it with the rest of the agreement.',
   },
 ];
+
+const contractInsightBundleSchema = {
+  type: 'object',
+  properties: {
+    headline: { type: 'string' },
+    summary: { type: 'string' },
+    nextSteps: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+    clauseInsights: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          clauseId: { type: 'string' },
+          whyItIsRisky: { type: 'string' },
+          comparison: { type: 'string' },
+          recommendedChange: { type: 'string' },
+        },
+        required: ['whyItIsRisky', 'comparison', 'recommendedChange'],
+      },
+    },
+  },
+  required: ['headline', 'summary', 'nextSteps', 'clauseInsights'],
+};
+
+const semanticAnswerSchema = {
+  type: 'object',
+  properties: {
+    answer: { type: 'string' },
+    recommendations: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+  },
+  required: ['answer', 'recommendations'],
+};
 
 function loadRulebook() {
   try {
@@ -32,71 +72,12 @@ function loadRulebook() {
 
 const rulebook = loadRulebook();
 
-// Cache for clause insights to avoid repeated API calls
-const clauseInsightCache = new Map();
-const BATCH_CLAUSE_INSIGHT_CHUNK_SIZE = 2;
-
-const contractOverviewSchema = {
-  type: 'object',
-  properties: {
-    headline: { type: 'string' },
-    summary: { type: 'string' },
-    nextSteps: {
-      type: 'array',
-      items: { type: 'string' },
-    },
-  },
-  required: ['headline', 'summary', 'nextSteps'],
-};
-
-const clauseInsightSchema = {
-  type: 'object',
-  properties: {
-    whyItIsRisky: { type: 'string' },
-    comparison: { type: 'string' },
-    recommendedChange: { type: 'string' },
-  },
-  required: ['whyItIsRisky', 'comparison', 'recommendedChange'],
-};
-
-const batchClauseInsightSchema = {
-  type: 'object',
-  properties: {
-    insights: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          clauseId: { type: 'string' },
-          whyItIsRisky: { type: 'string' },
-          comparison: { type: 'string' },
-          recommendedChange: { type: 'string' },
-        },
-        required: ['clauseId', 'whyItIsRisky', 'comparison', 'recommendedChange'],
-      },
-    },
-  },
-  required: ['insights'],
-};
-
-const semanticAnswerSchema = {
-  type: 'object',
-  properties: {
-    answer: { type: 'string' },
-    recommendations: {
-      type: 'array',
-      items: { type: 'string' },
-    },
-  },
-  required: ['answer', 'recommendations'],
-};
-
 function getRulebookEntry(clauseType = 'other') {
   return rulebook.find((entry) => entry.clauseType === clauseType)
     || rulebook.find((entry) => entry.clauseType === 'other');
 }
 
-function asText(value, fallback) {
+function asText(value, fallback = '') {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback;
 }
 
@@ -113,7 +94,7 @@ function asStringArray(value, fallback = [], maxItems = 5) {
   return normalized.length ? normalized : fallback;
 }
 
-function compactText(value, fallback, maxLength = 240) {
+function compactText(value, fallback = '', maxLength = 240) {
   const resolved = asText(value, fallback);
   const normalized = typeof resolved === 'string' ? resolved.replace(/\s+/g, ' ').trim() : '';
 
@@ -150,15 +131,26 @@ function trimPromptText(value, maxLength = 1200) {
   return `${normalized.slice(0, maxLength - 3).trim()}...`;
 }
 
-function chunkItems(items = [], chunkSize = 1) {
-  const normalizedChunkSize = Math.max(1, Number(chunkSize) || 1);
-  const chunks = [];
+function normalizeConfiguredModelCandidates() {
+  return [...new Set(
+    [env.genAiModel, ...(Array.isArray(env.genAiModelCandidates) ? env.genAiModelCandidates : [])]
+      .map((value) => String(value || '').trim())
+      .filter(Boolean),
+  )];
+}
 
-  for (let index = 0; index < items.length; index += normalizedChunkSize) {
-    chunks.push(items.slice(index, index + normalizedChunkSize));
-  }
+function buildContractInsightModelCandidates() {
+  const configuredCandidates = normalizeConfiguredModelCandidates();
+  const preferredOrder = [
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+  ];
 
-  return chunks;
+  return [...new Set([
+    ...preferredOrder,
+    ...configuredCandidates.filter((modelName) => !preferredOrder.includes(modelName)),
+  ])];
 }
 
 function buildGeminiFailureInfo(error, source = 'gemini') {
@@ -340,7 +332,7 @@ function toPromptRuleMatches(matches = []) {
       documentType: normalized.documentType,
       primaryClauseType: normalized.primaryClauseType,
       clauseTypes: normalized.clauseTypes,
-      primaryConcern: normalized.primaryConcern,
+      primaryConcern: trimPromptText(normalized.primaryConcern, 160),
       benchmark: trimPromptText(normalized.benchmark, 160),
       recommendedAction: trimPromptText(normalized.recommendedAction, 160),
       textSummary: trimPromptText(normalized.textSummary, 140),
@@ -352,48 +344,16 @@ function toPromptRuleMatches(matches = []) {
   });
 }
 
-function toBatchPromptMatches(matches = []) {
-  return matches.slice(0, 1).map((match) => {
-    const normalized = normalizePrecedentMatch(match);
-
-    return {
-      sourceType: normalized.sourceType,
-      clauseType: normalized.clauseType,
-      riskLabel: normalized.riskLabel,
-      score: normalized.score,
-      contractTitle: trimPromptText(normalized.title, 80),
-      clauseTextSummary: trimPromptText(normalized.clauseTextSummary, 100),
-      clauseTextFull: trimPromptText(normalized.clauseTextFull, 160),
-    };
-  });
-}
-
-function toBatchPromptRuleMatches(matches = []) {
-  return matches.slice(0, 1).map((match) => {
-    const normalized = normalizeRuleMatch(match);
-
-    return {
-      title: trimPromptText(normalized.title, 80),
-      sourceType: normalized.sourceType,
-      documentType: normalized.documentType,
-      primaryConcern: trimPromptText(normalized.primaryConcern, 110),
-      benchmark: trimPromptText(normalized.benchmark || normalized.textSummary, 120),
-      recommendedAction: trimPromptText(normalized.recommendedAction, 120),
-    };
-  });
-}
-
 function buildInsightRequestOptions(overrides = {}) {
+  const hasConfiguredModelCandidates = Array.isArray(env.genAiModelCandidates)
+    && env.genAiModelCandidates.length > 0;
+
   return {
-    includeDefaultModelFallbacks: false,
-    modelCandidates: [
-      env.genAiModel,
-      ...(Array.isArray(env.genAiModelCandidates) ? env.genAiModelCandidates : []),
-    ].filter(Boolean),
-    maxAttempts: Math.max(2, env.genAiMaxRetries + 1),
-    requestTimeoutMs: Math.max(env.genAiTimeoutMs, 20000),
-    maxOutputTokens: Math.max(env.genAiMaxOutputTokens, 900),
-    lowLatencyMaxOutputTokens: Math.max(env.genAiMaxOutputTokens, 900),
+    includeDefaultModelFallbacks: !hasConfiguredModelCandidates,
+    maxAttempts: Math.max(1, env.genAiMaxRetries + 1),
+    requestTimeoutMs: Math.max(env.genAiTimeoutMs, 25000),
+    maxOutputTokens: Math.max(env.genAiMaxOutputTokens, 1500),
+    lowLatencyMaxOutputTokens: Math.max(env.genAiMaxOutputTokens, 1500),
     temperature: Math.min(env.genAiTemperature, 0.1),
     lowLatencyTemperature: Math.min(env.genAiTemperature, 0.1),
     thinkingBudget: 0,
@@ -401,35 +361,65 @@ function buildInsightRequestOptions(overrides = {}) {
   };
 }
 
-function isGeneratedClauseInsightComplete(insight = {}) {
-  return Boolean(
-    insight
-      && insight.clauseId
-      && asText(insight.whyItIsRisky, '')
-      && asText(insight.comparison, '')
-      && asText(insight.recommendedChange, ''),
-  );
+function buildContractInsightFallback({ contract, risks = [], clauseInsights = [] }) {
+  const highRiskCount = Number(contract?.metadata?.riskCounts?.high || 0);
+  const highlightedClauseType = clauseInsights[0]?.clauseType
+    ? formatClauseType(clauseInsights[0].clauseType)
+    : 'high-risk';
+
+  return {
+    headline: highRiskCount > 0
+      ? `${highRiskCount} high-risk clause${highRiskCount === 1 ? '' : 's'} need review before approval.`
+      : `${contract?.title || 'This contract'} is ready for review.`,
+    summary: compactText(
+      [
+        contract?.metadata?.summary || 'The contract has been parsed and risk-labeled.',
+        highRiskCount > 0
+          ? `Review should focus on ${highlightedClauseType} language first.`
+          : 'No high-risk clauses were selected for AI insight generation.',
+      ].join(' '),
+      'The contract is ready for review.',
+      260,
+    ),
+    nextSteps: [
+      highRiskCount > 0
+        ? `Review the ${highlightedClauseType} clauses against the retrieved benchmarks.`
+        : 'Review the clause board for any business-specific concerns.',
+      risks[0]?.title
+        ? `Confirm the top flagged issue: ${compactText(risks[0].title, 'Review the top flagged clause.', 100)}`
+        : 'Compare the flagged clauses with your preferred precedent wording.',
+      'Align any redraft with the benchmark language before approval.',
+    ],
+  };
 }
 
-function buildTemplateClauseInsight(clause, reviewContext = {}) {
-  const currentClause = buildCurrentClausePayload(
-    clause,
-    reviewContext.currentClause || {},
-  );
+function buildClauseFallbackText(clauseInsight = {}) {
+  const topRule = Array.isArray(clauseInsight.ruleMatches) ? clauseInsight.ruleMatches[0] : null;
+  const comparisonSource = clauseInsight.precedentClause?.title
+    ? `The closest comparison is ${clauseInsight.precedentClause.title}.`
+    : 'The clause should be compared against the retrieved benchmark context.';
+
+  return {
+    whyItIsRisky: topRule?.primaryConcern || 'This clause needs review because it may create unbalanced or unclear obligations.',
+    comparison: compactText(
+      [
+        comparisonSource,
+        topRule?.benchmark || topRule?.textSummary || topRule?.primaryConcern || '',
+      ].filter(Boolean).join(' '),
+      'The clause differs from the retrieved benchmark language.',
+      220,
+    ),
+    recommendedChange: topRule?.recommendedAction || 'Redraft the clause to align it with the retrieved benchmark protections.',
+  };
+}
+
+function buildClauseInsightContextRecord(clause, reviewContext = {}) {
+  const currentClause = buildCurrentClausePayload(clause, reviewContext.currentClause || {});
   const precedentMatches = (reviewContext.precedentMatches || []).map(normalizePrecedentMatch);
   const precedentClause = reviewContext.precedentClause
     ? normalizePrecedentMatch(reviewContext.precedentClause)
     : (precedentMatches[0] || null);
   const ruleMatches = ensureRuleMatches(reviewContext.ruleMatches || [], clause.clauseType);
-  const topRule = ruleMatches[0];
-  const fallbackRule = getRulebookEntry(clause.clauseType);
-
-  const precedentSummary = precedentClause
-    ? `Closest precedent${precedentClause.title ? ` from ${precedentClause.title}` : ''} scored ${precedentClause.score ?? 'N/A'} and uses "${precedentClause.clauseTextSummary || precedentClause.clauseTextFull}".`
-    : 'No stored precedent matched closely yet, so the comparison relies on benchmark guidance.';
-  const ruleSummary = topRule
-    ? `Policy benchmark${topRule.title ? ` from ${topRule.title}` : ''}: ${topRule.benchmark || topRule.textSummary || topRule.primaryConcern}.`
-    : `Benchmark: ${fallbackRule.benchmark}`;
 
   return {
     clauseId: clause.id,
@@ -439,70 +429,272 @@ function buildTemplateClauseInsight(clause, reviewContext = {}) {
     precedentClause,
     precedentMatches,
     ruleMatches,
-    whyItIsRisky: topRule.primaryConcern || fallbackRule.primaryConcern,
-    comparison: `${precedentSummary} ${ruleSummary}`.trim(),
-    recommendedChange: topRule.recommendedAction || fallbackRule.recommendedAction,
+    whyItIsRisky: null,
+    comparison: null,
+    recommendedChange: null,
   };
 }
 
-function buildTemplateContractOverview(contractBundle) {
-  const { contract, clauses, risks } = contractBundle;
-  const headline = contract.metadata.riskCounts.high > 0
-    ? 'Immediate legal review is recommended before approval.'
-    : 'No critical blockers were detected, but a clause review is still recommended.';
-  const topRiskItems = risks.slice(0, 3).map((risk) => risk.title);
-  const automaticInsightClauses = clauses
-    .filter((clause) => clause.riskLabel === 'high')
-    .slice(0, 5);
-  const clauseInsights = Array.isArray(contractBundle.clauseInsights) && contractBundle.clauseInsights.length
-    ? contractBundle.clauseInsights
-    : automaticInsightClauses.map((clause) => buildTemplateClauseInsight(clause));
+function buildContractInsightPromptContext(clauseInsights = []) {
+  return clauseInsights.map((clauseInsight, index) => ({
+    order: index + 1,
+    clauseId: clauseInsight.clauseId,
+    clauseType: clauseInsight.clauseType,
+    riskLabel: clauseInsight.riskLabel,
+    currentClause: {
+      clauseTextSummary: trimPromptText(clauseInsight.currentClause?.clauseTextSummary, 160),
+      clauseTextFull: trimPromptText(clauseInsight.currentClause?.clauseTextFull, 320),
+      position: clauseInsight.currentClause?.position ?? null,
+    },
+    bestPrecedentMatch: clauseInsight.precedentClause
+      ? {
+        sourceType: clauseInsight.precedentClause.sourceType,
+        title: trimPromptText(clauseInsight.precedentClause.title, 90),
+        clauseType: clauseInsight.precedentClause.clauseType,
+        score: clauseInsight.precedentClause.score,
+        clauseTextSummary: trimPromptText(clauseInsight.precedentClause.clauseTextSummary, 140),
+        clauseTextFull: trimPromptText(clauseInsight.precedentClause.clauseTextFull, 240),
+      }
+      : null,
+    additionalPrecedentMatches: (clauseInsight.precedentMatches || [])
+      .slice(clauseInsight.precedentClause ? 1 : 0, 3)
+      .map((match) => ({
+        sourceType: match.sourceType,
+        title: trimPromptText(match.title, 90),
+        clauseType: match.clauseType,
+        score: match.score,
+        clauseTextSummary: trimPromptText(match.clauseTextSummary, 120),
+      })),
+    bestRuleMatch: clauseInsight.ruleMatches?.[0]
+      ? {
+        title: trimPromptText(clauseInsight.ruleMatches[0].title, 90),
+        sectionTitle: trimPromptText(clauseInsight.ruleMatches[0].sectionTitle, 90),
+        primaryConcern: trimPromptText(clauseInsight.ruleMatches[0].primaryConcern, 140),
+        benchmark: trimPromptText(clauseInsight.ruleMatches[0].benchmark || clauseInsight.ruleMatches[0].textSummary, 160),
+        recommendedAction: trimPromptText(clauseInsight.ruleMatches[0].recommendedAction, 140),
+      }
+      : null,
+    additionalRuleMatches: (clauseInsight.ruleMatches || [])
+      .slice(1, 3)
+      .map((rule) => ({
+        title: trimPromptText(rule.title, 90),
+        sectionTitle: trimPromptText(rule.sectionTitle, 90),
+        primaryConcern: trimPromptText(rule.primaryConcern, 120),
+        benchmark: trimPromptText(rule.benchmark || rule.textSummary, 140),
+      })),
+  }));
+}
 
+function buildContractInsightPrompt({ contract, risks = [], clauseInsights = [] }) {
+  return [
+    'You are a legal contract review assistant.',
+    'Generate one grounded contract insight package using only the provided JSON context.',
+    'Use the retrieved precedent and rulebook context when writing clause-level explanations.',
+    'Do not invent facts, obligations, dates, money values, or legal positions that are not present in the context.',
+    'Keep the wording practical, concise, and reviewer-friendly.',
+    'Return JSON only.',
+    '',
+    'Context:',
+    serializePromptContext({
+      contract: {
+        id: contract.id,
+        title: contract.title,
+        status: contract.status,
+        summary: contract.metadata?.summary || '',
+        contractType: contract.metadata?.contractType || '',
+        parties: (contract.metadata?.parties || []).slice(0, 4),
+        dates: (contract.metadata?.dates || []).slice(0, 4),
+        clauseTypes: (contract.metadata?.clauseTypes || []).slice(0, 8),
+        riskCounts: contract.metadata?.riskCounts || { low: 0, medium: 0, high: 0 },
+        textPreview: trimPromptText(contract.textPreview, 240),
+      },
+      topRisks: risks.slice(0, 5).map((risk) => ({
+        title: risk.title,
+        severity: risk.severity,
+        summary: trimPromptText(risk.summary, 140),
+      })),
+      targetClauses: buildContractInsightPromptContext(clauseInsights),
+    }),
+    '',
+    'Requirements:',
+    '- Headline: one short sentence.',
+    '- Summary: maximum two short sentences.',
+    '- NextSteps: exactly three short actions.',
+    '- Return clauseInsights in the same order as targetClauses.',
+    '- ClauseInsights: return one item for every provided clauseId.',
+    '- Copy each clauseId exactly if you include it.',
+    '- Each whyItIsRisky, comparison, and recommendedChange value must be one short sentence.',
+    '- Keep every clause explanation explicitly grounded in the provided precedent or rulebook context.',
+  ].join('\n');
+}
+
+function hasCompleteGeneratedContractInsight(item = {}) {
+  return Boolean(
+    asText(item?.whyItIsRisky, '')
+      && asText(item?.comparison, '')
+      && asText(item?.recommendedChange, ''),
+  );
+}
+
+function normalizeGeneratedContractInsightItem(item = {}) {
   return {
-    headline,
-    summary: contract.metadata.summary,
-    topRiskItems,
-    nextSteps: [
-      'Validate extracted parties, dates, and payment amounts.',
-      'Review every high-risk clause against the retrieved precedent bank.',
-      'Check policy and rule matches before redrafting the clause.',
-    ],
+    clauseId: asText(item?.clauseId, ''),
+    whyItIsRisky: asText(item?.whyItIsRisky, ''),
+    comparison: asText(item?.comparison, ''),
+    recommendedChange: asText(item?.recommendedChange, ''),
+  };
+}
+
+function validateGeneratedContractInsights(generated, clauseInsights = []) {
+  const requestedClauseIds = clauseInsights.map((item) => item.clauseId);
+  const generatedItems = Array.isArray(generated?.clauseInsights) ? generated.clauseInsights : [];
+  const generatedByClauseId = new Map();
+
+  generatedItems.forEach((item) => {
+    const normalizedItem = normalizeGeneratedContractInsightItem(item);
+    const clauseId = normalizedItem.clauseId;
+
+    if (!clauseId || !hasCompleteGeneratedContractInsight(normalizedItem)) {
+      return;
+    }
+
+    generatedByClauseId.set(clauseId, normalizedItem);
+  });
+
+  const missingClauseIds = requestedClauseIds.filter((clauseId) => {
+    const generatedItem = generatedByClauseId.get(clauseId);
+    return !hasCompleteGeneratedContractInsight(generatedItem);
+  });
+
+  if (!missingClauseIds.length) {
+    return generatedByClauseId;
+  }
+
+  const completeGeneratedItems = generatedItems
+    .map(normalizeGeneratedContractInsightItem)
+    .filter((item) => hasCompleteGeneratedContractInsight(item));
+
+  if (completeGeneratedItems.length >= requestedClauseIds.length) {
+    return requestedClauseIds.reduce((accumulator, clauseId, index) => {
+      accumulator.set(clauseId, {
+        clauseId,
+        ...completeGeneratedItems[index],
+      });
+      return accumulator;
+    }, new Map());
+  }
+
+  throw new AppError(502, 'Gemini returned an incomplete contract insight package.', {
+    promptVersion: CONTRACT_INSIGHT_PROMPT_VERSION,
+    missingClauseIds,
+  });
+}
+
+function normalizeGeneratedNextSteps(value, fallback = []) {
+  const normalized = compactStringArray(value, [], 3, 120);
+  return normalized.length === 3 ? normalized : fallback.slice(0, 3);
+}
+
+async function generateContractInsightBundle({ contract, risks = [], clauseInsights = [] }) {
+  if (!isGeminiEnabled()) {
+    throw new AppError(503, 'Gemini is not configured for contract insights.', {
+      provider: env.genAiProvider,
+      model: env.genAiModel,
+    });
+  }
+
+  const fallback = buildContractInsightFallback({
+    contract,
+    risks,
     clauseInsights,
+  });
+
+  const generated = await generateStructuredObject({
+    prompt: buildContractInsightPrompt({
+      contract,
+      risks,
+      clauseInsights,
+    }),
+    responseSchema: contractInsightBundleSchema,
+    label: 'contract insight bundle',
+    requestOptions: buildInsightRequestOptions({
+      modelCandidates: buildContractInsightModelCandidates(),
+      includeDefaultModelFallbacks: false,
+      maxOutputTokens: Math.max(env.genAiMaxOutputTokens, 1800),
+      lowLatencyMaxOutputTokens: Math.max(env.genAiMaxOutputTokens, 1800),
+      requestTimeoutMs: Math.max(env.genAiTimeoutMs, 30000),
+    }),
+  });
+
+  const generatedByClauseId = validateGeneratedContractInsights(generated, clauseInsights);
+  const normalizedClauseInsights = {};
+
+  clauseInsights.forEach((clauseInsight) => {
+    const generatedItem = generatedByClauseId.get(clauseInsight.clauseId);
+    const clauseFallback = buildClauseFallbackText(clauseInsight);
+
+    normalizedClauseInsights[clauseInsight.clauseId] = {
+      ...clauseInsight,
+      whyItIsRisky: compactText(generatedItem.whyItIsRisky, clauseFallback.whyItIsRisky, 180),
+      comparison: compactText(generatedItem.comparison, clauseFallback.comparison, 220),
+      recommendedChange: compactText(generatedItem.recommendedChange, clauseFallback.recommendedChange, 180),
+    };
+  });
+
+  return {
+    promptVersion: CONTRACT_INSIGHT_PROMPT_VERSION,
+    provider: 'gemini',
+    overview: {
+      headline: compactText(generated?.headline, fallback.headline, 140),
+      summary: compactText(generated?.summary, fallback.summary, 260),
+      nextSteps: normalizeGeneratedNextSteps(generated?.nextSteps, fallback.nextSteps),
+    },
+    clauseInsights: normalizedClauseInsights,
   };
 }
 
-function buildDerivedContractOverview(contractBundle) {
-  const fallback = buildTemplateContractOverview(contractBundle);
-  const highRiskCount = Number(contractBundle?.contract?.metadata?.riskCounts?.high || 0);
-  const highlightedClauseTypes = [...new Set(
-    (fallback.clauseInsights || [])
-      .map((insight) => formatClauseType(insight.clauseType || 'clause'))
-      .filter(Boolean),
-  )].slice(0, 2);
-  const clauseFocus = highlightedClauseTypes.length
-    ? `Primary review focus is ${highlightedClauseTypes.join(' and ')} language.`
-    : '';
+function lowerCaseFirstCharacter(value = '') {
+  return value ? `${value.charAt(0).toLowerCase()}${value.slice(1)}` : '';
+}
 
-  return {
-    ...fallback,
-    headline: highRiskCount > 0
-      ? `${highRiskCount} high-risk clause${highRiskCount === 1 ? '' : 's'} need review before approval.`
-      : fallback.headline,
-    summary: compactText(
-      [contractBundle?.contract?.metadata?.summary || fallback.summary, clauseFocus]
-        .filter(Boolean)
-        .join(' '),
-      fallback.summary,
-      260,
-    ),
-    nextSteps: [
-      highlightedClauseTypes[0]
-        ? `Review the ${highlightedClauseTypes[0]} wording against the suggested benchmark edits.`
-        : fallback.nextSteps[0],
-      'Compare the flagged clauses with the strongest precedent or closest indexed contract language.',
-      'Confirm notice periods, payment terms, and redline approvals before final sign-off.',
-    ],
-  };
+function buildSemanticClauseSnippet(match = {}, fallback = '') {
+  const rawSnippet = trimPromptText(match.clauseTextSummary || match.clauseTextFull || '', 120)
+    .replace(/^["'\s]+|["'\s]+$/g, '')
+    .replace(/\.+$/, '')
+    .trim();
+
+  return rawSnippet ? lowerCaseFirstCharacter(rawSnippet) : fallback;
+}
+
+function buildSemanticMatchSource(match = {}, contract = null) {
+  const clauseTypeLabel = formatClauseType(match.clauseType || 'clause');
+  const sourceTitle = contract?.title || match.title || '';
+
+  return sourceTitle
+    ? `${clauseTypeLabel} clause in ${sourceTitle}`
+    : `${clauseTypeLabel} clause in the indexed corpus`;
+}
+
+function buildSemanticAnswerModelCandidates() {
+  return [...new Set(
+    [env.genAiModel, ...(Array.isArray(env.genAiModelCandidates) ? env.genAiModelCandidates : [])]
+      .map((value) => String(value || '').trim())
+      .filter(Boolean),
+  )];
+}
+
+function buildSemanticAnswerRequestOptions() {
+  const modelCandidates = buildSemanticAnswerModelCandidates();
+
+  return buildInsightRequestOptions({
+    includeDefaultModelFallbacks: false,
+    ...(modelCandidates.length ? { modelCandidates } : {}),
+    maxAttempts: 1,
+    requestTimeoutMs: Math.max(env.genAiTimeoutMs, 18000),
+    maxOutputTokens: Math.max(env.genAiMaxOutputTokens, 700),
+    lowLatencyMaxOutputTokens: Math.max(env.genAiMaxOutputTokens, 700),
+    thinkingBudget: 0,
+  });
 }
 
 function buildTemplateSemanticAnswer({ query, matches, contract }) {
@@ -522,155 +714,27 @@ function buildTemplateSemanticAnswer({ query, matches, contract }) {
   }
 
   const primaryMatch = normalizePrecedentMatch(matches[0]);
+  const secondaryMatch = matches[1] ? normalizePrecedentMatch(matches[1]) : null;
   const clauseType = primaryMatch.clauseType || 'other';
   const rule = getRulebookEntry(clauseType);
+  const primarySnippet = buildSemanticClauseSnippet(primaryMatch, lowerCaseFirstCharacter(rule.primaryConcern));
+  const secondaryClauseLabel = secondaryMatch?.clauseType && secondaryMatch.clauseType !== clauseType
+    ? formatClauseType(secondaryMatch.clauseType)
+    : '';
+  const localAnswer = primarySnippet
+    ? `The closest match for "${query}" is a ${buildSemanticMatchSource(primaryMatch, contract)}. It discusses ${primarySnippet}${secondaryClauseLabel ? `, and a secondary match also points to ${secondaryClauseLabel} language.` : '.'}`
+    : `The closest match for "${query}" is a ${buildSemanticMatchSource(primaryMatch, contract)}. ${rule.primaryConcern}`;
 
   return {
-    answer: `The strongest match for "${query}" is a ${formatClauseType(clauseType)} clause from ${contract?.title || primaryMatch.title || 'your indexed corpus'}. ${rule.primaryConcern}`,
-    supportingMatches: toSupportingMatches(matches),
+    answer: compactText(localAnswer, rule.primaryConcern, 260),
+    supportingMatches: toSupportingMatches(matches).slice(0, 3),
     recommendations: [
       rule.recommendedAction,
-      `Cross-check the ${formatClauseType(clauseType)} clause against your governing law and dispute resolution sections before final approval.`,
+      secondaryClauseLabel
+        ? `Compare it with the ${secondaryClauseLabel} section because the retrieved matches suggest those obligations interact.`
+        : `Cross-check the ${formatClauseType(clauseType)} clause against your governing law and dispute resolution sections before final approval.`,
     ],
   };
-}
-
-function buildOverviewClauseContext(insight = {}) {
-  const topRule = Array.isArray(insight.ruleMatches) ? insight.ruleMatches[0] : null;
-
-  return {
-    clauseId: insight.clauseId,
-    clauseType: insight.clauseType,
-    riskLabel: insight.riskLabel,
-    currentClauseSummary: trimPromptText(
-      insight.currentClause?.clauseTextSummary
-      || insight.currentClause?.clauseText
-      || '',
-      120,
-    ),
-    bestPrecedentSummary: trimPromptText(
-      insight.precedentClause?.clauseTextSummary
-      || insight.precedentClause?.clauseText
-      || insight.precedentClause?.clauseTextFull
-      || '',
-      120,
-    ),
-    benchmarkSummary: trimPromptText(
-      topRule?.benchmark
-      || topRule?.textSummary
-      || topRule?.primaryConcern
-      || '',
-      140,
-    ),
-    whyItIsRisky: trimPromptText(insight.whyItIsRisky, 140),
-    recommendedChange: trimPromptText(insight.recommendedChange, 140),
-  };
-}
-
-function buildContractOverviewPrompt(contractBundle, fallback) {
-  const { contract, risks } = contractBundle;
-
-  return [
-    'You are a legal contract review assistant.',
-    'Generate grounded, context-based, actionable insights using only the provided JSON context.',
-    'Do not invent clauses, parties, obligations, money values, or legal facts that are not present in the context.',
-    'Be direct and practical for a business reviewer.',
-    'Keep everything brief and to the point.',
-    'Return JSON only.',
-    '',
-    'Context:',
-    serializePromptContext({
-      contract: {
-        id: contract.id,
-        title: contract.title,
-        status: contract.status,
-        summary: contract.metadata.summary,
-        contractType: contract.metadata.contractType,
-        parties: (contract.metadata.parties || []).slice(0, 3),
-        dates: (contract.metadata.dates || []).slice(0, 3),
-        monetaryValues: (contract.metadata.monetaryValues || []).slice(0, 3),
-        clauseTypes: (contract.metadata.clauseTypes || []).slice(0, 5),
-        riskCounts: contract.metadata.riskCounts,
-        textPreview: trimPromptText(contract.textPreview, 220),
-      },
-      topRisks: risks.slice(0, 3).map((risk) => ({
-        title: risk.title,
-        severity: risk.severity,
-        summary: trimPromptText(risk.summary, 140),
-      })),
-      targetClauses: fallback.clauseInsights.slice(0, 4).map(buildOverviewClauseContext),
-    }),
-    '',
-    'Requirements:',
-    '- Headline: one short sentence.',
-    '- Summary: max 2 short sentences.',
-    '- NextSteps: exactly 3 short actions.',
-  ].join('\n');
-}
-
-function buildClauseInsightPrompt(clause, reviewContext = {}) {
-  const currentClause = buildCurrentClausePayload(clause, reviewContext.currentClause || {});
-  const precedentMatches = (reviewContext.precedentMatches || []).map(normalizePrecedentMatch);
-  const ruleMatches = ensureRuleMatches(reviewContext.ruleMatches || [], clause.clauseType);
-
-  return [
-    'You are a legal contract review assistant.',
-    'Review the target clause using only the clause data, precedent matches, and policy/rule matches below.',
-    'Do not invent facts beyond the provided context.',
-    'Keep the explanation practical and actionable.',
-    'When explaining the comparison, explicitly anchor it to the precedent and benchmark guidance in the context.',
-    'Each of whyItIsRisky, comparison, and recommendedChange must be one short sentence.',
-    'Return JSON only.',
-    '',
-    'Context:',
-    serializePromptContext({
-      currentClause: {
-        ...currentClause,
-        clauseText: trimPromptText(currentClause.clauseText, 140),
-        clauseTextSummary: trimPromptText(currentClause.clauseTextSummary, 140),
-        clauseTextFull: trimPromptText(currentClause.clauseTextFull, 320),
-      },
-      precedentMatches: toPromptMatches(precedentMatches),
-      ruleMatches: toPromptRuleMatches(ruleMatches),
-    }),
-  ].join('\n');
-}
-
-function buildBatchClauseInsightPrompt(clauses, reviewContexts = []) {
-  const clausesData = clauses.map((clause, index) => {
-    const reviewContext = reviewContexts[index] || {};
-    const currentClause = buildCurrentClausePayload(clause, reviewContext.currentClause || {});
-    const precedentMatches = (reviewContext.precedentMatches || []).map(normalizePrecedentMatch);
-    const ruleMatches = ensureRuleMatches(reviewContext.ruleMatches || [], clause.clauseType);
-
-    return {
-      clauseId: clause.id,
-      context: {
-        currentClause: {
-          clauseType: currentClause.clauseType,
-          riskLabel: currentClause.riskLabel,
-          clauseTextSummary: trimPromptText(currentClause.clauseTextSummary, 100),
-          clauseTextFull: trimPromptText(currentClause.clauseTextFull, 180),
-        },
-        precedentMatches: toBatchPromptMatches(precedentMatches),
-        ruleMatches: toBatchPromptRuleMatches(ruleMatches),
-      },
-    };
-  });
-
-  return [
-    'You are a legal contract review assistant.',
-    'Review the target clauses using only the clause data, precedent matches, and policy/rule matches below.',
-    'Do not invent facts beyond the provided context.',
-    'Keep the explanations practical and actionable.',
-    'When explaining the comparison, explicitly anchor it to the precedent and benchmark guidance in the context.',
-    'Each whyItIsRisky, comparison, and recommendedChange value must be one short sentence.',
-    'Keep each value under 35 words.',
-    'Return JSON only with an array of insights, each containing clauseId, whyItIsRisky, comparison, and recommendedChange.',
-    '',
-    'Clauses to analyze:',
-    serializePromptContext({ clauses: clausesData }),
-  ].join('\n');
 }
 
 function buildSemanticAnswerPrompt({ query, matches, contract }) {
@@ -694,6 +758,7 @@ function buildSemanticAnswerPrompt({ query, matches, contract }) {
         }
         : null,
       matches: toPromptMatches(matches),
+      ruleMatches: toPromptRuleMatches(matches.map((match) => buildRuleFallbackMatch(match.clauseType || 'other'))),
     }),
     '',
     'Requirements:',
@@ -702,155 +767,13 @@ function buildSemanticAnswerPrompt({ query, matches, contract }) {
   ].join('\n');
 }
 
-async function generateContractOverview(contractBundle) {
-  return attachInsightMeta(buildDerivedContractOverview(contractBundle), {
-    provider: 'derived-overview',
-  });
-}
-
-async function generateBatchClauseInsights(clauses, reviewContexts = []) {
-  const fallbacks = clauses.map((clause, index) => buildTemplateClauseInsight(clause, reviewContexts[index] || {}));
-
-  if (!isGeminiEnabled()) {
-    return fallbacks.map((fallback, index) => attachInsightMeta(fallback, {
-      degraded: true,
-      provider: 'template-fallback',
-      geminiError: buildGeminiFailureInfo(
-        new AppError(503, 'Gemini is not configured for clause insights.', {
-          provider: env.genAiProvider,
-          model: env.genAiModel,
-        }),
-      ),
-    }));
-  }
-
-  const batchRequestOptions = buildInsightRequestOptions({
-    maxAttempts: Math.max(2, env.genAiMaxRetries + 1),
-    requestTimeoutMs: Math.max(env.genAiTimeoutMs, 25000),
-    maxOutputTokens: Math.max(env.genAiMaxOutputTokens, 1200),
-    lowLatencyMaxOutputTokens: Math.max(env.genAiMaxOutputTokens, 1200),
-  });
-  const resultsByClauseId = new Map();
-
-  for (const chunk of chunkItems(
-    clauses.map((clause, index) => ({
-      clause,
-      reviewContext: reviewContexts[index] || {},
-      fallback: fallbacks[index],
-    })),
-    BATCH_CLAUSE_INSIGHT_CHUNK_SIZE,
-  )) {
-    const chunkClauses = chunk.map((item) => item.clause);
-    const chunkReviewContexts = chunk.map((item) => item.reviewContext);
-
-    try {
-      const generated = await generateStructuredObject({
-        prompt: buildBatchClauseInsightPrompt(chunkClauses, chunkReviewContexts),
-        responseSchema: batchClauseInsightSchema,
-        label: 'batch clause insights',
-        requestOptions: batchRequestOptions,
-      });
-
-      const generatedInsightByClauseId = new Map(
-        (generated?.insights || [])
-          .filter(isGeneratedClauseInsightComplete)
-          .map((item) => [item.clauseId, item]),
-      );
-
-      for (const item of chunk) {
-        const generatedInsight = generatedInsightByClauseId.get(item.clause.id);
-
-        if (!generatedInsight) {
-          resultsByClauseId.set(
-            item.clause.id,
-            await generateClauseInsight(item.clause, item.reviewContext),
-          );
-          continue;
-        }
-
-        const result = attachInsightMeta({
-          ...item.fallback,
-          whyItIsRisky: compactText(generatedInsight.whyItIsRisky, item.fallback.whyItIsRisky, 180),
-          comparison: compactText(generatedInsight.comparison, item.fallback.comparison, 220),
-          recommendedChange: compactText(generatedInsight.recommendedChange, item.fallback.recommendedChange, 180),
-        });
-
-        clauseInsightCache.set(item.clause.id, result);
-        resultsByClauseId.set(item.clause.id, result);
-      }
-    } catch (error) {
-      console.warn('Gemini batch clause insight chunk failed, retrying clauses individually:', error.message);
-
-      for (const item of chunk) {
-        const result = await generateClauseInsight(item.clause, item.reviewContext);
-        resultsByClauseId.set(item.clause.id, result);
-      }
-    }
-  }
-
-  return clauses.map((clause, index) => resultsByClauseId.get(clause.id) || fallbacks[index]);
-}
-
-async function generateClauseInsight(clause, reviewContext = {}) {
-  const cacheKey = `${clause.id}`;
-  const cached = clauseInsightCache.get(cacheKey);
-  if (cached && cached.provider === 'gemini' && !cached.degraded) {
-    return cached;
-  }
-
-  const fallback = buildTemplateClauseInsight(clause, reviewContext);
-
-  if (!isGeminiEnabled()) {
-    return attachInsightMeta(fallback, {
-      degraded: true,
-      provider: 'template-fallback',
-      geminiError: buildGeminiFailureInfo(
-        new AppError(503, 'Gemini is not configured for clause insights.', {
-          provider: env.genAiProvider,
-          model: env.genAiModel,
-        }),
-      ),
-    });
-  }
-
-  try {
-    const generated = await generateStructuredObject({
-      prompt: buildClauseInsightPrompt(clause, reviewContext),
-      responseSchema: clauseInsightSchema,
-      label: 'clause insight',
-      requestOptions: buildInsightRequestOptions(),
-    });
-
-    const result = attachInsightMeta({
-      ...fallback,
-      whyItIsRisky: compactText(generated?.whyItIsRisky, fallback.whyItIsRisky, 180),
-      comparison: compactText(generated?.comparison, fallback.comparison, 220),
-      recommendedChange: compactText(generated?.recommendedChange, fallback.recommendedChange, 180),
-    });
-
-    // Cache successful results
-    if (result.provider === 'gemini' && !result.degraded) {
-      clauseInsightCache.set(cacheKey, result);
-    }
-
-    return result;
-  } catch (error) {
-    console.warn('Gemini clause insight failed, using explicit template fallback:', error.message);
-    return attachInsightMeta(fallback, {
-      degraded: true,
-      provider: 'template-fallback',
-      geminiError: buildGeminiFailureInfo(error),
-    });
-  }
-}
-
 async function buildSemanticAnswer({ query, matches, contract }) {
   const fallback = buildTemplateSemanticAnswer({ query, matches, contract });
 
   if (!matches.length || !isGeminiEnabled()) {
     return attachInsightMeta(fallback, {
       degraded: !matches.length ? false : true,
-      provider: !matches.length ? 'retrieval-only' : 'template-fallback',
+      provider: !matches.length ? 'retrieval-only' : 'local-derived',
       geminiError: !matches.length
         ? null
         : buildGeminiFailureInfo(
@@ -867,11 +790,7 @@ async function buildSemanticAnswer({ query, matches, contract }) {
       prompt: buildSemanticAnswerPrompt({ query, matches, contract }),
       responseSchema: semanticAnswerSchema,
       label: 'semantic answer',
-      requestOptions: buildInsightRequestOptions({
-        requestTimeoutMs: Math.max(env.genAiTimeoutMs, 18000),
-        maxOutputTokens: Math.max(env.genAiMaxOutputTokens, 700),
-        lowLatencyMaxOutputTokens: Math.max(env.genAiMaxOutputTokens, 700),
-      }),
+      requestOptions: buildSemanticAnswerRequestOptions(),
     });
 
     return attachInsightMeta({
@@ -880,18 +799,19 @@ async function buildSemanticAnswer({ query, matches, contract }) {
       recommendations: compactStringArray(generated?.recommendations, fallback.recommendations, 2, 100),
     });
   } catch (error) {
-    console.warn('Gemini semantic answer failed, using explicit template fallback:', error.message);
+    console.warn('Gemini semantic answer unavailable, using derived local answer:', error.message);
     return attachInsightMeta(fallback, {
       degraded: true,
-      provider: 'template-fallback',
+      provider: 'local-derived',
       geminiError: buildGeminiFailureInfo(error),
     });
   }
 }
 
 module.exports = {
+  CONTRACT_INSIGHT_PROMPT_VERSION,
+  buildClauseInsightContextRecord,
+  buildGeminiFailureInfo,
   buildSemanticAnswer,
-  generateClauseInsight,
-  generateBatchClauseInsights,
-  generateContractOverview,
+  generateContractInsightBundle,
 };

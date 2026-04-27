@@ -1,3 +1,4 @@
+const crypto = require('node:crypto');
 const { google } = require('googleapis');
 
 const { env, featureFlags } = require('../config/env');
@@ -16,6 +17,103 @@ const GOOGLE_SCOPE_MAP = {
 };
 
 const DEFAULT_SCOPE_ALIASES = ['drive', 'gmail', 'gmail-send'];
+const DEFAULT_GOOGLE_OAUTH_RETURN_TO = '/intake';
+const GOOGLE_OAUTH_STATE_TTL_MS = 15 * 60 * 1000;
+
+function normalizeGoogleOAuthReturnTo(value = '') {
+  const normalized = String(value || '').trim();
+
+  if (!normalized) {
+    return DEFAULT_GOOGLE_OAUTH_RETURN_TO;
+  }
+
+  if (
+    normalized.startsWith('http://')
+    || normalized.startsWith('https://')
+    || normalized.startsWith('//')
+  ) {
+    return DEFAULT_GOOGLE_OAUTH_RETURN_TO;
+  }
+
+  return normalized.startsWith('/') ? normalized : `/${normalized.replace(/^\/+/, '')}`;
+}
+
+function createGoogleOAuthState({ returnTo = DEFAULT_GOOGLE_OAUTH_RETURN_TO } = {}) {
+  const payload = {
+    returnTo: normalizeGoogleOAuthReturnTo(returnTo),
+    createdAt: Date.now(),
+  };
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto
+    .createHmac('sha256', env.authSessionSecret)
+    .update(encodedPayload)
+    .digest('base64url');
+
+  return `${encodedPayload}.${signature}`;
+}
+
+function parseGoogleOAuthState(state = '') {
+  const rawState = String(state || '').trim();
+
+  if (!rawState) {
+    return null;
+  }
+
+  const [encodedPayload, signature] = rawState.split('.');
+
+  if (!encodedPayload || !signature) {
+    return null;
+  }
+
+  const expectedSignature = crypto
+    .createHmac('sha256', env.authSessionSecret)
+    .update(encodedPayload)
+    .digest('base64url');
+  const providedSignatureBuffer = Buffer.from(signature, 'utf8');
+  const expectedSignatureBuffer = Buffer.from(expectedSignature, 'utf8');
+
+  if (
+    providedSignatureBuffer.length !== expectedSignatureBuffer.length
+    || !crypto.timingSafeEqual(providedSignatureBuffer, expectedSignatureBuffer)
+  ) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8'));
+    const createdAt = Number(payload?.createdAt);
+
+    if (!Number.isFinite(createdAt) || (Date.now() - createdAt) > GOOGLE_OAUTH_STATE_TTL_MS) {
+      return null;
+    }
+
+    return {
+      returnTo: normalizeGoogleOAuthReturnTo(payload?.returnTo),
+      createdAt,
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+function buildGoogleAppRedirectUrl(returnTo = DEFAULT_GOOGLE_OAUTH_RETURN_TO, params = {}) {
+  if (!env.appBaseUrl) {
+    return '';
+  }
+
+  const baseUrl = env.appBaseUrl.endsWith('/') ? env.appBaseUrl : `${env.appBaseUrl}/`;
+  const url = new URL(normalizeGoogleOAuthReturnTo(returnTo), baseUrl);
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') {
+      return;
+    }
+
+    url.searchParams.set(key, String(value));
+  });
+
+  return url.toString();
+}
 
 function ensureGoogleOAuthConfigured() {
   if (!featureFlags.googleConnectors) {
@@ -92,7 +190,7 @@ async function getOAuthClient() {
   if (!refreshToken) {
     throw new AppError(
       503,
-      'Google OAuth is configured but not connected yet. Open /api/connectors/google/auth-url and complete the browser consent flow first.',
+      'Google OAuth is configured but not connected yet. Start the Connect Google flow in Lexora Intake and complete the browser consent flow first.',
       {
         authUrlPath: `${env.apiPrefix}/connectors/google/auth-url`,
         redirectUri: env.googleRedirectUri,
@@ -133,7 +231,7 @@ async function exchangeGoogleAuthCode(code) {
 
   return {
     connected: true,
-    tokenSource: 'local-store',
+    tokenSource: storedTokens.storageMode || 'local-store',
     redirectUri: env.googleRedirectUri,
     scopes: storedTokens.scope
       ? storedTokens.scope.split(/\s+/).filter(Boolean)
@@ -149,6 +247,8 @@ async function disconnectGoogleOAuth() {
 }
 
 module.exports = {
+  buildGoogleAppRedirectUrl,
+  createGoogleOAuthState,
   GOOGLE_SCOPE_MAP,
   createGoogleAuthUrl,
   disconnectGoogleOAuth,
@@ -156,4 +256,5 @@ module.exports = {
   getGoogleConnectorStatus,
   getOAuthClient,
   normalizeScopes,
+  parseGoogleOAuthState,
 };

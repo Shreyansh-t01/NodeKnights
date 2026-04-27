@@ -1,4 +1,4 @@
-# User-Friendly UI Redesign Plan
+python -m scripts/test_predict.p# User-Friendly UI Redesign Plan
 
 This file is a design recommendation only. No code changes are included here.
 

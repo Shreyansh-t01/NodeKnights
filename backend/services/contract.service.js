@@ -9,8 +9,6 @@ const { embedText, embedTexts } = require('./embedding.service');
 const {
   deleteContractBundle,
   saveContractBundle,
-  saveContractCachedInsights,
-  saveContractOverviewInsights,
   listContracts,
   getContractById,
 } = require('./contract.repository');
@@ -19,7 +17,12 @@ const {
   upsertClauseVectors,
   usesPineconeIntegratedText,
 } = require('./vector.service');
-const { generateContractOverview, generateClauseInsight, generateBatchClauseInsights } = require('./insight.service');
+const {
+  CONTRACT_INSIGHT_PROMPT_VERSION,
+  buildClauseInsightContextRecord,
+  buildGeminiFailureInfo,
+  generateContractInsightBundle,
+} = require('./insight.service');
 const {
   findComparableContractMatchesForClause,
   findPrecedentMatchesForClause,
@@ -34,7 +37,33 @@ const {
   buildRiskRecords,
 } = require('./contract.helpers');
 
-const pendingContractInsightRequests = new Map();
+const INSIGHT_STATUS = Object.freeze({
+  NOT_REQUESTED: 'not_requested',
+  GENERATING: 'generating',
+  READY: 'ready',
+  FAILED: 'failed',
+});
+
+const pendingContractInsightGenerationRequests = new Map();
+
+function createVectorMetadata(contract, clause, embedding = null) {
+  return {
+    corpusType: 'contract_clause',
+    contractId: contract.id,
+    contractTitle: contract.title,
+    clauseId: clause.id,
+    clauseType: clause.clauseType,
+    riskLabel: clause.riskLabel,
+    clauseText: clause.clauseText,
+    clauseTextSummary: clause.clauseTextSummary || clause.clauseText,
+    clauseTextFull: clause.clauseTextFull || clause.clauseText,
+    position: clause.position,
+    sourceType: 'contract',
+    embeddingProvider: embedding?.provider || 'pinecone-integrated',
+    embeddingModel: embedding?.model || env.pineconeIntegratedModel || 'pinecone-hosted',
+    embeddingTaskType: embedding?.taskType || 'RETRIEVAL_DOCUMENT',
+  };
+}
 
 async function createVectorRecords(contract, clauses) {
   if (usesPineconeIntegratedText()) {
@@ -42,22 +71,7 @@ async function createVectorRecords(contract, clauses) {
       id: clause.id,
       namespace: env.pineconeContractNamespace,
       text: clause.clauseTextFull || clause.clauseText,
-      metadata: {
-        corpusType: 'contract_clause',
-        contractId: contract.id,
-        contractTitle: contract.title,
-        clauseId: clause.id,
-        clauseType: clause.clauseType,
-        riskLabel: clause.riskLabel,
-        clauseText: clause.clauseText,
-        clauseTextSummary: clause.clauseTextSummary || clause.clauseText,
-        clauseTextFull: clause.clauseTextFull || clause.clauseText,
-        position: clause.position,
-        sourceType: 'contract',
-        embeddingProvider: 'pinecone-integrated',
-        embeddingModel: env.pineconeIntegratedModel || 'pinecone-hosted',
-        embeddingTaskType: 'RETRIEVAL_DOCUMENT',
-      },
+      metadata: createVectorMetadata(contract, clause),
     }));
   }
 
@@ -73,22 +87,7 @@ async function createVectorRecords(contract, clauses) {
     id: clause.id,
     namespace: env.pineconeContractNamespace,
     values: embeddings[index].values,
-    metadata: {
-      corpusType: 'contract_clause',
-      contractId: contract.id,
-      contractTitle: contract.title,
-      clauseId: clause.id,
-      clauseType: clause.clauseType,
-      riskLabel: clause.riskLabel,
-      clauseText: clause.clauseText,
-      clauseTextSummary: clause.clauseTextSummary || clause.clauseText,
-      clauseTextFull: clause.clauseTextFull || clause.clauseText,
-      position: clause.position,
-      sourceType: 'contract',
-      embeddingProvider: embeddings[index].provider,
-      embeddingModel: embeddings[index].model,
-      embeddingTaskType: embeddings[index].taskType,
-    },
+    metadata: createVectorMetadata(contract, clause, embeddings[index]),
   }));
 }
 
@@ -104,10 +103,6 @@ function buildCurrentClauseContext(contract, clause) {
     clauseTextFull: clause.clauseTextFull || clause.clauseText,
     position: clause.position || null,
   };
-}
-
-async function buildClauseReviewContext(contract, clause) {
-  return buildClauseReviewContextWithVector(contract, clause, null);
 }
 
 async function buildClauseReviewContextWithVector(contract, clause, precomputedVector = null) {
@@ -128,6 +123,7 @@ async function buildClauseReviewContextWithVector(contract, clause, precomputedV
     findPrecedentMatchesForClause({ clause, topK: 3, vector: retrievalVector, queryText: searchText }),
     findRelevantKnowledge({ clause, topK: 4, vector: retrievalVector, queryText: searchText }),
   ]);
+
   const comparisonMatches = precedentMatches.length
     ? []
     : await findComparableContractMatchesForClause({
@@ -188,144 +184,280 @@ async function buildClauseReviewContexts(contract, clauses = []) {
   );
 }
 
-async function buildAutomaticClauseInsights(contract, clauses = []) {
-  const targets = clauses
-    .filter((clause) => clause.riskLabel === 'high')
-    .slice(0, 5);
+function findPipelineStepIndex(contract = {}, key = '') {
+  return Array.isArray(contract.pipeline)
+    ? contract.pipeline.findIndex((step) => step.key === key)
+    : -1;
+}
 
-  if (targets.length === 0) {
-    return [];
+function upsertPipelineStep(contract = {}, step = {}) {
+  const pipeline = Array.isArray(contract.pipeline) ? [...contract.pipeline] : [];
+  const stepPayload = {
+    key: step.key,
+    label: step.label,
+    status: step.status,
+    detail: step.detail,
+  };
+  const existingIndex = findPipelineStepIndex(contract, step.key);
+
+  if (existingIndex === -1) {
+    pipeline.push(stepPayload);
+  } else {
+    pipeline[existingIndex] = {
+      ...pipeline[existingIndex],
+      ...stepPayload,
+    };
   }
 
-  const cachedClauseInsights = contract.cachedInsights?.clauses || {};
-  const resultsByClauseId = new Map();
-  const missingTargets = [];
+  contract.pipeline = pipeline;
+  return contract;
+}
 
-  targets.forEach((clause) => {
-    const cachedInsight = cachedClauseInsights[clause.id];
+function createDefaultStoredInsightBundle() {
+  return {
+    status: INSIGHT_STATUS.NOT_REQUESTED,
+    requestedAt: null,
+    generatedAt: null,
+    failedAt: null,
+    lastError: null,
+    provider: null,
+    promptVersion: CONTRACT_INSIGHT_PROMPT_VERSION,
+    selectedClauseIds: [],
+    overview: null,
+    clauseInsights: {},
+  };
+}
 
-    if (isReusableGeminiClauseInsight(cachedInsight)) {
-      resultsByClauseId.set(clause.id, cachedInsight);
-    } else {
-      missingTargets.push(clause);
-    }
+function normalizeStoredInsightBundle(bundle = null) {
+  if (!bundle || typeof bundle !== 'object') {
+    return createDefaultStoredInsightBundle();
+  }
+
+  const normalizedStatus = Object.values(INSIGHT_STATUS).includes(bundle.status)
+    ? bundle.status
+    : INSIGHT_STATUS.NOT_REQUESTED;
+  const promptVersion = typeof bundle.promptVersion === 'string' ? bundle.promptVersion.trim() : '';
+
+  if (promptVersion !== CONTRACT_INSIGHT_PROMPT_VERSION) {
+    return createDefaultStoredInsightBundle();
+  }
+
+  return {
+    ...createDefaultStoredInsightBundle(),
+    ...bundle,
+    status: normalizedStatus,
+    promptVersion: CONTRACT_INSIGHT_PROMPT_VERSION,
+    selectedClauseIds: Array.isArray(bundle.selectedClauseIds) ? bundle.selectedClauseIds : [],
+    overview: bundle.overview && typeof bundle.overview === 'object' ? bundle.overview : null,
+    clauseInsights: bundle.clauseInsights && typeof bundle.clauseInsights === 'object' ? bundle.clauseInsights : {},
+    lastError: bundle.lastError || null,
+  };
+}
+
+function getStoredInsightBundle(contract = {}) {
+  return normalizeStoredInsightBundle(contract.cachedInsights?.contractInsights);
+}
+
+function mapInsightStatusToPipelineStatus(status = INSIGHT_STATUS.NOT_REQUESTED) {
+  switch (status) {
+    case INSIGHT_STATUS.READY:
+      return 'completed';
+    case INSIGHT_STATUS.FAILED:
+      return 'warning';
+    case INSIGHT_STATUS.GENERATING:
+      return 'pending';
+    case INSIGHT_STATUS.NOT_REQUESTED:
+    default:
+      return 'pending';
+  }
+}
+
+function buildPipelineInsightDetail(status = INSIGHT_STATUS.NOT_REQUESTED) {
+  switch (status) {
+    case INSIGHT_STATUS.GENERATING:
+      return 'Generating grounded insights for high-risk clauses...';
+    case INSIGHT_STATUS.READY:
+      return 'Insights are cached and ready for review.';
+    case INSIGHT_STATUS.FAILED:
+      return 'AI wording is unavailable right now, but retrieved legal context is still available.';
+    case INSIGHT_STATUS.NOT_REQUESTED:
+    default:
+      return 'Insights have not been generated yet for this contract.';
+  }
+}
+
+function applyStoredInsightBundle(contract = {}, insightBundle, options = {}) {
+  const normalizedBundle = normalizeStoredInsightBundle(insightBundle);
+  const persist = options.persist !== false;
+  const touch = options.touch !== false;
+
+  if (persist) {
+    contract.cachedInsights = {
+      ...(contract.cachedInsights || {}),
+      contractInsights: normalizedBundle,
+    };
+  }
+
+  contract.insightState = {
+    status: normalizedBundle.status,
+    requestedAt: normalizedBundle.requestedAt,
+    generatedAt: normalizedBundle.generatedAt,
+    failedAt: normalizedBundle.failedAt,
+    lastError: normalizedBundle.lastError || null,
+  };
+
+  upsertPipelineStep(contract, {
+    key: 'insights',
+    label: 'On-demand insights',
+    status: mapInsightStatusToPipelineStatus(normalizedBundle.status),
+    detail: buildPipelineInsightDetail(normalizedBundle.status),
   });
 
-  if (missingTargets.length) {
-    const reviewContexts = await buildClauseReviewContexts(contract, missingTargets);
-    const generatedInsights = await generateBatchClauseInsights(missingTargets, reviewContexts);
-
-    generatedInsights.forEach((insight, index) => {
-      resultsByClauseId.set(missingTargets[index].id, insight);
-    });
+  if (touch) {
+    contract.updatedAt = new Date().toISOString();
   }
 
-  return targets
-    .map((clause) => resultsByClauseId.get(clause.id))
-    .filter(Boolean);
+  return contract;
 }
 
-function isReusableOverview(insights) {
-  return Boolean(
-    insights
-      && !insights.degraded
-      && typeof insights.headline === 'string'
-      && typeof insights.summary === 'string'
-      && Array.isArray(insights.nextSteps)
-  );
-}
-
-function isReusableGeminiClauseInsight(insight) {
-  return Boolean(
-    insight
-      && insight.provider === 'gemini'
-      && !insight.degraded
-      && insight.clauseId,
-  );
-}
-
-function getCachedContractOverview(contract = {}) {
-  const overview = contract.cachedInsights?.overview;
-
-  return isReusableOverview(overview) ? overview : null;
-}
-
-function getCachedClauseInsight(contract = {}, clauseId = '') {
-  const cachedInsight = contract.cachedInsights?.clauses?.[clauseId];
-
-  return isReusableGeminiClauseInsight(cachedInsight) ? cachedInsight : null;
-}
-
-function buildReusableClauseInsightsPatch(clauseInsights = []) {
-  const clauses = clauseInsights.reduce((accumulator, insight) => {
-    if (isReusableGeminiClauseInsight(insight)) {
-      accumulator[insight.clauseId] = insight;
-    }
-
-    return accumulator;
-  }, {});
-
-  return Object.keys(clauses).length ? { clauses } : {};
-}
-
-function buildContractInsightCachePatch({ overview = null, clauseInsights = [] } = {}) {
-  const patch = {
-    ...buildReusableClauseInsightsPatch(clauseInsights),
-  };
-
-  if (isReusableOverview(overview)) {
-    patch.overview = overview;
-    patch.generatedAt = new Date().toISOString();
-    patch.provider = overview.provider;
-    patch.degraded = false;
-  }
-
-  return patch;
-}
-
-function getGeminiUnavailableMessage(reason = '') {
-  const suffix = reason ? ` ${reason}` : '';
-  return `Gemini insights are not generated yet for this contract. The contract was saved and extracted data is available for review.${suffix}`.trim();
-}
-
-function buildInsightUnavailableOverview(contract, reason = '') {
+function buildHighRiskClauseSummary(clause = {}) {
   return {
-    headline: `${contract?.title || 'Contract'} is available for review.`,
-    summary: getGeminiUnavailableMessage(reason),
-    topRiskItems: [],
-    nextSteps: [
-      'Review the extracted clause board from the contract card.',
-      'Retry AI insights later once Gemini becomes available.',
-      'Use semantic search or manual legal review in the meantime.',
-    ],
-    clauseInsights: [],
-    provider: 'template-fallback',
-    degraded: true,
-    geminiError: {
-      source: 'contract-ingest',
-      message: reason || 'Gemini insights were not generated during ingestion.',
-      statusCode: null,
-      details: null,
-    },
+    clauseId: clause.id,
+    clauseLabel: clause.clauseLabel || clause.clauseType || 'Clause',
+    clauseType: clause.clauseType || 'other',
+    riskLabel: clause.riskLabel || 'high',
+    riskScore: clause.riskScore ?? null,
+    clauseText: clause.clauseTextFull || clause.clauseTextSummary || clause.clauseText || '',
+    clausePreview: clause.clauseTextSummary || clause.clauseText || '',
+    extractedValues: clause.extractedValues || {},
+    position: clause.position ?? null,
   };
 }
 
-function hasGeminiInsightWarning({ overview = null, clauseInsights = [] } = {}) {
-  return Boolean(
-    (overview?.degraded && overview?.geminiError)
-      || clauseInsights.some((insight) => insight?.degraded && insight?.geminiError),
-  );
+function selectHighRiskClauses(clauses = []) {
+  return clauses
+    .filter((clause) => clause.riskLabel === 'high')
+    .sort((left, right) => (left.position || 0) - (right.position || 0));
 }
 
-function buildInsightPipelineDetail(overview = null, clauseInsights = []) {
-  if (!hasGeminiInsightWarning({ overview, clauseInsights })) {
-    return 'AI insights were generated for this contract.';
+function buildDefaultWorkspaceHeadline(contract = {}) {
+  return `${contract.title || 'Contract'} is ready for review.`;
+}
+
+function buildDefaultWorkspaceSummary(status = INSIGHT_STATUS.NOT_REQUESTED) {
+  switch (status) {
+    case INSIGHT_STATUS.GENERATING:
+      return 'Generating grounded insights for high-risk clauses...';
+    case INSIGHT_STATUS.FAILED:
+      return 'AI wording is unavailable right now, but review context is still available.';
+    case INSIGHT_STATUS.READY:
+      return 'Insights are available for this contract.';
+    case INSIGHT_STATUS.NOT_REQUESTED:
+    default:
+      return 'Insights have not been generated yet for this contract.';
+  }
+}
+
+function buildDefaultWorkspaceNextSteps(status = INSIGHT_STATUS.NOT_REQUESTED, highRiskClauses = []) {
+  const hasHighRiskClauses = highRiskClauses.length > 0;
+
+  switch (status) {
+    case INSIGHT_STATUS.GENERATING:
+      return [
+        'Keep reviewing the clause board while the insight request completes.',
+        'Focus first on the highest-risk clauses listed below.',
+        'Refresh is not required; the saved result will be reused after generation finishes.',
+      ];
+    case INSIGHT_STATUS.FAILED:
+      return [
+        'Use the retrieved precedent and rulebook context below to continue review.',
+        'Compare the flagged clause language with the strongest benchmark match.',
+        'Retry insight generation later if you need AI-written wording.',
+      ];
+    case INSIGHT_STATUS.READY:
+      return [
+        'Review the clause-level explanations against the source language.',
+        'Use the precedent and rulebook context to validate the suggested redraft direction.',
+        'Finalize redlines for the highlighted high-risk clauses before approval.',
+      ];
+    case INSIGHT_STATUS.NOT_REQUESTED:
+    default:
+      return hasHighRiskClauses
+        ? [
+          'Review the flagged high-risk clauses listed below.',
+          'Generate insights when you want AI-written explanation and redraft guidance.',
+          'Use semantic search or manual review in the meantime.',
+        ]
+        : [
+          'Review the clause board for any business-specific concerns.',
+          'Use semantic search to inspect similar language across indexed contracts.',
+          'Generate insights later if high-risk clauses appear after re-analysis.',
+        ];
+  }
+}
+
+function buildWorkspaceTopRiskItems(risks = []) {
+  return risks.slice(0, 5).map((risk) => risk.title);
+}
+
+function buildContractInsightsWorkspace(contractBundle) {
+  const storedBundle = getStoredInsightBundle(contractBundle.contract);
+  const highRiskClauses = selectHighRiskClauses(contractBundle.clauses).map(buildHighRiskClauseSummary);
+  const clauseInsights = storedBundle.selectedClauseIds
+    .map((clauseId) => storedBundle.clauseInsights?.[clauseId])
+    .filter(Boolean);
+
+  return {
+    status: storedBundle.status,
+    requestedAt: storedBundle.requestedAt,
+    generatedAt: storedBundle.generatedAt,
+    failedAt: storedBundle.failedAt,
+    lastError: storedBundle.lastError || null,
+    provider: storedBundle.provider || null,
+    promptVersion: storedBundle.promptVersion,
+    selectedClauseIds: storedBundle.selectedClauseIds,
+    eligibleForGeneration: highRiskClauses.length > 0,
+    headline: storedBundle.overview?.headline || buildDefaultWorkspaceHeadline(contractBundle.contract),
+    summary: storedBundle.overview?.summary || buildDefaultWorkspaceSummary(storedBundle.status),
+    nextSteps: Array.isArray(storedBundle.overview?.nextSteps) && storedBundle.overview.nextSteps.length
+      ? storedBundle.overview.nextSteps
+      : buildDefaultWorkspaceNextSteps(storedBundle.status, highRiskClauses),
+    topRiskItems: buildWorkspaceTopRiskItems(contractBundle.risks),
+    highRiskClauses,
+    clauseInsights,
+  };
+}
+
+function buildContractInsightsResponse(contractBundle) {
+  return {
+    contract: contractBundle.contract,
+    clauses: contractBundle.clauses,
+    risks: contractBundle.risks,
+    insights: buildContractInsightsWorkspace(contractBundle),
+  };
+}
+
+function hasReadyStoredInsightBundle(bundle = null) {
+  const normalizedBundle = normalizeStoredInsightBundle(bundle);
+
+  if (normalizedBundle.status !== INSIGHT_STATUS.READY || !normalizedBundle.overview) {
+    return false;
   }
 
-  const overviewMessage = overview?.geminiError?.message || '';
-  const clauseMessage = clauseInsights.find((insight) => insight?.geminiError?.message)?.geminiError?.message || '';
+  return normalizedBundle.selectedClauseIds.every((clauseId) => {
+    const clauseInsight = normalizedBundle.clauseInsights?.[clauseId];
+    return Boolean(
+      clauseInsight
+        && clauseInsight.whyItIsRisky
+        && clauseInsight.comparison
+        && clauseInsight.recommendedChange,
+    );
+  });
+}
 
-  return getGeminiUnavailableMessage(overviewMessage || clauseMessage);
+async function persistContractBundle(contractBundle) {
+  await saveContractBundle(contractBundle);
+  return contractBundle;
 }
 
 function describeArtifactStorage(artifact, label) {
@@ -413,11 +545,15 @@ async function ingestManualContract(file, options = {}) {
     },
     pipeline,
   });
+
+  applyStoredInsightBundle(contract, createDefaultStoredInsightBundle());
+
   const persistence = await saveContractBundle({
     contract,
     clauses,
     risks,
   });
+
   pipeline.push({
     key: 'firestore',
     label: 'Structured contract store',
@@ -425,51 +561,7 @@ async function ingestManualContract(file, options = {}) {
     detail: `Saved via ${persistence.mode}.`,
   });
 
-  let clauseInsights = [];
-  let insights = buildInsightUnavailableOverview(contract);
   const warnings = [];
-
-  try {
-    clauseInsights = await buildAutomaticClauseInsights(contract, clauses);
-    insights = await generateContractOverview({
-      contract,
-      clauses,
-      risks,
-      clauseInsights,
-    });
-
-    const cachedInsightsPatch = buildContractInsightCachePatch({
-      overview: insights,
-      clauseInsights,
-    });
-
-    if (Object.keys(cachedInsightsPatch).length) {
-      contract.cachedInsights = {
-        ...(contract.cachedInsights || {}),
-        ...cachedInsightsPatch,
-      };
-    }
-
-    pipeline.push({
-      key: 'insights',
-      label: 'AI insights',
-      status: hasGeminiInsightWarning({ overview: insights, clauseInsights }) ? 'warning' : 'completed',
-      detail: buildInsightPipelineDetail(insights, clauseInsights),
-    });
-  } catch (error) {
-    warnings.push({
-      key: 'insights',
-      message: error.message,
-    });
-    insights = buildInsightUnavailableOverview(contract, error.message);
-    pipeline.push({
-      key: 'insights',
-      label: 'AI insights',
-      status: 'warning',
-      detail: getGeminiUnavailableMessage(error.message),
-    });
-  }
-
   let vectorIndex = {
     mode: 'skipped',
     count: 0,
@@ -504,8 +596,6 @@ async function ingestManualContract(file, options = {}) {
     });
   }
 
-  contract.updatedAt = new Date().toISOString();
-
   try {
     await saveContractBundle({
       contract,
@@ -514,119 +604,140 @@ async function ingestManualContract(file, options = {}) {
     });
   } catch (error) {
     warnings.push({
-      key: 'contract-refresh',
+      key: 'contract-enrichment',
       message: error.message,
     });
     console.warn(`Contract ${contractId} enrichment state could not be persisted after initial save:`, error.message);
   }
 
-  return {
+  const responseBundle = {
     contract,
     clauses,
     risks,
-    insights,
+  };
+
+  return {
+    ...buildContractInsightsResponse(responseBundle),
     warnings,
     diagnostics: {
       extraction: extracted,
       analysisSource: analysis.source,
       persistence,
-      insightStatus: {
-        provider: insights?.provider || 'unknown',
-        degraded: Boolean(insights?.degraded),
-        geminiError: insights?.geminiError || null,
-      },
       vectorIndex,
+      insightStatus: contract.insightState,
     },
   };
 }
 
+function normalizeContractForRead(contract = {}) {
+  applyStoredInsightBundle(contract, getStoredInsightBundle(contract), {
+    persist: false,
+    touch: false,
+  });
+  return contract;
+}
+
 async function listContractSummaries() {
-  return listContracts();
+  return (await listContracts()).map((contract) => normalizeContractForRead(contract));
 }
 
 async function getContractDetails(contractId) {
-  return getContractById(contractId);
-}
-
-async function buildContractInsightsInternal(contractId, clauseId) {
   const contractBundle = await getContractById(contractId);
-
-  if (!clauseId) {
-    const cachedOverview = getCachedContractOverview(contractBundle.contract);
-
-    if (cachedOverview) {
-      return cachedOverview;
-    }
-
-    try {
-      const clauseInsights = await buildAutomaticClauseInsights(
-        contractBundle.contract,
-        contractBundle.clauses,
-      );
-      const overview = await generateContractOverview({
-        ...contractBundle,
-        clauseInsights,
-      });
-
-      const cachedInsightsPatch = buildContractInsightCachePatch({
-        overview,
-        clauseInsights,
-      });
-
-      if (Object.keys(cachedInsightsPatch).length) {
-        await saveContractCachedInsights(contractId, cachedInsightsPatch);
-      } else if (isReusableOverview(overview)) {
-        await saveContractOverviewInsights(contractId, overview);
-      }
-
-      return overview;
-    } catch (error) {
-      console.warn(`Contract overview generation failed for ${contractId}, returning saved-contract fallback:`, error.message);
-      return buildInsightUnavailableOverview(contractBundle.contract, error.message);
-    }
-  }
-
-  const clause = contractBundle.clauses.find((item) => item.id === clauseId);
-
-  if (!clause) {
-    throw new AppError(404, `Clause not found: ${clauseId}`);
-  }
-
-  const cachedClauseInsight = getCachedClauseInsight(contractBundle.contract, clauseId);
-
-  if (cachedClauseInsight) {
-    return cachedClauseInsight;
-  }
-
-  const reviewContext = await buildClauseReviewContext(contractBundle.contract, clause);
-
-  const insight = await generateClauseInsight(clause, reviewContext);
-
-  if (isReusableGeminiClauseInsight(insight)) {
-    await saveContractCachedInsights(contractId, {
-      clauses: {
-        ...(contractBundle.contract.cachedInsights?.clauses || {}),
-        [clauseId]: insight,
-      },
-    });
-  }
-
-  return insight;
+  normalizeContractForRead(contractBundle.contract);
+  return contractBundle;
 }
 
-async function buildContractInsights(contractId, clauseId) {
-  const requestKey = `${contractId}:${clauseId || 'overview'}`;
+async function getContractInsights(contractId) {
+  const contractBundle = await getContractDetails(contractId);
+  return buildContractInsightsResponse(contractBundle);
+}
 
-  if (pendingContractInsightRequests.has(requestKey)) {
-    return pendingContractInsightRequests.get(requestKey);
+async function generateContractInsightsInternal(contractId) {
+  const contractBundle = await getContractById(contractId);
+  const storedBundle = getStoredInsightBundle(contractBundle.contract);
+
+  applyStoredInsightBundle(contractBundle.contract, storedBundle, {
+    persist: false,
+    touch: false,
+  });
+
+  if (hasReadyStoredInsightBundle(storedBundle)) {
+    return buildContractInsightsResponse(contractBundle);
   }
 
-  const pendingRequest = buildContractInsightsInternal(contractId, clauseId)
-    .finally(() => {
-      pendingContractInsightRequests.delete(requestKey);
+  const targetClauses = selectHighRiskClauses(contractBundle.clauses);
+
+  if (!targetClauses.length) {
+    throw new AppError(400, 'No high-risk clauses are available for on-demand insight generation.');
+  }
+
+  const requestedAt = new Date().toISOString();
+  const generatingBundle = {
+    ...createDefaultStoredInsightBundle(),
+    status: INSIGHT_STATUS.GENERATING,
+    requestedAt,
+    provider: 'gemini',
+    promptVersion: CONTRACT_INSIGHT_PROMPT_VERSION,
+    selectedClauseIds: targetClauses.map((clause) => clause.id),
+  };
+
+  applyStoredInsightBundle(contractBundle.contract, generatingBundle);
+  await persistContractBundle(contractBundle);
+
+  const reviewContexts = await buildClauseReviewContexts(contractBundle.contract, targetClauses);
+  const clauseInsightContexts = targetClauses.reduce((accumulator, clause, index) => {
+    const contextRecord = buildClauseInsightContextRecord(clause, reviewContexts[index] || {});
+    accumulator[clause.id] = contextRecord;
+    return accumulator;
+  }, {});
+
+  try {
+    const generatedBundle = await generateContractInsightBundle({
+      contract: contractBundle.contract,
+      risks: contractBundle.risks,
+      clauseInsights: targetClauses.map((clause) => clauseInsightContexts[clause.id]),
     });
 
-  pendingContractInsightRequests.set(requestKey, pendingRequest);
+    applyStoredInsightBundle(contractBundle.contract, {
+      ...createDefaultStoredInsightBundle(),
+      status: INSIGHT_STATUS.READY,
+      requestedAt,
+      generatedAt: new Date().toISOString(),
+      provider: generatedBundle.provider,
+      promptVersion: generatedBundle.promptVersion,
+      selectedClauseIds: targetClauses.map((clause) => clause.id),
+      overview: generatedBundle.overview,
+      clauseInsights: generatedBundle.clauseInsights,
+    });
+  } catch (error) {
+    applyStoredInsightBundle(contractBundle.contract, {
+      ...createDefaultStoredInsightBundle(),
+      status: INSIGHT_STATUS.FAILED,
+      requestedAt,
+      failedAt: new Date().toISOString(),
+      provider: 'gemini',
+      promptVersion: CONTRACT_INSIGHT_PROMPT_VERSION,
+      selectedClauseIds: targetClauses.map((clause) => clause.id),
+      lastError: buildGeminiFailureInfo(error),
+      clauseInsights: clauseInsightContexts,
+    });
+  }
+
+  await persistContractBundle(contractBundle);
+  return buildContractInsightsResponse(contractBundle);
+}
+
+async function generateContractInsights(contractId) {
+  if (pendingContractInsightGenerationRequests.has(contractId)) {
+    return pendingContractInsightGenerationRequests.get(contractId);
+  }
+
+  const pendingRequest = generateContractInsightsInternal(contractId)
+    .finally(() => {
+      pendingContractInsightGenerationRequests.delete(contractId);
+    });
+
+  pendingContractInsightGenerationRequests.set(contractId, pendingRequest);
   return pendingRequest;
 }
 
@@ -685,10 +796,11 @@ async function deleteContractRecord(contractId) {
 }
 
 module.exports = {
-  buildContractInsights,
   createVectorRecords,
   deleteContractRecord,
+  generateContractInsights,
   getContractDetails,
+  getContractInsights,
   ingestManualContract,
   listContractSummaries,
 };

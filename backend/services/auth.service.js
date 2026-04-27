@@ -3,6 +3,7 @@ const crypto = require('node:crypto');
 const AppError = require('../errors/AppError');
 const { env } = require('../config/env');
 const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
+const { firestore, firestoreStatus } = require('../config/firebase');
 
 const STORE_FALLBACK = {
   users: [],
@@ -102,8 +103,26 @@ function parseToken(token = '') {
 }
 
 async function readAuthStore() {
-  const store = await readJsonFile(env.authUserStorePath, STORE_FALLBACK);
+  // Try Firestore first if available
+  if (firestoreStatus.enabled && firestore) {
+    try {
+      const docRef = firestore.collection('auth').doc('store');
+      const doc = await docRef.get();
 
+      if (doc.exists) {
+        const data = doc.data();
+        return {
+          users: Array.isArray(data.users) ? data.users : [],
+          sessions: Array.isArray(data.sessions) ? data.sessions : [],
+        };
+      }
+    } catch (error) {
+      console.warn('Failed to read auth store from Firestore, falling back to JSON:', error.message);
+    }
+  }
+
+  // Fallback to JSON file
+  const store = await readJsonFile(env.authUserStorePath, STORE_FALLBACK);
   return {
     users: Array.isArray(store.users) ? store.users : [],
     sessions: Array.isArray(store.sessions) ? store.sessions : [],
@@ -111,11 +130,62 @@ async function readAuthStore() {
 }
 
 async function writeAuthStore(store) {
-  await writeJsonFile(env.authUserStorePath, {
+  const data = {
     users: store.users || [],
     sessions: store.sessions || [],
     updatedAt: nowIso(),
-  });
+  };
+
+  // Try Firestore first if available
+  if (firestoreStatus.enabled && firestore) {
+    try {
+      const docRef = firestore.collection('auth').doc('store');
+      await docRef.set(data);
+      return;
+    } catch (error) {
+      console.warn('Failed to write auth store to Firestore, falling back to JSON:', error.message);
+    }
+  }
+
+  // Fallback to JSON file
+  await writeJsonFile(env.authUserStorePath, data);
+}
+
+async function migrateAuthStoreToFirestore() {
+  if (!firestoreStatus.enabled || !firestore) {
+    return { migrated: false, reason: 'firestore-not-available' };
+  }
+
+  try {
+    // Check if Firestore already has data
+    const docRef = firestore.collection('auth').doc('store');
+    const doc = await docRef.get();
+
+    if (doc.exists) {
+      return { migrated: false, reason: 'firestore-already-has-data' };
+    }
+
+    // Read from JSON file
+    const jsonStore = await readJsonFile(env.authUserStorePath, STORE_FALLBACK);
+
+    if (!jsonStore.users.length && !jsonStore.sessions.length) {
+      return { migrated: false, reason: 'no-data-to-migrate' };
+    }
+
+    // Write to Firestore
+    await docRef.set({
+      users: jsonStore.users,
+      sessions: jsonStore.sessions,
+      updatedAt: nowIso(),
+      migratedAt: nowIso(),
+    });
+
+    console.log(`Migrated ${jsonStore.users.length} users and ${jsonStore.sessions.length} sessions to Firestore`);
+    return { migrated: true, usersCount: jsonStore.users.length, sessionsCount: jsonStore.sessions.length };
+  } catch (error) {
+    console.warn('Auth store migration to Firestore failed:', error.message);
+    return { migrated: false, reason: 'migration-failed', error: error.message };
+  }
 }
 
 function serializeUser(user) {
@@ -286,12 +356,14 @@ async function getUserFromToken(token) {
   const session = store.sessions.find((item) => item.id === payload.sid && item.userId === payload.sub);
 
   if (!session || new Date(session.expiresAt).getTime() <= Date.now()) {
+    console.log(`Session not found or expired: sessionId=${payload.sid}, userId=${payload.sub}, sessionsCount=${store.sessions.length}`);
     throw new AppError(401, 'Authentication session has expired.');
   }
 
   const user = store.users.find((item) => item.id === payload.sub);
 
   if (!user) {
+    console.log(`User not found: userId=${payload.sub}, usersCount=${store.users.length}`);
     throw new AppError(401, 'Authentication user no longer exists.');
   }
 
@@ -313,6 +385,12 @@ async function logoutToken(token) {
 }
 
 async function bootstrapAuthUser() {
+  // Migrate existing auth data to Firestore if needed
+  const migrationResult = await migrateAuthStoreToFirestore();
+  if (migrationResult.migrated) {
+    console.log('Auth store migrated to Firestore:', migrationResult);
+  }
+
   if (!env.authUsername || !env.authPassword) {
     return {
       created: false,
@@ -382,4 +460,5 @@ module.exports = {
   loginUser,
   logoutToken,
   registerUser,
+  migrateAuthStoreToFirestore,
 };
