@@ -1382,6 +1382,11 @@ function App() {
   const [authMode, setAuthMode] = useState('login');
   const [loginForm, setLoginForm] = useState(initialLoginForm);
   const [registerForm, setRegisterForm] = useState(initialRegisterForm);
+  const [testerCredentials, setTesterCredentials] = useState({
+    enabled: false,
+    username: '',
+    password: '',
+  });
   const [authUser, setAuthUser] = useState(null);
   const [authChecking, setAuthChecking] = useState(Boolean(api.getAuthToken()));
   const [authPending, setAuthPending] = useState(false);
@@ -1418,6 +1423,38 @@ function App() {
     }
 
     hydrateAuth();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function hydrateTesterCredentials() {
+      try {
+        const response = await api.getTesterCredentials();
+
+        if (!ignore) {
+          setTesterCredentials({
+            enabled: Boolean(response.data?.enabled),
+            username: response.data?.username || '',
+            password: response.data?.password || '',
+          });
+        }
+      } catch (error) {
+        if (!ignore) {
+          setTesterCredentials({
+            enabled: false,
+            username: '',
+            password: '',
+          });
+        }
+      }
+    }
+
+    hydrateTesterCredentials();
 
     return () => {
       ignore = true;
@@ -1524,6 +1561,7 @@ function App() {
         pending={authPending}
         error={authError}
         loginForm={loginForm}
+        testerCredentials={testerCredentials}
         registerForm={registerForm}
         onLoginChange={updateLoginForm}
         onRegisterChange={updateRegisterForm}

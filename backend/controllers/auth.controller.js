@@ -1,5 +1,6 @@
 const asyncHandler = require('../utils/asyncHandler');
 const {
+  getTesterLoginCredentials,
   getUserFromToken,
   loginUser,
   logoutToken,
@@ -24,6 +25,13 @@ const login = asyncHandler(async (req, res) => {
     success: true,
     message: 'Login successful.',
     data: auth,
+  });
+});
+
+const testerCredentials = asyncHandler(async (req, res) => {
+  res.json({
+    success: true,
+    data: getTesterLoginCredentials(),
   });
 });
 
@@ -58,4 +66,5 @@ module.exports = {
   logout,
   me,
   register,
+  testerCredentials,
 };

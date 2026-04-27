@@ -1,15 +1,17 @@
-const TESTER_CREDENTIALS = {
-  username: 'shreyansh',
-  password: 'Lx-MiUe9BPmrYGMY-IF!9',
-};
-
 function AuthPage({
   pending,
   error,
   loginForm,
+  testerCredentials,
   onLoginChange,
   onLoginSubmit,
 }) {
+  const hasTesterCredentials = Boolean(
+    testerCredentials?.enabled
+      && testerCredentials?.username
+      && testerCredentials?.password,
+  );
+
   return (
     <main className="auth-shell">
       <section className="auth-panel">
@@ -33,26 +35,28 @@ function AuthPage({
           </p>
         </div>
 
-        <details className="auth-tester-box">
-          <summary className="auth-tester-summary">
-            <span>
-              <strong>Tester credentials</strong>
-              <small>Open this box to view the login details.</small>
-            </span>
-            <span className="auth-tester-arrow" aria-hidden="true">▾</span>
-          </summary>
+        {hasTesterCredentials ? (
+          <details className="auth-tester-box">
+            <summary className="auth-tester-summary">
+              <span>
+                <strong>Tester login credentials</strong>
+                <small>Open this box to view the login details.</small>
+              </span>
+              <span className="auth-tester-arrow" aria-hidden="true">&#9662;</span>
+            </summary>
 
-          <div className="auth-tester-body">
-            <div className="auth-tester-row">
-              <span>Tester username</span>
-              <code>{TESTER_CREDENTIALS.username}</code>
+            <div className="auth-tester-body">
+              <div className="auth-tester-row">
+                <span>Tester username</span>
+                <code>{testerCredentials.username}</code>
+              </div>
+              <div className="auth-tester-row">
+                <span>Tester password</span>
+                <code>{testerCredentials.password}</code>
+              </div>
             </div>
-            <div className="auth-tester-row">
-              <span>Tester password</span>
-              <code>{TESTER_CREDENTIALS.password}</code>
-            </div>
-          </div>
-        </details>
+          </details>
+        ) : null}
 
         {error ? (
           <p className="auth-error" role="alert">{error}</p>
