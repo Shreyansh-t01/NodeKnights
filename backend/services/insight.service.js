@@ -501,6 +501,50 @@ function buildDerivedContractOverview(contractBundle) {
   };
 }
 
+function lowerCaseFirstCharacter(value = '') {
+  return value ? `${value.charAt(0).toLowerCase()}${value.slice(1)}` : '';
+}
+
+function buildSemanticClauseSnippet(match = {}, fallback = '') {
+  const rawSnippet = trimPromptText(match.clauseTextSummary || match.clauseTextFull || '', 120)
+    .replace(/^["'\s]+|["'\s]+$/g, '')
+    .replace(/\.+$/, '')
+    .trim();
+
+  return rawSnippet ? lowerCaseFirstCharacter(rawSnippet) : fallback;
+}
+
+function buildSemanticMatchSource(match = {}, contract = null) {
+  const clauseTypeLabel = formatClauseType(match.clauseType || 'clause');
+  const sourceTitle = contract?.title || match.title || '';
+
+  return sourceTitle
+    ? `${clauseTypeLabel} clause in ${sourceTitle}`
+    : `${clauseTypeLabel} clause in the indexed corpus`;
+}
+
+function buildSemanticAnswerModelCandidates() {
+  return [...new Set(
+    [env.genAiModel, ...(Array.isArray(env.genAiModelCandidates) ? env.genAiModelCandidates : [])]
+      .map((value) => String(value || '').trim())
+      .filter(Boolean),
+  )];
+}
+
+function buildSemanticAnswerRequestOptions() {
+  const modelCandidates = buildSemanticAnswerModelCandidates();
+
+  return buildInsightRequestOptions({
+    includeDefaultModelFallbacks: false,
+    ...(modelCandidates.length ? { modelCandidates } : {}),
+    maxAttempts: 1,
+    requestTimeoutMs: Math.max(env.genAiTimeoutMs, 18000),
+    maxOutputTokens: Math.max(env.genAiMaxOutputTokens, 700),
+    lowLatencyMaxOutputTokens: Math.max(env.genAiMaxOutputTokens, 700),
+    thinkingBudget: 0,
+  });
+}
+
 function buildTemplateSemanticAnswer({ query, matches, contract }) {
   if (!matches.length) {
     return {
@@ -518,15 +562,25 @@ function buildTemplateSemanticAnswer({ query, matches, contract }) {
   }
 
   const primaryMatch = normalizePrecedentMatch(matches[0]);
+  const secondaryMatch = matches[1] ? normalizePrecedentMatch(matches[1]) : null;
   const clauseType = primaryMatch.clauseType || 'other';
   const rule = getRulebookEntry(clauseType);
+  const primarySnippet = buildSemanticClauseSnippet(primaryMatch, lowerCaseFirstCharacter(rule.primaryConcern));
+  const secondaryClauseLabel = secondaryMatch?.clauseType && secondaryMatch.clauseType !== clauseType
+    ? formatClauseType(secondaryMatch.clauseType)
+    : '';
+  const localAnswer = primarySnippet
+    ? `The closest match for "${query}" is a ${buildSemanticMatchSource(primaryMatch, contract)}. It discusses ${primarySnippet}${secondaryClauseLabel ? `, and a secondary match also points to ${secondaryClauseLabel} language.` : '.'}`
+    : `The closest match for "${query}" is a ${buildSemanticMatchSource(primaryMatch, contract)}. ${rule.primaryConcern}`;
 
   return {
-    answer: `The strongest match for "${query}" is a ${formatClauseType(clauseType)} clause from ${contract?.title || primaryMatch.title || 'your indexed corpus'}. ${rule.primaryConcern}`,
-    supportingMatches: toSupportingMatches(matches),
+    answer: compactText(localAnswer, rule.primaryConcern, 260),
+    supportingMatches: toSupportingMatches(matches).slice(0, 3),
     recommendations: [
       rule.recommendedAction,
-      `Cross-check the ${formatClauseType(clauseType)} clause against your governing law and dispute resolution sections before final approval.`,
+      secondaryClauseLabel
+        ? `Compare it with the ${secondaryClauseLabel} section because the retrieved matches suggest those obligations interact.`
+        : `Cross-check the ${formatClauseType(clauseType)} clause against your governing law and dispute resolution sections before final approval.`,
     ],
   };
 }
@@ -846,7 +900,7 @@ async function buildSemanticAnswer({ query, matches, contract }) {
   if (!matches.length || !isGeminiEnabled()) {
     return attachInsightMeta(fallback, {
       degraded: !matches.length ? false : true,
-      provider: !matches.length ? 'retrieval-only' : 'template-fallback',
+      provider: !matches.length ? 'retrieval-only' : 'local-derived',
       geminiError: !matches.length
         ? null
         : buildGeminiFailureInfo(
@@ -863,14 +917,7 @@ async function buildSemanticAnswer({ query, matches, contract }) {
       prompt: buildSemanticAnswerPrompt({ query, matches, contract }),
       responseSchema: semanticAnswerSchema,
       label: 'semantic answer',
-      requestOptions: buildInsightRequestOptions({
-        includeDefaultModelFallbacks: false,
-        modelCandidates: [env.genAiModel].filter(Boolean),
-        maxAttempts: 1,
-        requestTimeoutMs: Math.max(env.genAiTimeoutMs, 18000),
-        maxOutputTokens: Math.max(env.genAiMaxOutputTokens, 700),
-        lowLatencyMaxOutputTokens: Math.max(env.genAiMaxOutputTokens, 700),
-      }),
+      requestOptions: buildSemanticAnswerRequestOptions(),
     });
 
     return attachInsightMeta({
@@ -879,10 +926,10 @@ async function buildSemanticAnswer({ query, matches, contract }) {
       recommendations: compactStringArray(generated?.recommendations, fallback.recommendations, 2, 100),
     });
   } catch (error) {
-    console.warn('Gemini semantic answer failed, using explicit template fallback:', error.message);
+    console.warn('Gemini semantic answer unavailable, using derived local answer:', error.message);
     return attachInsightMeta(fallback, {
       degraded: true,
-      provider: 'template-fallback',
+      provider: 'local-derived',
       geminiError: buildGeminiFailureInfo(error),
     });
   }
