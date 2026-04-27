@@ -1,5 +1,6 @@
 import { startTransition, useDeferredValue, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 
+
 import AppNav from './components/AppNav';
 import { api } from './lib/api';
 import {
@@ -13,6 +14,7 @@ import InsightsPage from './pages/InsightsPage';
 import SearchPage from './pages/SearchPage';
 import DocumentsPage from './pages/DocumentsPage';
 import AuthPage from './pages/AuthPage';
+import LandingPage from './pages/LandingPage';
 
 const KNOWN_ROUTES = new Set(['/', '/intake', '/contracts', '/insights', '/search', '/documents']);
 const LIVE_REFRESH_INTERVAL_MS = 15000;
@@ -1245,6 +1247,7 @@ function WorkspaceApp({ authUser, onLogout }) {
 
 function App() {
   const [authMode, setAuthMode] = useState('login');
+  const [showLanding, setShowLanding] = useState(true);
   const [loginForm, setLoginForm] = useState(initialLoginForm);
   const [registerForm, setRegisterForm] = useState(initialRegisterForm);
   const [authUser, setAuthUser] = useState(null);
@@ -1268,6 +1271,7 @@ function App() {
 
         if (!ignore) {
           setAuthUser(response.data.user);
+          setShowLanding(false); 
           setAuthError('');
         }
       } catch (error) {
@@ -1358,6 +1362,7 @@ function App() {
       api.setAuthToken('');
       setAuthUser(null);
       setAuthMode('login');
+      setShowLanding(true);
       window.history.pushState({}, '', '/');
     }
   }
@@ -1381,6 +1386,10 @@ function App() {
       </main>
     );
   }
+
+  if (showLanding && !authUser) {
+  return <LandingPage onGetStarted={() => setShowLanding(false)} />;
+}
 
   if (!authUser) {
     return (

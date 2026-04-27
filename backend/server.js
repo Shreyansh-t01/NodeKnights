@@ -79,8 +79,8 @@ app.use(errorHandler);
 
 const server = http.createServer(app);
 
-server.listen(env.port, env.host, () => {
-  console.log(`Legal intelligence backend listening on ${env.host}:${env.port}`);
+server.listen(3000, () => {
+  console.log(`Legal intelligence backend listening on 3000`);
 
   bootstrapAuthUser()
     .then((result) => {
