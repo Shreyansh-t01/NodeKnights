@@ -23,6 +23,7 @@ async function authenticate(req, res, next) {
   const token = readBearerToken(req);
 
   if (!token) {
+    console.log(`Authentication failed: No token provided for ${req.method} ${req.path}`);
     next(new AppError(401, 'Sign in to access Lexora.'));
     return;
   }
@@ -32,6 +33,7 @@ async function authenticate(req, res, next) {
     req.auth = auth;
     next();
   } catch (error) {
+    console.log(`Authentication failed for ${req.method} ${req.path}: ${error.message}`);
     next(error);
   }
 }
