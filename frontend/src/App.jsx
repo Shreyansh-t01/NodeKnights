@@ -483,6 +483,8 @@ function WorkspaceApp({ authUser, onLogout }) {
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [selectedDocumentViewerUrl, setSelectedDocumentViewerUrl] = useState(null);
+  const [selectedDocumentViewerPending, setSelectedDocumentViewerPending] = useState(false);
+  const [selectedDocumentViewerError, setSelectedDocumentViewerError] = useState('');
   const viewerObjectUrlRef = useRef(null);
   const freshInsightsRef = useRef({ contractId: '', updatedAt: '' });
   const deferredQuery = useDeferredValue(query);
@@ -500,7 +502,6 @@ function WorkspaceApp({ authUser, onLogout }) {
     () => documentResults.find((document) => document.id === selectedDocumentId) || documentResults[0] || null,
     [documentResults, selectedDocumentId],
   );
-  const selectedDocumentDownloadUrl = selectedDocument ? api.getDocumentContentUrl(selectedDocument.id, { download: true }) : '';
 
   useEffect(() => {
     if (connectorNotice?.tone === 'success') {
@@ -916,7 +917,7 @@ function WorkspaceApp({ authUser, onLogout }) {
 
   useEffect(() => {
     let ignore = false;
-    let createdObjectUrl = '';
+    const abortController = new AbortController();
 
     async function hydrateSelectedDocumentViewer() {
       if (!selectedDocument?.id || !selectedDocument?.available) {
@@ -926,20 +927,26 @@ function WorkspaceApp({ authUser, onLogout }) {
         }
 
         setSelectedDocumentViewerUrl(null);
+        setSelectedDocumentViewerPending(false);
+        setSelectedDocumentViewerError('');
         return;
       }
 
       try {
-        const response = await fetch(api.getDocumentContentUrl(selectedDocument.id), {
-          method: 'GET',
-        });
+        setSelectedDocumentViewerPending(true);
+        setSelectedDocumentViewerError('');
 
-        if (!response.ok) {
-          throw new Error(`Failed to load document preview: ${response.status}`);
+        if (viewerObjectUrlRef.current) {
+          URL.revokeObjectURL(viewerObjectUrlRef.current);
+          viewerObjectUrlRef.current = null;
         }
 
-        const blob = await response.blob();
-        createdObjectUrl = URL.createObjectURL(blob);
+        setSelectedDocumentViewerUrl(null);
+
+        const blob = await api.fetchDocumentContent(selectedDocument.id, {
+          signal: abortController.signal,
+        });
+        const createdObjectUrl = URL.createObjectURL(blob);
 
         if (ignore) {
           URL.revokeObjectURL(createdObjectUrl);
@@ -953,13 +960,18 @@ function WorkspaceApp({ authUser, onLogout }) {
         viewerObjectUrlRef.current = createdObjectUrl;
         setSelectedDocumentViewerUrl(createdObjectUrl);
       } catch (error) {
-        if (!ignore) {
+        if (!ignore && error.name !== 'AbortError') {
           if (viewerObjectUrlRef.current) {
             URL.revokeObjectURL(viewerObjectUrlRef.current);
             viewerObjectUrlRef.current = null;
           }
 
           setSelectedDocumentViewerUrl(null);
+          setSelectedDocumentViewerError(error.message || 'Failed to load document preview.');
+        }
+      } finally {
+        if (!ignore) {
+          setSelectedDocumentViewerPending(false);
         }
       }
     }
@@ -968,9 +980,7 @@ function WorkspaceApp({ authUser, onLogout }) {
 
     return () => {
       ignore = true;
-      if (createdObjectUrl) {
-        URL.revokeObjectURL(createdObjectUrl);
-      }
+      abortController.abort();
     };
   }, [selectedDocument]);
 
@@ -1307,7 +1317,8 @@ function WorkspaceApp({ authUser, onLogout }) {
         selectedDocumentId={selectedDocument?.id || null}
         selectedDocument={selectedDocument}
         viewerUrl={selectedDocumentViewerUrl}
-        downloadUrl={selectedDocumentDownloadUrl}
+        viewerPending={selectedDocumentViewerPending}
+        viewerError={selectedDocumentViewerError}
         onQueryChange={setDocumentQuery}
         onSubmit={handleDocumentSearch}
         onSelectDocument={setSelectedDocumentId}

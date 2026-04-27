@@ -57,7 +57,7 @@ function DocumentSearchResultCard({ document, isActive, onSelect }) {
   );
 }
 
-function DocumentViewer({ document, viewerUrl, downloadUrl }) {
+function DocumentViewer({ document, viewerUrl, viewerPending, viewerError }) {
   if (!document) {
     return (
       <div className="document-viewer-shell">
@@ -78,7 +78,17 @@ function DocumentViewer({ document, viewerUrl, downloadUrl }) {
     );
   }
 
-  if (!viewerUrl) {
+  if (viewerError) {
+    return (
+      <div className="document-viewer-shell">
+        <p className="empty-state">
+          {viewerError}
+        </p>
+      </div>
+    );
+  }
+
+  if (viewerPending || !viewerUrl) {
     return (
       <div className="document-viewer-shell">
         <p className="empty-state">
@@ -94,7 +104,7 @@ function DocumentViewer({ document, viewerUrl, downloadUrl }) {
         <a className="action-link" href={viewerUrl} target="_blank" rel="noreferrer">
           Open
         </a>
-        <a className="action-link" href={downloadUrl}>
+        <a className="action-link" href={viewerUrl} download={document.originalName || 'document'}>
           Download
         </a>
       </div>
@@ -127,7 +137,8 @@ function DocumentsPage({
   selectedDocumentId,
   selectedDocument,
   viewerUrl,
-  downloadUrl,
+  viewerPending,
+  viewerError,
   onQueryChange,
   onSubmit,
   onSelectDocument,
@@ -234,7 +245,8 @@ function DocumentsPage({
           <DocumentViewer
             document={selectedDocument}
             viewerUrl={viewerUrl}
-            downloadUrl={downloadUrl}
+            viewerPending={viewerPending}
+            viewerError={viewerError}
           />
         </section>
       </div>

@@ -70,6 +70,26 @@ async function request(path, options = {}) {
   return response.json();
 }
 
+async function requestBlob(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+  const token = getAuthToken();
+
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response));
+  }
+
+  return response.blob();
+}
+
 export const api = {
   baseUrl: API_BASE_URL,
   getAuthToken,
@@ -140,6 +160,15 @@ export const api = {
   }),
   searchDocuments: (params = {}) => request(`/documents${buildQueryString(params)}`),
   getDocumentById: (contractId) => request(`/documents/${contractId}`),
+  fetchDocumentContent: (contractId, options = {}) => requestBlob(
+    `/documents/${encodeURIComponent(contractId)}/content${buildQueryString({
+      download: options.download ? '1' : '',
+    })}`,
+    {
+      method: 'GET',
+      signal: options.signal,
+    },
+  ),
   getDocumentContentUrl: (contractId, options = {}) => (
     `${API_BASE_URL}/documents/${encodeURIComponent(contractId)}/content${buildQueryString({
       download: options.download ? '1' : '',
