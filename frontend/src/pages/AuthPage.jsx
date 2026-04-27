@@ -1,3 +1,8 @@
+const TESTER_CREDENTIALS = {
+  username: 'shreyansh',
+  password: 'Lx-MiUe9BPmrYGMY-IF!9',
+};
+
 function AuthPage({
   pending,
   error,
@@ -27,6 +32,27 @@ function AuthPage({
             Use your configured workspace credentials to open your private Lexora review environment.
           </p>
         </div>
+
+        <details className="auth-tester-box">
+          <summary className="auth-tester-summary">
+            <span>
+              <strong>Tester credentials</strong>
+              <small>Open this box to view the login details.</small>
+            </span>
+            <span className="auth-tester-arrow" aria-hidden="true">▾</span>
+          </summary>
+
+          <div className="auth-tester-body">
+            <div className="auth-tester-row">
+              <span>Tester username</span>
+              <code>{TESTER_CREDENTIALS.username}</code>
+            </div>
+            <div className="auth-tester-row">
+              <span>Tester password</span>
+              <code>{TESTER_CREDENTIALS.password}</code>
+            </div>
+          </div>
+        </details>
 
         {error ? (
           <p className="auth-error" role="alert">{error}</p>
