@@ -385,11 +385,7 @@ function toBatchPromptRuleMatches(matches = []) {
 
 function buildInsightRequestOptions(overrides = {}) {
   return {
-    includeDefaultModelFallbacks: false,
-    modelCandidates: [
-      env.genAiModel,
-      ...(Array.isArray(env.genAiModelCandidates) ? env.genAiModelCandidates : []),
-    ].filter(Boolean),
+    includeDefaultModelFallbacks: true,
     maxAttempts: Math.max(2, env.genAiMaxRetries + 1),
     requestTimeoutMs: Math.max(env.genAiTimeoutMs, 20000),
     maxOutputTokens: Math.max(env.genAiMaxOutputTokens, 900),
@@ -453,7 +449,7 @@ function buildTemplateContractOverview(contractBundle) {
   const topRiskItems = risks.slice(0, 3).map((risk) => risk.title);
   const automaticInsightClauses = clauses
     .filter((clause) => clause.riskLabel === 'high')
-    .slice(0, 5);
+    .slice(0, 3);
   const clauseInsights = Array.isArray(contractBundle.clauseInsights) && contractBundle.clauseInsights.length
     ? contractBundle.clauseInsights
     : automaticInsightClauses.map((clause) => buildTemplateClauseInsight(clause));
@@ -868,6 +864,9 @@ async function buildSemanticAnswer({ query, matches, contract }) {
       responseSchema: semanticAnswerSchema,
       label: 'semantic answer',
       requestOptions: buildInsightRequestOptions({
+        includeDefaultModelFallbacks: false,
+        modelCandidates: [env.genAiModel].filter(Boolean),
+        maxAttempts: 1,
         requestTimeoutMs: Math.max(env.genAiTimeoutMs, 18000),
         maxOutputTokens: Math.max(env.genAiMaxOutputTokens, 700),
         lowLatencyMaxOutputTokens: Math.max(env.genAiMaxOutputTokens, 700),

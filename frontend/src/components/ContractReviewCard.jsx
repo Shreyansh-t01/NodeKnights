@@ -29,7 +29,7 @@ function formatExtractedValues(extractedValues = {}) {
 function getInsightPipelineMessage(contract = {}) {
   const step = (contract.pipeline || []).find((item) => item.key === 'insights');
 
-  if (step && ['warning', 'failed'].includes(step.status)) {
+  if (step && ['pending', 'warning', 'failed'].includes(step.status)) {
     return step.detail || 'Gemini insights are not generated yet for this contract.';
   }
 

@@ -187,7 +187,7 @@ const configuredGenAiBaseUrl = envValue('GEMINI_BASE_URL')
 const configuredGenAiApiKey = envValue('GEMINI_API_KEY') || envValue('GENAI_API_KEY');
 const configuredGenAiModel = envValue('GEMINI_MODEL')
   || envValue('GENAI_MODEL')
-  || (configuredGenAiProvider === 'gemini' ? 'gemini-2.5-flash' : '');
+  || (configuredGenAiProvider === 'gemini' ? 'gemini-2.0-flash-lite' : '');
 const configuredGenAiModelCandidates = asList(
   envValue('GEMINI_MODEL_CANDIDATES') || envValue('GENAI_MODEL_CANDIDATES'),
 );
@@ -197,7 +197,7 @@ const configuredEmbeddingModel = envValue('GEMINI_EMBEDDING_MODEL')
 const configuredEmbeddingProvider = asChoice(
   envValue('EMBEDDING_PROVIDER'),
   ['gemini', 'pinecone', 'local'],
-  configuredGenAiApiKey && configuredEmbeddingModel ? 'gemini' : 'local',
+  'pinecone',
 );
 const configuredApiPrefix = envValue('API_PREFIX', '/api');
 const configuredCorsOrigin = envValue('CORS_ORIGIN', '*');

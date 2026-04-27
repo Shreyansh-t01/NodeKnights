@@ -11,6 +11,7 @@ function StatusPill({ status, children }) {
     high: 'pill pill-danger',
     medium: 'pill pill-warning',
     low: 'pill pill-ready',
+    pending: 'pill pill-warning',
     warning: 'pill pill-warning',
     failed: 'pill pill-danger',
     complete: 'pill pill-ready',

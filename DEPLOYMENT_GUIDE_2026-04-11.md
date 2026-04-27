@@ -149,9 +149,11 @@ Then set your real service credentials:
 Recommended Gemini env additions:
 
 ```env
-GEMINI_MODEL=gemini-2.5-flash
-GEMINI_MODEL_CANDIDATES=gemini-2.5-flash
-GEMINI_EMBEDDING_MODEL=gemini-embedding-001
+GEMINI_MODEL=gemini-2.0-flash-lite
+GEMINI_MODEL_CANDIDATES=gemini-2.0-flash-lite,gemini-2.0-flash,gemini-2.5-flash
+EMBEDDING_PROVIDER=pinecone
+PINECONE_TEXT_FIELD=chunk_text
+PINECONE_INTEGRATED_MODEL=multilingual-e5-large
 ```
 
 ### Step 2. Set Google production URLs

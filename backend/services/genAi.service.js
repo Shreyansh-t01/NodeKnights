@@ -13,11 +13,11 @@ const {
   sleep,
 } = require('../utils/geminiRetry');
 
-const PRIMARY_GEMINI_RESPONSE_MODEL = 'gemini-2.5-flash';
+const PRIMARY_GEMINI_RESPONSE_MODEL = 'gemini-2.0-flash-lite';
 const DEFAULT_GEMINI_RESPONSE_MODELS = [
   PRIMARY_GEMINI_RESPONSE_MODEL,
   'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
+  'gemini-2.5-flash',
 ];
 const GEMINI_RESPONSE_CACHE_LIMIT = 300;
 const geminiResponseCachePath = path.join(env.tempStorageDir, 'local-store', 'gemini-response-cache.json');
@@ -290,7 +290,7 @@ function shouldTryNextModel(error) {
 
   const status = Number(error.details?.status || error.statusCode || 0);
 
-  return (isRetryableGeminiFailure(error) && status !== 429)
+  return isRetryableGeminiFailure(error)
     || error.message.includes('invalid JSON')
     || [400, 403, 404].includes(status);
 }
@@ -303,7 +303,7 @@ function shouldRetrySameModel(error) {
   const status = Number(error.details?.status || error.statusCode || 0);
 
   if (status === 429) {
-    return false;
+    return Number(error.details?.retryDelayMs || 0) > 0;
   }
 
   return true;

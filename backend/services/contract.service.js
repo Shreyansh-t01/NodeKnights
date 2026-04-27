@@ -10,7 +10,6 @@ const {
   deleteContractBundle,
   saveContractBundle,
   saveContractCachedInsights,
-  saveContractOverviewInsights,
   listContracts,
   getContractById,
 } = require('./contract.repository');
@@ -35,6 +34,12 @@ const {
 } = require('./contract.helpers');
 
 const pendingContractInsightRequests = new Map();
+const queuedContractInsightRefreshes = [];
+const queuedContractInsightRefreshIds = new Set();
+const activeContractInsightRefreshIds = new Set();
+const cancelledContractInsightRefreshIds = new Set();
+const MAX_BACKGROUND_CONTRACT_INSIGHT_REFRESHES = 1;
+const MAX_AUTOMATIC_CLAUSE_INSIGHTS = 3;
 
 async function createVectorRecords(contract, clauses) {
   if (usesPineconeIntegratedText()) {
@@ -188,10 +193,150 @@ async function buildClauseReviewContexts(contract, clauses = []) {
   );
 }
 
+function findPipelineStepIndex(contract = {}, key = '') {
+  return Array.isArray(contract.pipeline)
+    ? contract.pipeline.findIndex((step) => step.key === key)
+    : -1;
+}
+
+function upsertPipelineStep(contract = {}, step = {}) {
+  const pipeline = Array.isArray(contract.pipeline) ? [...contract.pipeline] : [];
+  const stepPayload = {
+    key: step.key,
+    label: step.label,
+    status: step.status,
+    detail: step.detail,
+  };
+  const existingIndex = findPipelineStepIndex(contract, step.key);
+
+  if (existingIndex === -1) {
+    pipeline.push(stepPayload);
+  } else {
+    pipeline[existingIndex] = {
+      ...pipeline[existingIndex],
+      ...stepPayload,
+    };
+  }
+
+  contract.pipeline = pipeline;
+  return contract;
+}
+
+function buildInsightRefreshErrorSummary(error = null) {
+  if (!error) {
+    return null;
+  }
+
+  return {
+    message: error.message || 'Insight refresh failed.',
+    statusCode: error.statusCode || null,
+  };
+}
+
+function updateInsightRefreshState(contract = {}, refreshStatus = 'pending', detail = '', error = null) {
+  const timestamp = new Date().toISOString();
+  const previousState = contract.cachedInsights?.refreshState || {};
+
+  return {
+    ...previousState,
+    status: refreshStatus,
+    message: detail,
+    updatedAt: timestamp,
+    queuedAt: refreshStatus === 'pending'
+      ? timestamp
+      : (previousState.queuedAt || timestamp),
+    startedAt: refreshStatus === 'running'
+      ? timestamp
+      : (refreshStatus === 'pending' ? null : (previousState.startedAt || null)),
+    completedAt: refreshStatus === 'completed'
+      ? timestamp
+      : (refreshStatus === 'pending' ? null : (previousState.completedAt || null)),
+    failedAt: refreshStatus === 'warning'
+      ? timestamp
+      : (refreshStatus === 'completed' ? previousState.failedAt || null : previousState.failedAt || null),
+    lastError: error ? buildInsightRefreshErrorSummary(error) : null,
+  };
+}
+
+function applyInsightPipelineState(
+  contract = {},
+  {
+    pipelineStatus = 'pending',
+    detail = '',
+    refreshStatus = pipelineStatus,
+    error = null,
+  } = {},
+) {
+  upsertPipelineStep(contract, {
+    key: 'insights',
+    label: 'AI insights',
+    status: pipelineStatus,
+    detail,
+  });
+
+  contract.cachedInsights = {
+    ...(contract.cachedInsights || {}),
+    refreshState: updateInsightRefreshState(contract, refreshStatus, detail, error),
+  };
+  contract.updatedAt = new Date().toISOString();
+
+  return contract;
+}
+
+function isInsightRefreshPending(contract = {}) {
+  return ['pending', 'running'].includes(contract.cachedInsights?.refreshState?.status || '');
+}
+
+function hasReusableCachedInsightData(contract = {}) {
+  return Object.values(contract.cachedInsights?.clauses || {}).some(isReusableGeminiClauseInsight);
+}
+
+function getInsightPendingMessage(reason = '') {
+  const suffix = reason ? ` ${reason}` : '';
+  return `AI insights are being generated in the background. The contract is ready for review now, and Gemini-backed clause insights will appear after refresh.${suffix}`.trim();
+}
+
+function getInsightRefreshingMessage() {
+  return 'AI insights are available and are being refreshed in the background.';
+}
+
+function getInsightStaleReuseMessage() {
+  return 'AI insights are available. The latest Gemini refresh hit a temporary limit, so Lexora kept the last successful insight set where possible.';
+}
+
+function buildInsightPendingOverview(contract, options = {}) {
+  const summary = options.summary || getInsightPendingMessage();
+  const cachedOverview = getCachedContractOverview(contract);
+
+  if (cachedOverview) {
+    return {
+      ...cachedOverview,
+      summary: `${cachedOverview.summary} ${summary}`.trim(),
+      pending: true,
+    };
+  }
+
+  return {
+    headline: `${contract?.title || 'Contract'} is ready for review.`,
+    summary,
+    topRiskItems: [],
+    nextSteps: [
+      'Review the extracted clause board from the contract card.',
+      'Refresh this workspace shortly for Gemini-backed clause insights.',
+      'Use semantic search or manual legal review in the meantime.',
+    ],
+    clauseInsights: [],
+    provider: 'background-refresh-pending',
+    degraded: false,
+    pending: true,
+    geminiError: null,
+  };
+}
+
 async function buildAutomaticClauseInsights(contract, clauses = []) {
   const targets = clauses
     .filter((clause) => clause.riskLabel === 'high')
-    .slice(0, 5);
+    .slice(0, MAX_AUTOMATIC_CLAUSE_INSIGHTS);
 
   if (targets.length === 0) {
     return [];
@@ -281,6 +426,151 @@ function buildContractInsightCachePatch({ overview = null, clauseInsights = [] }
   }
 
   return patch;
+}
+
+async function queueNextContractInsightRefresh() {
+  if (activeContractInsightRefreshIds.size >= MAX_BACKGROUND_CONTRACT_INSIGHT_REFRESHES) {
+    return;
+  }
+
+  const nextContractId = queuedContractInsightRefreshes.shift();
+
+  if (!nextContractId) {
+    return;
+  }
+
+  queuedContractInsightRefreshIds.delete(nextContractId);
+  activeContractInsightRefreshIds.add(nextContractId);
+
+  void runContractInsightRefresh(nextContractId)
+    .catch((error) => {
+      console.warn(`Contract insight refresh failed for ${nextContractId}:`, error.message);
+    })
+    .finally(() => {
+      activeContractInsightRefreshIds.delete(nextContractId);
+      void queueNextContractInsightRefresh();
+    });
+}
+
+function scheduleContractInsightRefresh(contractId) {
+  if (
+    !contractId
+    || cancelledContractInsightRefreshIds.has(contractId)
+    || queuedContractInsightRefreshIds.has(contractId)
+    || activeContractInsightRefreshIds.has(contractId)
+  ) {
+    return false;
+  }
+
+  queuedContractInsightRefreshIds.add(contractId);
+  queuedContractInsightRefreshes.push(contractId);
+  setTimeout(() => {
+    void queueNextContractInsightRefresh();
+  }, 0);
+
+  return true;
+}
+
+async function persistContractBundle(contractBundle) {
+  await saveContractBundle(contractBundle);
+  return contractBundle;
+}
+
+async function runContractInsightRefresh(contractId) {
+  let contractBundle = null;
+
+  try {
+    contractBundle = await getContractById(contractId);
+  } catch (error) {
+    if (error.statusCode !== 404) {
+      throw error;
+    }
+
+    return;
+  }
+
+  const hadReusableInsights = hasReusableCachedInsightData(contractBundle.contract);
+
+  try {
+    if (cancelledContractInsightRefreshIds.has(contractId)) {
+      return;
+    }
+
+    applyInsightPipelineState(contractBundle.contract, {
+      pipelineStatus: hadReusableInsights ? 'completed' : 'pending',
+      detail: hadReusableInsights ? getInsightRefreshingMessage() : getInsightPendingMessage(),
+      refreshStatus: 'running',
+    });
+    await persistContractBundle(contractBundle);
+
+    const clauseInsights = await buildAutomaticClauseInsights(
+      contractBundle.contract,
+      contractBundle.clauses,
+    );
+    const overview = await generateContractOverview({
+      ...contractBundle,
+      clauseInsights,
+    });
+    const cachedInsightsPatch = buildContractInsightCachePatch({
+      overview,
+      clauseInsights,
+    });
+
+    contractBundle.contract.cachedInsights = {
+      ...(contractBundle.contract.cachedInsights || {}),
+      ...cachedInsightsPatch,
+    };
+    if (cancelledContractInsightRefreshIds.has(contractId)) {
+      return;
+    }
+
+    const refreshProducedWarning = hasGeminiInsightWarning({
+      overview,
+      clauseInsights,
+    });
+    const reusableInsightsAvailable = hasReusableCachedInsightData(contractBundle.contract);
+
+    applyInsightPipelineState(contractBundle.contract, {
+      pipelineStatus: refreshProducedWarning && !reusableInsightsAvailable ? 'warning' : 'completed',
+      detail: refreshProducedWarning
+        ? (
+          reusableInsightsAvailable
+            ? getInsightStaleReuseMessage()
+            : buildInsightPipelineDetail(overview, clauseInsights)
+        )
+        : buildInsightPipelineDetail(overview, clauseInsights),
+      refreshStatus: refreshProducedWarning ? (reusableInsightsAvailable ? 'completed' : 'warning') : 'completed',
+      error: refreshProducedWarning && !reusableInsightsAvailable
+        ? (
+          overview?.geminiError
+            || clauseInsights.find((insight) => insight?.geminiError)?.geminiError
+            || null
+        )
+        : null,
+    });
+    await persistContractBundle(contractBundle);
+  } catch (error) {
+    if (!contractBundle) {
+      throw error;
+    }
+
+    const reusableInsightsAvailable = hasReusableCachedInsightData(contractBundle.contract);
+
+    applyInsightPipelineState(contractBundle.contract, {
+      pipelineStatus: reusableInsightsAvailable ? 'completed' : 'warning',
+      detail: reusableInsightsAvailable
+        ? getInsightStaleReuseMessage()
+        : getGeminiUnavailableMessage(error.message),
+      refreshStatus: reusableInsightsAvailable ? 'completed' : 'warning',
+      error,
+    });
+
+    try {
+      await persistContractBundle(contractBundle);
+    } catch (persistError) {
+      console.warn(`Contract ${contractId} insight refresh state could not be persisted:`, persistError.message);
+    }
+  }
 }
 
 function getGeminiUnavailableMessage(reason = '') {
@@ -425,50 +715,14 @@ async function ingestManualContract(file, options = {}) {
     detail: `Saved via ${persistence.mode}.`,
   });
 
-  let clauseInsights = [];
-  let insights = buildInsightUnavailableOverview(contract);
+  let insights = buildInsightPendingOverview(contract);
   const warnings = [];
 
-  try {
-    clauseInsights = await buildAutomaticClauseInsights(contract, clauses);
-    insights = await generateContractOverview({
-      contract,
-      clauses,
-      risks,
-      clauseInsights,
-    });
-
-    const cachedInsightsPatch = buildContractInsightCachePatch({
-      overview: insights,
-      clauseInsights,
-    });
-
-    if (Object.keys(cachedInsightsPatch).length) {
-      contract.cachedInsights = {
-        ...(contract.cachedInsights || {}),
-        ...cachedInsightsPatch,
-      };
-    }
-
-    pipeline.push({
-      key: 'insights',
-      label: 'AI insights',
-      status: hasGeminiInsightWarning({ overview: insights, clauseInsights }) ? 'warning' : 'completed',
-      detail: buildInsightPipelineDetail(insights, clauseInsights),
-    });
-  } catch (error) {
-    warnings.push({
-      key: 'insights',
-      message: error.message,
-    });
-    insights = buildInsightUnavailableOverview(contract, error.message);
-    pipeline.push({
-      key: 'insights',
-      label: 'AI insights',
-      status: 'warning',
-      detail: getGeminiUnavailableMessage(error.message),
-    });
-  }
+  applyInsightPipelineState(contract, {
+    pipelineStatus: 'pending',
+    detail: getInsightPendingMessage(),
+    refreshStatus: 'pending',
+  });
 
   let vectorIndex = {
     mode: 'skipped',
@@ -504,8 +758,6 @@ async function ingestManualContract(file, options = {}) {
     });
   }
 
-  contract.updatedAt = new Date().toISOString();
-
   try {
     await saveContractBundle({
       contract,
@@ -519,6 +771,8 @@ async function ingestManualContract(file, options = {}) {
     });
     console.warn(`Contract ${contractId} enrichment state could not be persisted after initial save:`, error.message);
   }
+
+  scheduleContractInsightRefresh(contractId);
 
   return {
     contract,
@@ -558,32 +812,23 @@ async function buildContractInsightsInternal(contractId, clauseId) {
       return cachedOverview;
     }
 
-    try {
-      const clauseInsights = await buildAutomaticClauseInsights(
-        contractBundle.contract,
-        contractBundle.clauses,
-      );
-      const overview = await generateContractOverview({
-        ...contractBundle,
-        clauseInsights,
+    if (!isInsightRefreshPending(contractBundle.contract)) {
+      applyInsightPipelineState(contractBundle.contract, {
+        pipelineStatus: 'pending',
+        detail: getInsightPendingMessage(),
+        refreshStatus: 'pending',
       });
 
-      const cachedInsightsPatch = buildContractInsightCachePatch({
-        overview,
-        clauseInsights,
-      });
-
-      if (Object.keys(cachedInsightsPatch).length) {
-        await saveContractCachedInsights(contractId, cachedInsightsPatch);
-      } else if (isReusableOverview(overview)) {
-        await saveContractOverviewInsights(contractId, overview);
+      try {
+        await persistContractBundle(contractBundle);
+      } catch (error) {
+        console.warn(`Contract ${contractId} pending insight state could not be persisted:`, error.message);
       }
 
-      return overview;
-    } catch (error) {
-      console.warn(`Contract overview generation failed for ${contractId}, returning saved-contract fallback:`, error.message);
-      return buildInsightUnavailableOverview(contractBundle.contract, error.message);
+      scheduleContractInsightRefresh(contractId);
     }
+
+    return buildInsightPendingOverview(contractBundle.contract);
   }
 
   const clause = contractBundle.clauses.find((item) => item.id === clauseId);
@@ -631,6 +876,14 @@ async function buildContractInsights(contractId, clauseId) {
 }
 
 async function deleteContractRecord(contractId) {
+  cancelledContractInsightRefreshIds.add(contractId);
+  queuedContractInsightRefreshIds.delete(contractId);
+  const queuedIndex = queuedContractInsightRefreshes.findIndex((item) => item === contractId);
+
+  if (queuedIndex !== -1) {
+    queuedContractInsightRefreshes.splice(queuedIndex, 1);
+  }
+
   const bundle = await getContractById(contractId);
   const persistence = await deleteContractBundle(contractId);
   const sourceContext = bundle.contract.sourceContext || {};

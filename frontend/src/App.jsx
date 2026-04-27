@@ -69,7 +69,7 @@ function getContractPipelineStep(contract = null, key = '') {
 function getContractInsightNotice(contract = null, insights = null) {
   const insightStep = getContractPipelineStep(contract, 'insights');
 
-  if (insightStep && ['warning', 'failed'].includes(insightStep.status)) {
+  if (insightStep && ['pending', 'warning', 'failed'].includes(insightStep.status)) {
     return insightStep.detail || 'Gemini insights are not generated yet for this contract.';
   }
 
@@ -92,12 +92,20 @@ function buildEmptyInsights(contract = null, options = {}) {
   }
 
   const unavailableMessage = options.message || getContractInsightNotice(contract);
+  const insightStep = getContractPipelineStep(contract, 'insights');
+  const insightsPending = insightStep?.status === 'pending' || Boolean(options.pending);
 
   return {
     headline: `${contract.title} is ready for review.`,
     summary: unavailableMessage || 'No live insight response is available yet for this contract.',
     topRiskItems: [],
-    nextSteps: unavailableMessage
+    nextSteps: insightsPending
+      ? [
+        'Review the extracted clauses from the contract card.',
+        'Refresh this workspace shortly for Gemini-backed clause insights.',
+        'Use semantic search or manual review in the meantime.',
+      ]
+      : unavailableMessage
       ? [
         'Review the extracted clauses from the contract card.',
         'Retry Gemini insights later for this contract.',
