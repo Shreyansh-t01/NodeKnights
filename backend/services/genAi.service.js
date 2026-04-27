@@ -120,6 +120,13 @@ function hasHardQuotaExhaustion(error) {
     || /requests per day/i.test(message);
 }
 
+function isModelScopedGeminiFailure(error) {
+  const status = getErrorStatus(error);
+
+  return isQuotaExceededGeminiError(error)
+    || [400, 403, 404].includes(status);
+}
+
 function computeGeminiFailureCooldownMs(error) {
   const retryDelayMs = Number(error?.details?.retryDelayMs || 0);
   const status = getErrorStatus(error);
@@ -144,11 +151,11 @@ function computeGeminiFailureCooldownMs(error) {
 }
 
 function shouldOpenCircuitImmediately(error) {
-  const status = getErrorStatus(error);
+  if (isModelScopedGeminiFailure(error)) {
+    return false;
+  }
 
-  return hasHardQuotaExhaustion(error)
-    || isQuotaExceededGeminiError(error)
-    || [400, 403, 404].includes(status);
+  return isRetryableGeminiFailure(error);
 }
 
 function pruneExpiredModelCooldowns() {
@@ -231,6 +238,10 @@ function getGeminiModelCandidateState(requestOptions = {}) {
 }
 
 function recordCircuitBreakerFailure(error) {
+  if (isModelScopedGeminiFailure(error)) {
+    return;
+  }
+
   circuitBreakerFailures++;
   circuitBreakerLastFailureTime = Date.now();
   const cooldownMs = computeGeminiFailureCooldownMs(error) || CIRCUIT_BREAKER_TIMEOUT_MS;
@@ -538,8 +549,8 @@ function shouldTryNextModel(error) {
 
   const status = Number(error.details?.status || error.statusCode || 0);
 
-  if (status === 429 && hasHardQuotaExhaustion(error)) {
-    return false;
+  if (status === 429) {
+    return true;
   }
 
   return isRetryableGeminiFailure(error)
@@ -555,6 +566,10 @@ function shouldRetrySameModel(error) {
   const status = Number(error.details?.status || error.statusCode || 0);
 
   if (status === 429) {
+    if (hasHardQuotaExhaustion(error)) {
+      return false;
+    }
+
     return Number(error.details?.retryDelayMs || 0) > 0;
   }
 

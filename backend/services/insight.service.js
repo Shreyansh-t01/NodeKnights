@@ -35,7 +35,7 @@ const contractInsightBundleSchema = {
           comparison: { type: 'string' },
           recommendedChange: { type: 'string' },
         },
-        required: ['clauseId', 'whyItIsRisky', 'comparison', 'recommendedChange'],
+        required: ['whyItIsRisky', 'comparison', 'recommendedChange'],
       },
     },
   },
@@ -129,6 +129,28 @@ function trimPromptText(value, maxLength = 1200) {
   }
 
   return `${normalized.slice(0, maxLength - 3).trim()}...`;
+}
+
+function normalizeConfiguredModelCandidates() {
+  return [...new Set(
+    [env.genAiModel, ...(Array.isArray(env.genAiModelCandidates) ? env.genAiModelCandidates : [])]
+      .map((value) => String(value || '').trim())
+      .filter(Boolean),
+  )];
+}
+
+function buildContractInsightModelCandidates() {
+  const configuredCandidates = normalizeConfiguredModelCandidates();
+  const preferredOrder = [
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+  ];
+
+  return [...new Set([
+    ...preferredOrder,
+    ...configuredCandidates.filter((modelName) => !preferredOrder.includes(modelName)),
+  ])];
 }
 
 function buildGeminiFailureInfo(error, source = 'gemini') {
@@ -414,7 +436,8 @@ function buildClauseInsightContextRecord(clause, reviewContext = {}) {
 }
 
 function buildContractInsightPromptContext(clauseInsights = []) {
-  return clauseInsights.map((clauseInsight) => ({
+  return clauseInsights.map((clauseInsight, index) => ({
+    order: index + 1,
     clauseId: clauseInsight.clauseId,
     clauseType: clauseInsight.clauseType,
     riskLabel: clauseInsight.riskLabel,
@@ -497,10 +520,29 @@ function buildContractInsightPrompt({ contract, risks = [], clauseInsights = [] 
     '- Headline: one short sentence.',
     '- Summary: maximum two short sentences.',
     '- NextSteps: exactly three short actions.',
+    '- Return clauseInsights in the same order as targetClauses.',
     '- ClauseInsights: return one item for every provided clauseId.',
+    '- Copy each clauseId exactly if you include it.',
     '- Each whyItIsRisky, comparison, and recommendedChange value must be one short sentence.',
     '- Keep every clause explanation explicitly grounded in the provided precedent or rulebook context.',
   ].join('\n');
+}
+
+function hasCompleteGeneratedContractInsight(item = {}) {
+  return Boolean(
+    asText(item?.whyItIsRisky, '')
+      && asText(item?.comparison, '')
+      && asText(item?.recommendedChange, ''),
+  );
+}
+
+function normalizeGeneratedContractInsightItem(item = {}) {
+  return {
+    clauseId: asText(item?.clauseId, ''),
+    whyItIsRisky: asText(item?.whyItIsRisky, ''),
+    comparison: asText(item?.comparison, ''),
+    recommendedChange: asText(item?.recommendedChange, ''),
+  };
 }
 
 function validateGeneratedContractInsights(generated, clauseInsights = []) {
@@ -509,36 +551,43 @@ function validateGeneratedContractInsights(generated, clauseInsights = []) {
   const generatedByClauseId = new Map();
 
   generatedItems.forEach((item) => {
-    const clauseId = asText(item?.clauseId, '');
+    const normalizedItem = normalizeGeneratedContractInsightItem(item);
+    const clauseId = normalizedItem.clauseId;
 
-    if (!clauseId) {
+    if (!clauseId || !hasCompleteGeneratedContractInsight(normalizedItem)) {
       return;
     }
 
-    generatedByClauseId.set(clauseId, {
-      clauseId,
-      whyItIsRisky: asText(item?.whyItIsRisky, ''),
-      comparison: asText(item?.comparison, ''),
-      recommendedChange: asText(item?.recommendedChange, ''),
-    });
+    generatedByClauseId.set(clauseId, normalizedItem);
   });
 
   const missingClauseIds = requestedClauseIds.filter((clauseId) => {
     const generatedItem = generatedByClauseId.get(clauseId);
-    return !generatedItem
-      || !generatedItem.whyItIsRisky
-      || !generatedItem.comparison
-      || !generatedItem.recommendedChange;
+    return !hasCompleteGeneratedContractInsight(generatedItem);
   });
 
-  if (missingClauseIds.length) {
-    throw new AppError(502, 'Gemini returned an incomplete contract insight package.', {
-      promptVersion: CONTRACT_INSIGHT_PROMPT_VERSION,
-      missingClauseIds,
-    });
+  if (!missingClauseIds.length) {
+    return generatedByClauseId;
   }
 
-  return generatedByClauseId;
+  const completeGeneratedItems = generatedItems
+    .map(normalizeGeneratedContractInsightItem)
+    .filter((item) => hasCompleteGeneratedContractInsight(item));
+
+  if (completeGeneratedItems.length >= requestedClauseIds.length) {
+    return requestedClauseIds.reduce((accumulator, clauseId, index) => {
+      accumulator.set(clauseId, {
+        clauseId,
+        ...completeGeneratedItems[index],
+      });
+      return accumulator;
+    }, new Map());
+  }
+
+  throw new AppError(502, 'Gemini returned an incomplete contract insight package.', {
+    promptVersion: CONTRACT_INSIGHT_PROMPT_VERSION,
+    missingClauseIds,
+  });
 }
 
 function normalizeGeneratedNextSteps(value, fallback = []) {
@@ -569,6 +618,8 @@ async function generateContractInsightBundle({ contract, risks = [], clauseInsig
     responseSchema: contractInsightBundleSchema,
     label: 'contract insight bundle',
     requestOptions: buildInsightRequestOptions({
+      modelCandidates: buildContractInsightModelCandidates(),
+      includeDefaultModelFallbacks: false,
       maxOutputTokens: Math.max(env.genAiMaxOutputTokens, 1800),
       lowLatencyMaxOutputTokens: Math.max(env.genAiMaxOutputTokens, 1800),
       requestTimeoutMs: Math.max(env.genAiTimeoutMs, 30000),
