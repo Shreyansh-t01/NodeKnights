@@ -209,8 +209,13 @@ const configuredApiPrefix = envValue('API_PREFIX', '/api');
 const configuredCorsOrigin = envValue('CORS_ORIGIN', '*');
 const configuredGoogleRedirectUri = envValue('GOOGLE_REDIRECT_URI');
 const configuredAppBaseUrl = envValue('APP_BASE_URL') || firstHttpUrl(configuredCorsOrigin);
+const configuredDriveFolderIds = asList(envValue('GOOGLE_DRIVE_FOLDER_IDS'));
 const configuredDriveWebhookUrl = envValue('GOOGLE_DRIVE_WEBHOOK_URL')
   || deriveWebhookUrl(configuredGoogleRedirectUri, configuredApiPrefix);
+const configuredDriveWatchEnabled = asBoolean(
+  envValue('GOOGLE_DRIVE_WATCH_ENABLED'),
+  Boolean(configuredDriveFolderIds.length && configuredDriveWebhookUrl),
+);
 
 const env = {
   nodeEnv: envValue('NODE_ENV', 'development'),
@@ -239,9 +244,9 @@ const env = {
   googleRefreshToken: envValue('GOOGLE_REFRESH_TOKEN'),
   googleWorkspaceUser: envValue('GOOGLE_WORKSPACE_USER', 'me'),
   appBaseUrl: configuredAppBaseUrl,
-  googleDriveFolderIds: asList(envValue('GOOGLE_DRIVE_FOLDER_IDS')),
+  googleDriveFolderIds: configuredDriveFolderIds,
   googleDriveWebhookUrl: configuredDriveWebhookUrl,
-  googleDriveWatchEnabled: asBoolean(envValue('GOOGLE_DRIVE_WATCH_ENABLED'), false),
+  googleDriveWatchEnabled: configuredDriveWatchEnabled,
   googleDriveWatchChannelToken: envValue('GOOGLE_DRIVE_WATCH_CHANNEL_TOKEN'),
   googleDriveWatchExpirationMs: asNumber(envValue('GOOGLE_DRIVE_WATCH_EXPIRATION_MS'), 604800000),
   googleDriveWatchRenewalLeadMs: asNumber(envValue('GOOGLE_DRIVE_WATCH_RENEWAL_LEAD_MS'), 21600000),

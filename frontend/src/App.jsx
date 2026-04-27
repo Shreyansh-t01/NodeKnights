@@ -145,6 +145,8 @@ function buildConnectorState(health, returnTo = '/intake') {
 
   return connectorCards.map((connector) => {
     if (connector.key === 'google-drive') {
+      const driveStatus = health.googleConnectors?.drive;
+
       if (!health.googleConnectors?.enabled) {
         return {
           ...connector,
@@ -162,7 +164,7 @@ function buildConnectorState(health, returnTo = '/intake') {
         };
       }
 
-      if (health.googleConnectors?.drive?.watchState?.status === 'active') {
+      if (driveStatus?.watchState?.status === 'active') {
         return {
           ...connector,
           status: 'active',
@@ -170,11 +172,19 @@ function buildConnectorState(health, returnTo = '/intake') {
         };
       }
 
-      if (health.googleConnectors?.drive?.folderIds?.length) {
+      if (driveStatus?.folderIds?.length && !driveStatus?.webhookUrlConfigured) {
+        return {
+          ...connector,
+          status: 'configure',
+          description: 'Google is connected, but the Drive webhook URL still needs to be configured before continuous ingestion can start.',
+        };
+      }
+
+      if (driveStatus?.folderIds?.length) {
         return {
           ...connector,
           status: 'ready',
-          description: 'Drive is connected for monitored-folder imports. Start the watch to make ingestion continuous.',
+          description: 'Drive is connected for monitored-folder imports. Lexora will activate continuous ingestion automatically for the monitored folder.',
         };
       }
 
