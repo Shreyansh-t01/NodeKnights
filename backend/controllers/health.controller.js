@@ -358,7 +358,11 @@ async function getHealth(req, res) {
       mlService: mlServiceStatus,
       pinecone: {
         enabled: featureFlags.pinecone,
-        mode: featureFlags.pinecone ? 'pinecone' : 'local-vector-fallback',
+        mode: featureFlags.pinecone
+          ? (featureFlags.pineconeIntegratedEmbedding ? 'pinecone-integrated' : 'pinecone')
+          : 'local-vector-fallback',
+        embeddingProvider: env.embeddingProvider,
+        embeddingModel: env.pineconeIntegratedModel || null,
         namespaces: {
           contracts: env.pineconeContractNamespace,
           precedents: env.pineconePrecedentNamespace,

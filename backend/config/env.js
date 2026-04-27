@@ -90,6 +90,16 @@ function asChoice(value, allowedValues, fallback) {
   return allowedValues.includes(normalized) ? normalized : fallback;
 }
 
+function normalizeEmbeddingProvider(value) {
+  const normalized = cleanValue(value).toLowerCase();
+
+  if (normalized === 'gemini') {
+    return 'pinecone';
+  }
+
+  return asChoice(value, ['pinecone', 'local'], 'pinecone');
+}
+
 function resolveIfPresent(value, fallback = '') {
   const normalized = cleanValue(value);
 
@@ -191,14 +201,10 @@ const configuredGenAiModel = envValue('GEMINI_MODEL')
 const configuredGenAiModelCandidates = asList(
   envValue('GEMINI_MODEL_CANDIDATES') || envValue('GENAI_MODEL_CANDIDATES'),
 );
-const configuredEmbeddingModel = envValue('GEMINI_EMBEDDING_MODEL')
-  || envValue('EMBEDDING_MODEL')
-  || 'gemini-embedding-001';
-const configuredEmbeddingProvider = asChoice(
-  envValue('EMBEDDING_PROVIDER'),
-  ['gemini', 'pinecone', 'local'],
-  'pinecone',
-);
+const configuredEmbeddingModel = envValue('EMBEDDING_MODEL')
+  || envValue('PINECONE_INTEGRATED_MODEL')
+  || '';
+const configuredEmbeddingProvider = normalizeEmbeddingProvider(envValue('EMBEDDING_PROVIDER'));
 const configuredApiPrefix = envValue('API_PREFIX', '/api');
 const configuredCorsOrigin = envValue('CORS_ORIGIN', '*');
 const configuredGoogleRedirectUri = envValue('GOOGLE_REDIRECT_URI');
@@ -312,12 +318,6 @@ const featureFlags = {
       && env.googleRedirectUri,
   ),
   pinecone: Boolean(env.pineconeApiKey && env.pineconeIndexHost),
-  embeddingApi: Boolean(
-    env.embeddingProvider === 'gemini'
-      && env.genAiBaseUrl
-      && env.genAiApiKey
-      && env.embeddingModel,
-  ),
   pineconeIntegratedEmbedding: Boolean(
     env.embeddingProvider === 'pinecone'
       && env.pineconeTextField,
