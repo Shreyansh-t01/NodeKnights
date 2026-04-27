@@ -323,9 +323,12 @@ function toPromptRuleMatches(matches = []) {
 }
 
 function buildInsightRequestOptions(overrides = {}) {
+  const hasConfiguredModelCandidates = Array.isArray(env.genAiModelCandidates)
+    && env.genAiModelCandidates.length > 0;
+
   return {
-    includeDefaultModelFallbacks: true,
-    maxAttempts: Math.max(2, env.genAiMaxRetries + 1),
+    includeDefaultModelFallbacks: !hasConfiguredModelCandidates,
+    maxAttempts: Math.max(1, env.genAiMaxRetries + 1),
     requestTimeoutMs: Math.max(env.genAiTimeoutMs, 25000),
     maxOutputTokens: Math.max(env.genAiMaxOutputTokens, 1500),
     lowLatencyMaxOutputTokens: Math.max(env.genAiMaxOutputTokens, 1500),
