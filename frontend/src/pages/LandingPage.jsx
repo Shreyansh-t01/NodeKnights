@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-export default function LandingPage({ onGetStarted = () => {} }) {
+export default function LandingPage({ onGetStarted = () => { } }) {
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
 
@@ -21,8 +21,8 @@ export default function LandingPage({ onGetStarted = () => {} }) {
       color: "#f97316",
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="white" fillOpacity="0.9"/>
-          <path d="M9 12l2 2 4-4" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="white" fillOpacity="0.9" />
+          <path d="M9 12l2 2 4-4" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       ),
       title: "Risk Detection",
@@ -32,9 +32,9 @@ export default function LandingPage({ onGetStarted = () => {} }) {
       color: "#10b981",
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <circle cx="11" cy="11" r="7" stroke="white" strokeWidth="2" strokeOpacity="0.9"/>
-          <path d="M16.5 16.5L21 21" stroke="white" strokeWidth="2" strokeLinecap="round" strokeOpacity="0.9"/>
-          <path d="M8 11h6M11 8v6" stroke="#10b981" strokeWidth="1.8" strokeLinecap="round"/>
+          <circle cx="11" cy="11" r="7" stroke="white" strokeWidth="2" strokeOpacity="0.9" />
+          <path d="M16.5 16.5L21 21" stroke="white" strokeWidth="2" strokeLinecap="round" strokeOpacity="0.9" />
+          <path d="M8 11h6M11 8v6" stroke="#10b981" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       ),
       title: "Smart Search",
@@ -44,10 +44,10 @@ export default function LandingPage({ onGetStarted = () => {} }) {
       color: "#3b82f6",
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <rect x="4" y="3" width="16" height="18" rx="2" fill="white" fillOpacity="0.9"/>
-          <path d="M8 8h8M8 12h8M8 16h5" stroke="#3b82f6" strokeWidth="1.8" strokeLinecap="round"/>
-          <circle cx="17" cy="17" r="4" fill="#3b82f6"/>
-          <path d="M15.5 17l1 1 2-2" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+          <rect x="4" y="3" width="16" height="18" rx="2" fill="white" fillOpacity="0.9" />
+          <path d="M8 8h8M8 12h8M8 16h5" stroke="#3b82f6" strokeWidth="1.8" strokeLinecap="round" />
+          <circle cx="17" cy="17" r="4" fill="#3b82f6" />
+          <path d="M15.5 17l1 1 2-2" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       ),
       title: "Clause Detection",
@@ -57,9 +57,9 @@ export default function LandingPage({ onGetStarted = () => {} }) {
       color: "#8b5cf6",
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="5" width="18" height="14" rx="2" fill="white" fillOpacity="0.9"/>
-          <path d="M7 9h10M7 13h7" stroke="#8b5cf6" strokeWidth="1.8" strokeLinecap="round"/>
-          <rect x="14" y="11" width="6" height="5" rx="1" fill="#8b5cf6" opacity="0.3"/>
+          <rect x="3" y="5" width="18" height="14" rx="2" fill="white" fillOpacity="0.9" />
+          <path d="M7 9h10M7 13h7" stroke="#8b5cf6" strokeWidth="1.8" strokeLinecap="round" />
+          <rect x="14" y="11" width="6" height="5" rx="1" fill="#8b5cf6" opacity="0.3" />
         </svg>
       ),
       title: "OCR Extraction",
@@ -75,118 +75,8 @@ export default function LandingPage({ onGetStarted = () => {} }) {
       position: "relative",
       overflowX: "hidden",
       overflowY: "auto",
-      background: "linear-gradient(120deg, #f0057a 0%, #c0157a 22%, #7b2fbe 52%, #1ab8c4 100%)",
       boxSizing: "border-box",
     }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        *, *::before, *::after { box-sizing: border-box; }
-        @keyframes floatA { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-        @keyframes floatB { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
-        @keyframes fadein { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes fadeup { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
-        .lp-hero { animation: fadein 0.55s cubic-bezier(.22,1,.36,1) both; }
-        .lp-cards { animation: fadeup 0.65s cubic-bezier(.22,1,.36,1) 0.15s both; }
-        .lp-bottom { animation: fadeup 0.65s cubic-bezier(.22,1,.36,1) 0.28s both; }
-        .lp-cta:hover { filter: brightness(1.07); transform: translateY(-2px) scale(1.02); }
-        .lp-cta:active { transform: translateY(0) scale(1); filter: brightness(0.97); }
-        .lp-cta { transition: filter 0.2s, transform 0.18s; }
-        .lp-feat:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(0,0,0,0.16) !important; }
-        .lp-feat { transition: transform 0.2s, box-shadow 0.2s; }
-      `}</style>
-
-      {/* ── BACKGROUND SVG ── */}
-      <svg
-        viewBox="0 0 1024 576"
-        preserveAspectRatio="xMidYMid slice"
-        style={{ position: "fixed", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0 }}
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <defs>
-          <filter id="lpblur"><feGaussianBlur stdDeviation="2.5" /></filter>
-        </defs>
-        <ellipse cx="210" cy="290" rx="270" ry="240" fill="rgba(255,80,180,0.22)" />
-        <ellipse cx="870" cy="280" rx="210" ry="210" fill="rgba(0,220,230,0.18)" />
-
-        {/* Globe */}
-        <g transform="translate(30,36)" opacity="0.5">
-          <circle cx="200" cy="200" r="190" fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="2.5" />
-          <ellipse cx="200" cy="200" rx="95" ry="190" fill="none" stroke="rgba(255,255,255,0.38)" strokeWidth="1.5" />
-          <ellipse cx="200" cy="200" rx="38" ry="190" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.2" />
-          <ellipse cx="200" cy="200" rx="190" ry="58" fill="none" stroke="rgba(255,255,255,0.38)" strokeWidth="1.5" />
-          <ellipse cx="200" cy="200" rx="190" ry="112" fill="none" stroke="rgba(255,255,255,0.26)" strokeWidth="1.2" />
-          <ellipse cx="200" cy="200" rx="190" ry="20" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
-          <line x1="10" y1="200" x2="390" y2="200" stroke="rgba(255,255,255,0.26)" strokeWidth="1" />
-          <line x1="200" y1="10" x2="200" y2="390" stroke="rgba(255,255,255,0.26)" strokeWidth="1" />
-        </g>
-
-        {/* Floating platforms */}
-        <g style={{ animation: "floatA 5s ease-in-out infinite" }}>
-          <g transform="translate(55,360)">
-            <polygon points="0,32 78,0 156,32 78,64" fill="rgba(255,255,255,0.14)" stroke="rgba(255,255,255,0.5)" strokeWidth="1.2" />
-            <polygon points="0,32 0,54 78,86 78,64" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.28)" strokeWidth="1" />
-            <polygon points="156,32 156,54 78,86 78,64" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.28)" strokeWidth="1" />
-            <circle cx="78" cy="32" r="5" fill="#00e5ff" opacity="0.7" filter="url(#lpblur)" />
-            <circle cx="78" cy="32" r="2.5" fill="white" />
-          </g>
-        </g>
-        <g style={{ animation: "floatB 6.5s ease-in-out infinite 1.2s" }}>
-          <g transform="translate(15,220)">
-            <polygon points="0,22 56,0 112,22 56,44" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.44)" strokeWidth="1" />
-            <polygon points="0,22 0,38 56,60 56,44" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.26)" strokeWidth="0.9" />
-            <polygon points="112,22 112,38 56,60 56,44" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.26)" strokeWidth="0.9" />
-            <circle cx="56" cy="22" r="4" fill="#00e5ff" opacity="0.65" filter="url(#lpblur)" />
-            <circle cx="56" cy="22" r="2" fill="white" />
-          </g>
-        </g>
-        <g style={{ animation: "floatA 4.8s ease-in-out infinite 0.6s" }}>
-          <g transform="translate(148,268)">
-            <polygon points="0,16 44,0 88,16 44,32" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.4)" strokeWidth="0.9" />
-            <polygon points="0,16 0,28 44,44 44,32" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.24)" strokeWidth="0.8" />
-            <polygon points="88,16 88,28 44,44 44,32" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.24)" strokeWidth="0.8" />
-          </g>
-        </g>
-        <g style={{ animation: "floatB 5.2s ease-in-out infinite 2s" }}>
-          <g transform="translate(210,415)">
-            <polygon points="0,18 50,0 100,18 50,36" fill="rgba(255,255,255,0.11)" stroke="rgba(255,255,255,0.38)" strokeWidth="0.9" />
-            <polygon points="0,18 0,32 50,50 50,36" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.22)" strokeWidth="0.8" />
-            <polygon points="100,18 100,32 50,50 50,36" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.22)" strokeWidth="0.8" />
-            <circle cx="50" cy="18" r="4" fill="#00e5ff" opacity="0.6" filter="url(#lpblur)" />
-            <circle cx="50" cy="18" r="2" fill="white" />
-          </g>
-        </g>
-
-        {/* Chip cards */}
-        <g transform="translate(28,155)" opacity="0.65" style={{ animation: "floatA 4.2s ease-in-out infinite 0.4s" }}>
-          <rect width="88" height="44" rx="9" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.45)" strokeWidth="1" />
-          <rect x="9" y="9" width="30" height="5" rx="2.5" fill="rgba(255,255,255,0.55)" />
-          <rect x="9" y="19" width="22" height="4" rx="2" fill="rgba(255,255,255,0.33)" />
-          <rect x="9" y="29" width="14" height="4" rx="2" fill="rgba(255,255,255,0.22)" />
-          <circle cx="72" cy="22" r="9" fill="rgba(0,229,255,0.2)" stroke="rgba(0,229,255,0.6)" strokeWidth="1" />
-          <circle cx="72" cy="22" r="3.5" fill="#00e5ff" />
-        </g>
-        <g transform="translate(178,135)" opacity="0.55" style={{ animation: "floatB 6s ease-in-out infinite 2.1s" }}>
-          <rect width="70" height="36" rx="8" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.38)" strokeWidth="0.9" />
-          <rect x="8" y="8" width="24" height="4.5" rx="2.2" fill="rgba(255,255,255,0.48)" />
-          <rect x="8" y="17" width="18" height="3.5" rx="1.75" fill="rgba(255,255,255,0.3)" />
-          <rect x="8" y="25" width="12" height="3.5" rx="1.75" fill="rgba(255,255,255,0.22)" />
-        </g>
-
-        {/* Connector lines */}
-        <line x1="149" y1="276" x2="71" y2="240" stroke="rgba(0,229,255,0.32)" strokeWidth="1" strokeDasharray="5 5" />
-        <line x1="260" y1="433" x2="196" y2="284" stroke="rgba(0,229,255,0.26)" strokeWidth="1" strokeDasharray="5 5" />
-        <circle cx="71" cy="240" r="3.5" fill="rgba(0,229,255,0.85)" />
-        <circle cx="149" cy="276" r="3" fill="rgba(0,229,255,0.7)" />
-        <circle cx="260" cy="433" r="3" fill="rgba(0,229,255,0.7)" />
-
-        {/* Sparkles */}
-        <g transform="translate(950,490)">
-          <path d="M10,0 L12.2,7.8 L20,10 L12.2,12.2 L10,20 L7.8,12.2 L0,10 L7.8,7.8 Z" fill="rgba(255,255,255,0.75)" />
-        </g>
-        <g transform="translate(968,118) scale(0.55)">
-          <path d="M10,0 L12.2,7.8 L20,10 L12.2,12.2 L10,20 L7.8,12.2 L0,10 L7.8,7.8 Z" fill="rgba(255,255,255,0.5)" />
-        </g>
-      </svg>
 
       {/* ══════════════════════════════════
           PAGE CONTENT
@@ -280,7 +170,7 @@ export default function LandingPage({ onGetStarted = () => {} }) {
           >
             Get Started
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </section>
@@ -341,11 +231,11 @@ export default function LandingPage({ onGetStarted = () => {} }) {
                 flexShrink: 0,
               }}>
                 <svg width="28" height="22" viewBox="0 0 256 193" xmlns="http://www.w3.org/2000/svg">
-                  <path fill="#4285F4" d="M58.182 192.05V93.14L27.507 65.077 0 49.504v125.091c0 9.658 7.825 17.455 17.455 17.455z"/>
-                  <path fill="#34A853" d="M197.818 192.05h40.727c9.659 0 17.455-7.826 17.455-17.455V49.505l-31.156 17.837-27.026 25.798z"/>
-                  <path fill="#EA4335" d="M58.182 93.14l-4.174-38.647 4.174-36.989L128 69.868l69.818-52.364 4.669 34.992-4.669 40.644L128 145.504z"/>
-                  <path fill="#FBBC04" d="M197.818 17.504V93.14L256 49.504V26.231c0-21.585-24.64-33.89-41.89-20.945z"/>
-                  <path fill="#C5221F" d="M0 49.504l26.759 20.07L58.182 93.14V17.504L41.89 5.286C24.61-7.66 0 4.646 0 26.23z"/>
+                  <path fill="#4285F4" d="M58.182 192.05V93.14L27.507 65.077 0 49.504v125.091c0 9.658 7.825 17.455 17.455 17.455z" />
+                  <path fill="#34A853" d="M197.818 192.05h40.727c9.659 0 17.455-7.826 17.455-17.455V49.505l-31.156 17.837-27.026 25.798z" />
+                  <path fill="#EA4335" d="M58.182 93.14l-4.174-38.647 4.174-36.989L128 69.868l69.818-52.364 4.669 34.992-4.669 40.644L128 145.504z" />
+                  <path fill="#FBBC04" d="M197.818 17.504V93.14L256 49.504V26.231c0-21.585-24.64-33.89-41.89-20.945z" />
+                  <path fill="#C5221F" d="M0 49.504l26.759 20.07L58.182 93.14V17.504L41.89 5.286C24.61-7.66 0 4.646 0 26.23z" />
                 </svg>
               </div>
 
@@ -358,12 +248,12 @@ export default function LandingPage({ onGetStarted = () => {} }) {
                 flexShrink: 0,
               }}>
                 <svg width="26" height="24" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
-                  <path fill="#0066da" d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H.97c0 1.55.4 3.1 1.2 4.5z"/>
-                  <path fill="#00ac47" d="M43.65 25L29.9 1.2C28.55 2 27.4 3.1 26.6 4.5L1.17 48.5c-.8 1.4-1.2 2.95-1.2 4.5h27.45z"/>
-                  <path fill="#ea4335" d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.85l5.87 11.2z"/>
-                  <path fill="#00832d" d="M43.65 25L57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z"/>
-                  <path fill="#2684fc" d="M59.85 53H27.45L13.7 76.8c1.35.8 2.9 1.2 4.5 1.2h50.5c1.6 0 3.15-.45 4.5-1.2z"/>
-                  <path fill="#ffba00" d="M73.4 26.5L60.7 4.5C59.9 3.1 58.75 2 57.4 1.2L43.65 25l16.2 28H86.3c0-1.55-.4-3.1-1.2-4.5z"/>
+                  <path fill="#0066da" d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H.97c0 1.55.4 3.1 1.2 4.5z" />
+                  <path fill="#00ac47" d="M43.65 25L29.9 1.2C28.55 2 27.4 3.1 26.6 4.5L1.17 48.5c-.8 1.4-1.2 2.95-1.2 4.5h27.45z" />
+                  <path fill="#ea4335" d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.85l5.87 11.2z" />
+                  <path fill="#00832d" d="M43.65 25L57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z" />
+                  <path fill="#2684fc" d="M59.85 53H27.45L13.7 76.8c1.35.8 2.9 1.2 4.5 1.2h50.5c1.6 0 3.15-.45 4.5-1.2z" />
+                  <path fill="#ffba00" d="M73.4 26.5L60.7 4.5C59.9 3.1 58.75 2 57.4 1.2L43.65 25l16.2 28H86.3c0-1.55-.4-3.1-1.2-4.5z" />
                 </svg>
               </div>
 
@@ -377,14 +267,14 @@ export default function LandingPage({ onGetStarted = () => {} }) {
               }}>
                 <svg width="26" height="30" viewBox="0 0 24 28" fill="none" xmlns="http://www.w3.org/2000/svg">
                   {/* Page body */}
-                  <rect x="1" y="1" width="16" height="22" rx="2.5" fill="#ef4444"/>
+                  <rect x="1" y="1" width="16" height="22" rx="2.5" fill="#ef4444" />
                   {/* Folded corner */}
-                  <path d="M12 1 L17 6 L12 6 Z" fill="#fca5a5"/>
-                  <path d="M12 1 L17 6" stroke="#ef4444" strokeWidth="0.5"/>
+                  <path d="M12 1 L17 6 L12 6 Z" fill="#fca5a5" />
+                  <path d="M12 1 L17 6" stroke="#ef4444" strokeWidth="0.5" />
                   {/* White lines */}
-                  <path d="M4 10h10M4 13h10M4 16h6" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                  <path d="M4 10h10M4 13h10M4 16h6" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
                   {/* PDF badge */}
-                  <rect x="0" y="19" width="18" height="8" rx="2" fill="#c82020"/>
+                  <rect x="0" y="19" width="18" height="8" rx="2" fill="#c82020" />
                   <text x="2" y="26" fontSize="5.5" fill="white" fontWeight="800" fontFamily="Arial, sans-serif" letterSpacing="0.3">PDF</text>
                 </svg>
               </div>
@@ -399,15 +289,15 @@ export default function LandingPage({ onGetStarted = () => {} }) {
               }}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   {/* Frame */}
-                  <rect x="2" y="3" width="20" height="18" rx="3" fill="#16a34a"/>
+                  <rect x="2" y="3" width="20" height="18" rx="3" fill="#16a34a" />
                   {/* Sky area */}
-                  <rect x="2" y="3" width="20" height="11" rx="3" fill="#22c55e"/>
+                  <rect x="2" y="3" width="20" height="11" rx="3" fill="#22c55e" />
                   {/* Sun */}
-                  <circle cx="17" cy="8" r="2.5" fill="#fde047"/>
+                  <circle cx="17" cy="8" r="2.5" fill="#fde047" />
                   {/* Mountain / landscape */}
-                  <path d="M2 17 L7 11 L11 15 L15 10 L22 17 L22 21 Q22 21 19 21 L5 21 Q2 21 2 21 Z" fill="#15803d"/>
+                  <path d="M2 17 L7 11 L11 15 L15 10 L22 17 L22 21 Q22 21 19 21 L5 21 Q2 21 2 21 Z" fill="#15803d" />
                   {/* Horizon overlap fix */}
-                  <path d="M2 17 L7 11 L11 15 L15 10 L22 17" fill="none" stroke="#16a34a" strokeWidth="0.5"/>
+                  <path d="M2 17 L7 11 L11 15 L15 10 L22 17" fill="none" stroke="#16a34a" strokeWidth="0.5" />
                 </svg>
               </div>
             </div>
@@ -467,8 +357,8 @@ export default function LandingPage({ onGetStarted = () => {} }) {
                 flexShrink: 0,
               }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <rect x="3" y="2" width="14" height="18" rx="2" fill="#ef4444"/>
-                  <path d="M6 10h8M6 13h8M6 16h5" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
+                  <rect x="3" y="2" width="14" height="18" rx="2" fill="#ef4444" />
+                  <path d="M6 10h8M6 13h8M6 16h5" stroke="white" strokeWidth="1.4" strokeLinecap="round" />
                 </svg>
               </div>
               <div style={{ minWidth: 0 }}>
@@ -527,7 +417,7 @@ export default function LandingPage({ onGetStarted = () => {} }) {
                 {/* Donut */}
                 <div style={{ flexShrink: 0, width: 72, height: 72, position: "relative" }}>
                   <svg width="72" height="72" viewBox="0 0 72 72">
-                    <circle cx="36" cy="36" r="26" fill="none" stroke="#f3f4f6" strokeWidth="10"/>
+                    <circle cx="36" cy="36" r="26" fill="none" stroke="#f3f4f6" strokeWidth="10" />
                     {/* High risk — 64% ≈ 103 of 163 */}
                     <circle cx="36" cy="36" r="26" fill="none" stroke="#ef4444" strokeWidth="10"
                       strokeDasharray="103 163" strokeDashoffset="0"

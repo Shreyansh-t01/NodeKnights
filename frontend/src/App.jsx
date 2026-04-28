@@ -15,6 +15,7 @@ import InsightsPage from './pages/InsightsPage';
 import SearchPage from './pages/SearchPage';
 import DocumentsPage from './pages/DocumentsPage';
 import AuthPage from './pages/AuthPage';
+import LxBackground from './components/LxBackground';
 import LandingPage from './pages/LandingPage';
 
 const KNOWN_ROUTES = new Set(['/', '/intake', '/contracts', '/insights', '/search', '/documents']);
@@ -1372,6 +1373,7 @@ function WorkspaceApp({ authUser, onLogout }) {
 
   return (
     <main className="app-shell">
+      <LxBackground />
       <AppNav
         authUser={authUser}
         currentPath={safePath}
@@ -1384,8 +1386,11 @@ function WorkspaceApp({ authUser, onLogout }) {
         onNotificationSelect={handleNotificationSelect}
         onToggleNotifications={() => setNotificationsOpen((current) => !current)}
         modeLabel={modeLabel}
+        contracts={contracts}
       />
-      {page}
+      <div className="app-main">
+        {page}
+      </div>
     </main>
   );
 }
@@ -1421,7 +1426,7 @@ function App() {
 
         if (!ignore) {
           setAuthUser(response.data.user);
-          setShowLanding(false); 
+          setShowLanding(false);
           setAuthError('');
         }
       } catch (error) {
@@ -1570,27 +1575,35 @@ function App() {
   }
 
   if (showLanding && !authUser) {
-  return <LandingPage onGetStarted={() => setShowLanding(false)} />;
-}
+    return (
+      <>
+        <LxBackground />
+        <LandingPage onGetStarted={() => setShowLanding(false)} />
+      </>
+    );
+  }
 
   if (!authUser) {
     return (
-      <AuthPage
-        mode={authMode}
-        pending={authPending}
-        error={authError}
-        loginForm={loginForm}
-        testerCredentials={testerCredentials}
-        registerForm={registerForm}
-        onLoginChange={updateLoginForm}
-        onRegisterChange={updateRegisterForm}
-        onLoginSubmit={handleLoginSubmit}
-        onRegisterSubmit={handleRegisterSubmit}
-        onModeChange={(nextMode) => {
-          setAuthMode(nextMode);
-          setAuthError('');
-        }}
-      />
+      <>
+        <LxBackground />
+        <AuthPage
+          mode={authMode}
+          pending={authPending}
+          error={authError}
+          loginForm={loginForm}
+          testerCredentials={testerCredentials}
+          registerForm={registerForm}
+          onLoginChange={updateLoginForm}
+          onRegisterChange={updateRegisterForm}
+          onLoginSubmit={handleLoginSubmit}
+          onRegisterSubmit={handleRegisterSubmit}
+          onModeChange={(nextMode) => {
+            setAuthMode(nextMode);
+            setAuthError('');
+          }}
+        />
+      </>
     );
   }
 

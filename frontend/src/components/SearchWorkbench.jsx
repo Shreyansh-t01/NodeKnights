@@ -1,399 +1,307 @@
 import { useEffect, useRef, useState } from 'react';
+import StatusPill from './StatusPill';
 
 function mapVoiceRecognitionError(code = '') {
   switch (code) {
-    case 'audio-capture':
-      return 'No microphone was detected. Connect a microphone and try again.';
-    case 'network':
-      return 'Voice capture lost its connection. Please try the microphone again.';
+    case 'audio-capture': return 'No microphone was detected.';
+    case 'network': return 'Connection lost. Please try again.';
     case 'not-allowed':
-    case 'service-not-allowed':
-      return 'Microphone access was blocked. Allow microphone permission to use voice search.';
-    case 'no-speech':
-      return 'No speech was detected. Please try again and speak clearly.';
-    case 'language-not-supported':
-      return 'This browser could not start speech recognition for the selected language.';
-    default:
-      return 'Voice search could not start in this browser right now.';
+    case 'service-not-allowed': return 'Microphone access blocked.';
+    case 'no-speech': return 'No speech was detected.';
+    case 'language-not-supported': return 'Language not supported.';
+    default: return 'Voice search error.';
   }
 }
 
 function buildSpokenReply(result, scopeLabel = '', fallbackError = '') {
-  if (fallbackError) {
-    return fallbackError;
-  }
-
+  if (fallbackError) return fallbackError;
   const answer = result?.reasoning?.answer || '';
   const recommendations = (result?.reasoning?.recommendations || []).slice(0, 3);
-  const supportingMatches = (result?.reasoning?.supportingMatches || []).slice(0, 2);
   const parts = [];
-
-  if (scopeLabel) {
-    parts.push(`Semantic search reply for ${scopeLabel}.`);
-  }
-
-  if (answer) {
-    parts.push(answer);
-  }
-
-  if (recommendations.length) {
-    parts.push(`Recommended next steps: ${recommendations.join('. ')}.`);
-  }
-
-  if (supportingMatches.length) {
-    parts.push(`Supporting matches include ${supportingMatches.map((match) => match.clauseType.replace(/_/g, ' ')).join(' and ')}.`);
-  }
-
+  if (scopeLabel) parts.push(`Reply for ${scopeLabel}.`);
+  if (answer) parts.push(answer);
+  if (recommendations.length) parts.push(`Suggested steps: ${recommendations.join('. ')}.`);
   return parts.join(' ').trim();
 }
 
 function SearchWorkbench({
   query,
-  deferredQuery,
   pending,
   result,
   error,
   disabled,
-  disabledMessage,
   scopeLabel,
   onQueryChange,
   onSubmit,
-  onRunSearch,
-  modeLabel,
 }) {
   const recognitionRef = useRef(null);
-  const utteranceRef = useRef(null);
   const [voiceStatus, setVoiceStatus] = useState('idle');
-  const [voiceMessage, setVoiceMessage] = useState('');
   const [voiceError, setVoiceError] = useState('');
   const recommendations = result?.reasoning?.recommendations || [];
   const supportingMatches = result?.reasoning?.supportingMatches || [];
-  const SpeechRecognitionApi = typeof window !== 'undefined'
-    ? (window.SpeechRecognition || window.webkitSpeechRecognition || null)
-    : null;
+
+  const SpeechRecognitionApi = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition || null) : null;
   const voiceInputSupported = Boolean(SpeechRecognitionApi);
   const voiceOutputSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
   const isListening = voiceStatus === 'listening';
-  const isVoiceProcessing = voiceStatus === 'processing';
   const isSpeaking = voiceStatus === 'speaking';
   const canSpeakReply = Boolean(error || result?.reasoning?.answer || recommendations.length);
-  const voiceSupportMessage = !voiceInputSupported && !voiceOutputSupported
-    ? 'Voice input and spoken replies need a browser with Web Speech API support.'
-    : !voiceInputSupported
-      ? 'Voice input is unavailable in this browser, but spoken reply can still read the written answer aloud.'
-      : !voiceOutputSupported
-        ? 'Voice input is available, but spoken reply is not supported in this browser.'
-        : 'Ask with your voice and hear the grounded semantic search answer read back aloud.';
 
-  useEffect(() => (
-    () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.onstart = null;
-        recognitionRef.current.onresult = null;
-        recognitionRef.current.onerror = null;
-        recognitionRef.current.onend = null;
-
-        if (typeof recognitionRef.current.abort === 'function') {
-          recognitionRef.current.abort();
-        } else if (typeof recognitionRef.current.stop === 'function') {
-          recognitionRef.current.stop();
-        }
-
-        recognitionRef.current = null;
-      }
-
-      if (voiceOutputSupported) {
-        window.speechSynthesis.cancel();
-      }
-
-      utteranceRef.current = null;
+  useEffect(() => (() => {
+    if (recognitionRef.current) {
+      if (typeof recognitionRef.current.abort === 'function') recognitionRef.current.abort();
+      recognitionRef.current = null;
     }
-  ), [voiceOutputSupported]);
+    if (voiceOutputSupported) window.speechSynthesis.cancel();
+  }), [voiceOutputSupported]);
 
-  function stopVoiceReply() {
-    if (!voiceOutputSupported) {
+  const stopVoiceReply = () => {
+    if (!voiceOutputSupported) return;
+    window.speechSynthesis.cancel();
+    setVoiceStatus('idle');
+  };
+
+  const speakReply = () => {
+    if (!voiceOutputSupported) return;
+    const spokenText = buildSpokenReply(result, scopeLabel, error);
+    if (!spokenText) {
+      setVoiceError('No answer to read aloud.');
       return;
     }
-
-    window.speechSynthesis.cancel();
-    utteranceRef.current = null;
-    setVoiceMessage('');
-    setVoiceStatus((current) => (current === 'speaking' ? 'idle' : current));
-  }
-
-  function speakReply(nextResult = result, fallbackError = '') {
-    if (!voiceOutputSupported) {
-      return Promise.resolve(false);
-    }
-
-    const spokenText = buildSpokenReply(nextResult, scopeLabel, fallbackError);
-
-    if (!spokenText) {
-      setVoiceError('No written answer is available to read aloud yet.');
-      return Promise.resolve(false);
-    }
-
     window.speechSynthesis.cancel();
     setVoiceError('');
     setVoiceStatus('speaking');
-    setVoiceMessage('Reading the semantic search reply aloud...');
+    const utterance = new SpeechSynthesisUtterance(spokenText);
+    utterance.onend = () => setVoiceStatus('idle');
+    utterance.onerror = () => setVoiceStatus('idle');
+    window.speechSynthesis.speak(utterance);
+  };
 
-    return new Promise((resolve) => {
-      const utterance = new SpeechSynthesisUtterance(spokenText);
-      utterance.rate = 0.98;
-      utterance.pitch = 1;
-      utteranceRef.current = utterance;
-
-      utterance.onend = () => {
-        utteranceRef.current = null;
-        setVoiceMessage('');
-        setVoiceStatus('idle');
-        resolve(true);
-      };
-
-      utterance.onerror = (event) => {
-        utteranceRef.current = null;
-        setVoiceMessage('');
-        setVoiceStatus('idle');
-
-        if (event.error !== 'interrupted') {
-          setVoiceError('The voice reply could not be played in this browser.');
-        }
-
-        resolve(false);
-      };
-
-      window.speechSynthesis.speak(utterance);
-    });
-  }
-
-  function handleFormSubmit(event) {
-    stopVoiceReply();
-    void onSubmit(event);
-  }
-
-  async function handleReplayReply() {
-    if (isSpeaking) {
-      stopVoiceReply();
+  const handleVoiceToggle = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
       return;
     }
-
-    await speakReply(result, error);
-  }
-
-  function handleVoiceSearch() {
-    if (disabled || pending) {
-      return;
-    }
-
-    if (isListening && recognitionRef.current) {
-      setVoiceMessage('Finishing your voice capture...');
-      recognitionRef.current.stop();
-      return;
-    }
-
-    if (!voiceInputSupported) {
-      setVoiceError('Voice input is not supported in this browser.');
-      return;
-    }
-
-    stopVoiceReply();
-    setVoiceError('');
-    setVoiceStatus('listening');
-    setVoiceMessage('Listening for your contract question...');
+    if (!voiceInputSupported) return;
 
     const recognition = new SpeechRecognitionApi();
-    recognition.lang = 'en-US';
     recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-    recognitionRef.current = recognition;
-
-    let finalTranscript = '';
-    let latestTranscript = '';
-    let recognitionFailed = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
 
     recognition.onstart = () => {
       setVoiceStatus('listening');
-      setVoiceMessage('Listening for your contract question...');
       setVoiceError('');
     };
 
-    recognition.onresult = (event) => {
-      let interimTranscript = '';
-
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        const transcript = event.results[index][0]?.transcript || '';
-
-        if (event.results[index].isFinal) {
-          finalTranscript += `${transcript} `;
-        } else {
-          interimTranscript += transcript;
-        }
-      }
-
-      latestTranscript = `${finalTranscript}${interimTranscript}`.trim();
-
-      if (latestTranscript) {
-        onQueryChange(latestTranscript);
-        setVoiceMessage(interimTranscript ? 'Listening...' : 'Captured your question.');
-      }
-    };
-
     recognition.onerror = (event) => {
-      recognitionFailed = true;
-      recognitionRef.current = null;
+      setVoiceError(mapVoiceRecognitionError(event.error));
       setVoiceStatus('idle');
-      setVoiceMessage('');
-
-      if (event.error !== 'aborted') {
-        setVoiceError(mapVoiceRecognitionError(event.error));
-      }
     };
 
-    recognition.onend = async () => {
-      recognitionRef.current = null;
-
-      if (recognitionFailed) {
-        return;
-      }
-
-      const spokenQuery = (finalTranscript || latestTranscript).trim();
-
-      if (!spokenQuery) {
-        setVoiceStatus('idle');
-        setVoiceMessage('');
-        setVoiceError('No speech was detected. Please try again.');
-        return;
-      }
-
-      onQueryChange(spokenQuery);
-      setVoiceStatus('processing');
-      setVoiceMessage('Running semantic search for your spoken question...');
-
-      try {
-        const nextResult = await onRunSearch(spokenQuery);
-
-        if (voiceOutputSupported) {
-          await speakReply(nextResult);
-        } else {
-          setVoiceStatus('idle');
-          setVoiceMessage('Voice search complete. The written answer is ready below.');
-        }
-      } catch (searchRunError) {
-        setVoiceStatus('idle');
-        setVoiceMessage('');
-        setVoiceError(searchRunError.message || 'The spoken question was captured, but semantic search failed.');
-      }
+    recognition.onend = () => {
+      setVoiceStatus('idle');
     };
 
-    try {
-      recognition.start();
-    } catch (startError) {
-      recognitionRef.current = null;
-      setVoiceStatus('idle');
-      setVoiceMessage('');
-      setVoiceError('Microphone capture could not be started. Please try again.');
-    }
-  }
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      onQueryChange(transcript);
+      // Trigger search automatically on voice success
+      setTimeout(() => {
+        const fakeEvent = { preventDefault: () => { } };
+        onSubmit(fakeEvent);
+      }, 300);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
+  const handleFormSubmit = (e) => {
+    stopVoiceReply();
+    onSubmit(e);
+  };
 
   return (
-    <section className="panel search-panel">
-      <div className="panel-header">
-        <div>
-          <p className="eyebrow">Reasoning Layer</p>
-          <h3>Semantic search workbench</h3>
-        </div>
-        <span className="mode-label">{modeLabel}</span>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      {/* ── SEARCH INPUT CARD ── */}
+      <section className="panel" style={{
+        padding: '32px',
+        border: '1px solid rgba(255,255,255,0.15)',
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.04) 100%)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        {/* Glow */}
+        <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '40%', height: '80%', background: 'radial-gradient(circle, rgba(0, 229, 255, 0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-      <form className="search-form" onSubmit={handleFormSubmit}>
-        <label htmlFor="semantic-query" className="search-label">
-          Ask about risk, precedent, or drafting changes
-        </label>
-        <div className="search-row">
-          <input
-            id="semantic-query"
-            value={query}
-            disabled={disabled}
-            onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="Type or speak a contract question"
-          />
-          <button type="submit" disabled={pending || disabled}>
-            {pending ? 'Searching...' : 'Run Search'}
-          </button>
-          <button
-            type="button"
-            className="search-secondary-button"
-            disabled={disabled || pending || isVoiceProcessing}
-            onClick={handleVoiceSearch}
-          >
-            {isListening ? 'Stop Listening' : isVoiceProcessing ? 'Voice Search...' : 'Voice Ask'}
-          </button>
-          <button
-            type="button"
-            className="search-secondary-button"
-            disabled={(!canSpeakReply && !isSpeaking) || !voiceOutputSupported || pending || isVoiceProcessing}
-            onClick={() => {
-              void handleReplayReply();
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <p className="eyebrow" style={{ color: 'var(--lex-cyan-glow)' }}>Semantic Intelligence</p>
+          <h2 style={{ fontSize: '1.8rem', color: '#fff', margin: '8px 0 24px', fontWeight: '800' }}>Search Workbench</h2>
+
+          <form
+            onSubmit={handleFormSubmit}
+            style={{
+              display: 'flex',
+              gap: '12px',
+              background: 'rgba(0,0,0,0.2)',
+              padding: '10px',
+              borderRadius: '20px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
             }}
           >
-            {isSpeaking ? 'Stop Reply' : 'Speak Reply'}
-          </button>
+            <input
+              type="text"
+              className="lex-input-glow"
+              style={{
+                flex: 1,
+                background: 'transparent',
+                border: 'none',
+                color: '#fff',
+                padding: '12px 20px',
+                fontSize: '16px',
+                outline: 'none'
+              }}
+              placeholder="Ask anything about your contracts..."
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              disabled={disabled || pending}
+            />
+            {voiceInputSupported && (
+              <button
+                type="button"
+                onClick={handleVoiceToggle}
+                className="lex-btn-secondary"
+                style={{
+                  background: isListening ? 'var(--lex-magenta)' : 'rgba(255,255,255,0.05)',
+                  borderRadius: '14px',
+                  width: '46px',
+                  height: '46px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: isListening ? '#fff' : 'rgba(255,255,255,0.5)',
+                  padding: 0,
+                  backdropFilter: 'blur(8px)'
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                  <line x1="12" y1="19" x2="12" y2="23"></line>
+                  <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+              </button>
+            )}
+            <button
+              type="submit"
+              className="lex-btn-primary"
+              disabled={disabled || pending || !query.trim()}
+              style={{ padding: '0 24px', borderRadius: '14px', fontWeight: '800' }}
+            >
+              {pending ? 'Processing...' : 'Audit'}
+            </button>
+          </form>
+          {(error || voiceError) && (
+            <p style={{ color: 'var(--lex-magenta)', fontSize: '13px', marginTop: '12px', fontWeight: '600' }}>
+              {error || voiceError}
+            </p>
+          )}
         </div>
-        <p className="search-hint">
-          {scopeLabel ? `Scoped contract: ${scopeLabel}` : 'Scoped contract: select a contract name first.'}
-        </p>
-        <p className="search-hint">Focused context preview: {deferredQuery || 'Start typing a contract question.'}</p>
-        <p className="search-hint">{voiceSupportMessage}</p>
-        {voiceMessage ? (
-          <p className="search-hint search-voice-status" aria-live="polite">{voiceMessage}</p>
-        ) : null}
-        {voiceError ? (
-          <p className="empty-state search-voice-error" aria-live="polite">{voiceError}</p>
-        ) : null}
-      </form>
+      </section>
 
-      <div className="search-answer">
-        <h4>Answer</h4>
-        <p>
-          {error || result?.reasoning?.answer || (
-            disabled
-              ? disabledMessage
-              : 'Run a semantic search to see grounded reasoning and supporting matches.'
-          )}
-        </p>
-      </div>
+      {/* ── RESULTS GRID ── */}
+      {result && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '32px' }}>
 
-      <div className="search-grid">
-        <div>
-          <h4>Recommendations</h4>
-          {recommendations.length ? (
-            <ul>
-              {recommendations.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="empty-state">Recommendations will appear after a successful search.</p>
+          {/* Main Answer Area */}
+          <section className="panel" style={{
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            padding: '32px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <p className="eyebrow" style={{ color: 'var(--lex-cyan-glow)' }}>AI Analysis Reply</p>
+              {voiceOutputSupported && canSpeakReply && (
+                <button
+                  type="button"
+                  className="lex-btn-secondary"
+                  onClick={() => isSpeaking ? stopVoiceReply() : speakReply()}
+                  style={{ padding: '6px 14px', fontSize: '11px', color: isSpeaking ? 'var(--lex-cyan-glow)' : 'rgba(255,255,255,0.6)' }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '6px' }}>
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  </svg>
+                  {isSpeaking ? 'Mute AI' : 'Play Reply'}
+                </button>
+              )}
+            </div>
+
+            <p style={{
+              fontSize: '1.25rem',
+              color: '#fff',
+              lineHeight: '1.7',
+              margin: '0 0 24px',
+              maxWidth: '800px',
+              fontWeight: '700'
+            }}>
+              {result.reasoning?.answer || "Analysis complete. View recommendations below."}
+            </p>
+
+            {/* Recommendations Sub-cards */}
+            {recommendations.length > 0 && (
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '24px', marginTop: '24px' }}>
+                <p className="eyebrow" style={{ marginBottom: '16px' }}>Suggested Next Steps</p>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  {recommendations.map((rec, i) => (
+                    <div key={i} style={{
+                      padding: '12px 18px',
+                      background: 'rgba(255,255,255,0.08)',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      color: '#fff',
+                      fontSize: '13.5px',
+                      fontWeight: '800'
+                    }}>
+                      {rec}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Reference Cards */}
+          {supportingMatches.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h3 style={{ fontSize: '1.2rem' }}>Supporting Evidence</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+                {supportingMatches.map((match, i) => (
+                  <div key={i} className="panel" style={{
+                    padding: '24px',
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.05)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <p className="eyebrow" style={{ fontSize: '9px' }}>Match Score: {(match.score * 100).toFixed(0)}%</p>
+                      <StatusPill status={match.riskLabel}>{match.riskLabel}</StatusPill>
+                    </div>
+                    <p style={{ color: '#fff', fontSize: '13.5px', lineHeight: '1.6', margin: '8px 0', fontWeight: '500' }}>
+                      "{match.text}"
+                    </p>
+                    <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', fontWeight: '800' }}>
+                      Source: {match.docTitle}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
-        <div>
-          <h4>Supporting matches</h4>
-          {supportingMatches.length ? (
-            <ul>
-              {supportingMatches.map((match) => (
-                <li key={match.id}>
-                  <strong>{match.clauseType.replace(/_/g, ' ')}</strong> - {match.riskLabel} risk
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="empty-state">Matching clauses will appear here once the search index has live data.</p>
-          )}
-        </div>
-      </div>
-    </section>
+      )}
+    </div>
   );
 }
 

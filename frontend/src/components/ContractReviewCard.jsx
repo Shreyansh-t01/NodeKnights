@@ -55,23 +55,23 @@ function ContractReviewCard({
     <article className={`panel contract-review-card ${isExpanded ? 'contract-review-card-active' : ''}`}>
       <div className="contract-review-header">
         <div>
-          <p className="eyebrow">{contract.source}</p>
-          <h3>{contract.title}</h3>
+          <p className="eyebrow" style={{ fontSize: '11px', fontWeight: '900' }}>{contract.source}</p>
+          <h3 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#fff' }}>{contract.title}</h3>
         </div>
         <StatusPill status={contract.status}>{contract.status.replace(/-/g, ' ')}</StatusPill>
       </div>
 
       <div className="contract-review-meta-grid">
-        <p className="contract-meta">
+        <p className="contract-meta" style={{ fontWeight: '700', fontSize: '14px', color: 'rgba(255,255,255,0.9)' }}>
           Type: {contract.contractType}
         </p>
-        <p className="contract-meta">
+        <p className="contract-meta" style={{ fontWeight: '700', fontSize: '14px', color: 'rgba(255,255,255,0.9)' }}>
           Parties: {contract.parties.length ? contract.parties.join(', ') : 'Not extracted yet'}
         </p>
-        <p className="contract-meta">
+        <p className="contract-meta" style={{ fontWeight: '700', fontSize: '14px', color: 'rgba(255,255,255,0.9)' }}>
           Dates: {contract.dates.length ? contract.dates.join(', ') : 'Awaiting extraction'}
         </p>
-        <p className="contract-meta">
+        <p className="contract-meta" style={{ fontWeight: '700', fontSize: '14px', color: 'rgba(255,255,255,0.9)' }}>
           Preview: {contract.textPreview || 'No preview available yet.'}
         </p>
       </div>
@@ -92,7 +92,8 @@ function ContractReviewCard({
         <div className="contract-review-actions">
           <button
             type="button"
-            className="contract-review-toggle"
+            className="lex-btn-secondary"
+            style={{ padding: '8px 16px', borderRadius: '10px' }}
             onClick={onToggleExpand}
             disabled={deletePending}
           >
@@ -100,7 +101,8 @@ function ContractReviewCard({
           </button>
           <button
             type="button"
-            className="contract-review-toggle contract-review-insights"
+            className="lex-btn-primary"
+            style={{ padding: '8px 16px', borderRadius: '10px' }}
             onClick={onOpenInsights}
             disabled={deletePending}
           >
@@ -108,7 +110,8 @@ function ContractReviewCard({
           </button>
           <button
             type="button"
-            className="contract-review-toggle contract-review-delete"
+            className="lex-btn-secondary"
+            style={{ padding: '8px 16px', borderRadius: '10px', color: 'var(--lex-magenta)', borderColor: 'rgba(255, 45, 149, 0.2)' }}
             onClick={onDelete}
             disabled={deletePending}
           >
@@ -144,7 +147,8 @@ function ContractReviewCard({
                         <StatusPill status={clause.riskLabel}>{clause.riskLabel}</StatusPill>
                         <button
                           type="button"
-                          className="clause-action-button"
+                          className="lex-btn-primary"
+                          style={{ padding: '6px 12px', fontSize: '11px', borderRadius: '8px', minWidth: '110px' }}
                           onClick={() => handleClauseToggle(clause.id)}
                         >
                           {isClauseOpen ? 'Hide Risk Board' : 'View Risk Board'}
