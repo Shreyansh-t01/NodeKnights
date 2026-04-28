@@ -189,15 +189,18 @@ export default function LandingPage({ onGetStarted = () => { } }) {
         >
           {/* ── Card 1: The Problem ── */}
           <div style={{
-            background: "white",
+            background: "rgba(255,255,255,0.08)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            border: "1px solid rgba(255,255,255,0.12)",
             borderRadius: 20,
             padding: isMobile ? "24px 20px" : "28px 28px 24px",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.12)",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.3)",
           }}>
             <h2 style={{
               fontSize: isMobile ? 17 : 19,
               fontWeight: 700,
-              color: "#111827",
+              color: "#ffffff",
               textAlign: "center",
               margin: "0 0 12px",
             }}>
@@ -205,7 +208,7 @@ export default function LandingPage({ onGetStarted = () => { } }) {
             </h2>
             <p style={{
               fontSize: 13.5,
-              color: "#4b5563",
+              color: "rgba(255,255,255,0.75)",
               textAlign: "center",
               lineHeight: 1.65,
               margin: "0 0 24px",
@@ -225,8 +228,8 @@ export default function LandingPage({ onGetStarted = () => { } }) {
               {/* Gmail */}
               <div style={{
                 width: isMobile ? 44 : 52, height: isMobile ? 44 : 52, borderRadius: 14,
-                background: "white",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.10)",
+                background: "rgba(255,255,255,0.12)",
+                boxShadow: "0 2px 12px rgba(0,0,0,0.2)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 flexShrink: 0,
               }}>
@@ -242,8 +245,8 @@ export default function LandingPage({ onGetStarted = () => { } }) {
               {/* Google Drive */}
               <div style={{
                 width: isMobile ? 44 : 52, height: isMobile ? 44 : 52, borderRadius: 14,
-                background: "white",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.10)",
+                background: "rgba(255,255,255,0.12)",
+                boxShadow: "0 2px 12px rgba(0,0,0,0.2)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 flexShrink: 0,
               }}>
@@ -260,8 +263,8 @@ export default function LandingPage({ onGetStarted = () => { } }) {
               {/* PDF */}
               <div style={{
                 width: isMobile ? 44 : 52, height: isMobile ? 44 : 52, borderRadius: 14,
-                background: "#fff1f1",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+                background: "rgba(239,68,68,0.15)",
+                boxShadow: "0 2px 12px rgba(0,0,0,0.2)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 flexShrink: 0,
               }}>
@@ -282,8 +285,8 @@ export default function LandingPage({ onGetStarted = () => { } }) {
               {/* Image / Gallery */}
               <div style={{
                 width: isMobile ? 44 : 52, height: isMobile ? 44 : 52, borderRadius: 14,
-                background: "#f0fdf4",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+                background: "rgba(22,163,74,0.15)",
+                boxShadow: "0 2px 12px rgba(0,0,0,0.2)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 flexShrink: 0,
               }}>
@@ -318,9 +321,9 @@ export default function LandingPage({ onGetStarted = () => { } }) {
                 <span key={tag} style={{
                   fontSize: 13,
                   fontWeight: 600,
-                  color: "#374151",
-                  background: "#f9fafb",
-                  border: "1.5px solid #e5e7eb",
+                  color: "rgba(255,255,255,0.85)",
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1.5px solid rgba(255,255,255,0.15)",
                   borderRadius: 8,
                   padding: "6px 14px",
                   whiteSpace: "nowrap",
@@ -333,10 +336,13 @@ export default function LandingPage({ onGetStarted = () => { } }) {
 
           {/* ── Card 2: Contract Insight Panel ── */}
           <div style={{
-            background: "white",
+            background: "rgba(255,255,255,0.08)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            border: "1px solid rgba(255,255,255,0.12)",
             borderRadius: 20,
             padding: isMobile ? "20px" : "24px",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.12)",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.3)",
             display: "flex",
             flexDirection: "column",
             gap: 16,
@@ -348,11 +354,11 @@ export default function LandingPage({ onGetStarted = () => { } }) {
               alignItems: "center",
               gap: 12,
               paddingBottom: 14,
-              borderBottom: "1px solid #f3f4f6",
+              borderBottom: "1px solid rgba(255,255,255,0.1)",
             }}>
               <div style={{
                 width: 40, height: 40, borderRadius: 10,
-                background: "#fef2f2",
+                background: "rgba(239,68,68,0.15)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 flexShrink: 0,
               }}>
@@ -362,23 +368,23 @@ export default function LandingPage({ onGetStarted = () => { } }) {
                 </svg>
               </div>
               <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 13.5, fontWeight: 700, color: "#111827", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Contract_1233.pdf</p>
-                <p style={{ fontSize: 11.5, color: "#6b7280", margin: "2px 0 0" }}>Uploaded on 20 May 2025</p>
+                <p style={{ fontSize: 13.5, fontWeight: 700, color: "#ffffff", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Contract_1233.pdf</p>
+                <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.6)", margin: "2px 0 0" }}>Uploaded on 20 May 2025</p>
               </div>
             </div>
 
             {/* Stats row */}
             <div style={{ display: "flex", gap: 0 }}>
               {[
-                { label: "Clauses", value: "5", color: "#111827" },
-                { label: "Parties", value: "8", color: "#111827" },
+                { label: "Clauses", value: "5", color: "#ffffff" },
+                { label: "Parties", value: "8", color: "#ffffff" },
                 { label: "Risk Score", value: "High", color: "#ef4444" },
               ].map((stat, i) => (
                 <div key={i} style={{
                   flex: 1,
                   textAlign: i === 0 ? "left" : i === 2 ? "right" : "center",
                 }}>
-                  <p style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.55)", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                     {stat.label}
                   </p>
                   <p style={{ fontSize: 20, fontWeight: 800, color: stat.color, margin: 0 }}>
@@ -390,14 +396,15 @@ export default function LandingPage({ onGetStarted = () => { } }) {
 
             {/* AI Insights + Donut chart — FIXED: legend is now inside the card, no overflow */}
             <div style={{
-              background: "#f9fafb",
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.08)",
               borderRadius: 14,
               padding: "14px 16px",
             }}>
               {/* Top row: label + read more */}
               <div style={{ marginBottom: 10 }}>
-                <p style={{ fontSize: 12, fontWeight: 700, color: "#111827", margin: "0 0 3px" }}>AI insights</p>
-                <p style={{ fontSize: 12, color: "#374151", margin: "0 0 6px", lineHeight: 1.5 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "#ffffff", margin: "0 0 3px" }}>AI insights</p>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", margin: "0 0 6px", lineHeight: 1.5 }}>
                   Penalty clause is missing penalty safeguard
                 </p>
                 <button style={{
@@ -447,10 +454,10 @@ export default function LandingPage({ onGetStarted = () => { } }) {
                   ].map((l) => (
                     <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <div style={{ width: 8, height: 8, borderRadius: 2, background: l.color, flexShrink: 0 }} />
-                      <span style={{ fontSize: 11, color: "#374151", fontWeight: 500, whiteSpace: "nowrap" }}>
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", fontWeight: 500, whiteSpace: "nowrap" }}>
                         {l.label}
                       </span>
-                      <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 400, marginLeft: "auto", paddingLeft: 6 }}>
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 400, marginLeft: "auto", paddingLeft: 6 }}>
                         {l.pct}
                       </span>
                     </div>

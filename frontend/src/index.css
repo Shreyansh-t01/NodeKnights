@@ -366,7 +366,7 @@ button {
   border-radius: 8px;
   border: 1px solid var(--line);
   background: #fff;
-  color: var(--court);
+  color: #111827;
 }
 
 .auth-form textarea {
@@ -1308,6 +1308,7 @@ button {
 
 .search-label {
   font-weight: 800;
+  font-size: 1.1rem;
   color: var(--court);
 }
 
@@ -1345,12 +1346,13 @@ button {
 
 .contract-scope-item {
   width: 100%;
-  padding: 0.75rem 0.85rem;
+  padding: 0.85rem 1rem;
   border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--court);
   text-align: left;
+  font-size: 1.05rem;
   cursor: pointer;
   transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
 }
@@ -1365,6 +1367,7 @@ button {
 .contract-scope-name {
   display: block;
   font-weight: 800;
+  font-size: 1.05rem;
   line-height: 1.4;
 }
 

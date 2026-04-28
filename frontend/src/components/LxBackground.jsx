@@ -18,7 +18,7 @@ const LxBackground = () => {
             pointerEvents: "none",
             zIndex: -1,
             overflow: 'hidden',
-            background: "linear-gradient(120deg, #f0057a 0%, #c0157a 22%, #7b2fbe 52%, #1ab8c4 100%)",
+            background: "linear-gradient(135deg, #0b0d1a 0%, #12102e 22%, #1a1045 42%, #2d1b69 58%, #1e2a5e 74%, #0f3443 88%, #0c4a6e 100%)",
         }}>
             <style>{`
                 @keyframes floatA { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
@@ -36,7 +36,7 @@ const LxBackground = () => {
                 </defs>
 
                 {/* Gradients/Blobs */}
-                <ellipse cx="210" cy="290" rx="270" ry="240" fill="rgba(255,80,180,0.22)" />
+                <ellipse cx="210" cy="290" rx="270" ry="240" fill="rgba(90,50,180,0.22)" />
                 <ellipse cx="870" cy="280" rx="210" ry="210" fill="rgba(0,220,230,0.18)" />
 
                 {/* Globe */}

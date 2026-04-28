@@ -285,13 +285,13 @@ function SearchWorkbench({
                     border: '1px solid rgba(255,255,255,0.05)'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <p className="eyebrow" style={{ fontSize: '9px' }}>Match Score: {(match.score * 100).toFixed(0)}%</p>
+                      <p className="eyebrow" style={{ fontSize: '13px' }}>Match Score: {(match.score * 100).toFixed(0)}%</p>
                       <StatusPill status={match.riskLabel}>{match.riskLabel}</StatusPill>
                     </div>
-                    <p style={{ color: '#fff', fontSize: '13.5px', lineHeight: '1.6', margin: '8px 0', fontWeight: '500' }}>
+                    <p style={{ color: '#fff', fontSize: '16px', lineHeight: '1.6', margin: '8px 0', fontWeight: '500' }}>
                       "{match.text}"
                     </p>
-                    <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', fontWeight: '800' }}>
+                    <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)', fontWeight: '800' }}>
                       Source: {match.docTitle}
                     </p>
                   </div>

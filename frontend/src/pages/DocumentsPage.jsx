@@ -94,7 +94,7 @@ function DocumentSearchResultCard({ document, isActive, onSelect }) {
         {/* Title + source */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{
-            fontSize: '10px',
+            fontSize: '13px',
             fontWeight: 700,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
@@ -104,7 +104,7 @@ function DocumentSearchResultCard({ document, isActive, onSelect }) {
             {document.source}
           </p>
           <h4 style={{
-            fontSize: '13px',
+            fontSize: '17px',
             fontWeight: 700,
             color: '#ffffff',
             margin: 0,
@@ -117,7 +117,7 @@ function DocumentSearchResultCard({ document, isActive, onSelect }) {
             {document.title}
           </h4>
           <p style={{
-            fontSize: '11px',
+            fontSize: '14px',
             color: 'rgba(255,255,255,0.55)',
             margin: '3px 0 0',
             whiteSpace: 'nowrap',
@@ -130,7 +130,7 @@ function DocumentSearchResultCard({ document, isActive, onSelect }) {
 
         {/* Badge */}
         <span style={{
-          fontSize: '10px',
+          fontSize: '12px',
           fontWeight: 800,
           padding: '4px 9px',
           borderRadius: '6px',
@@ -153,7 +153,7 @@ function DocumentSearchResultCard({ document, isActive, onSelect }) {
           display: 'flex',
           alignItems: 'center',
           gap: '5px',
-          fontSize: '11px',
+          fontSize: '13px',
           color: document.available ? '#86efac' : 'rgba(255,255,255,0.4)',
           fontWeight: 500,
         }}>
@@ -168,7 +168,7 @@ function DocumentSearchResultCard({ document, isActive, onSelect }) {
           {document.available ? 'Ready for preview' : 'Preview unavailable'}
         </span>
         <span style={{
-          fontSize: '11px',
+          fontSize: '13px',
           color: 'rgba(255,255,255,0.5)',
           fontWeight: 500,
         }}>

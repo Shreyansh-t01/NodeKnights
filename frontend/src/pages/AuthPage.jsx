@@ -71,7 +71,7 @@ export default function AuthPage({
       position: "relative",
       overflowX: "hidden",
       overflowY: "auto",
-      background: "linear-gradient(120deg, #f0057a 0%, #c0157a 22%, #7b2fbe 52%, #1ab8c4 100%)",
+      background: "linear-gradient(135deg, #0b0d1a 0%, #12102e 22%, #1a1045 42%, #2d1b69 58%, #1e2a5e 74%, #0f3443 88%, #0c4a6e 100%)",
       padding: isMobile ? "16px 12px 32px" : isTablet ? "24px 16px" : "32px 20px",
       boxSizing: "border-box",
     }}>
@@ -102,7 +102,7 @@ export default function AuthPage({
         <defs>
           <filter id="softblur3"><feGaussianBlur stdDeviation="2.5" /></filter>
         </defs>
-        <ellipse cx="210" cy="310" rx="260" ry="230" fill="rgba(255,80,180,0.22)" />
+        <ellipse cx="210" cy="310" rx="260" ry="230" fill="rgba(90,50,180,0.22)" />
         <ellipse cx="870" cy="290" rx="200" ry="200" fill="rgba(0,220,230,0.18)" />
         <g transform="translate(30,36)" opacity="0.4">
           <circle cx="200" cy="210" r="190" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5" />
