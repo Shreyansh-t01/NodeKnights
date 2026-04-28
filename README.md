@@ -113,6 +113,37 @@ These integrations help Lexora feel connected, practical, and ready for real doc
 | Retrieval | Pinecone |
 | Google Stack | Google Drive API, Gmail API, Google OAuth, Gemini |
 
+## Database and Storage Details
+
+For deployed Lexora, the data is organized like this:
+
+| Data Type | Where It Is Stored | Deployment Detail |
+| --- | --- | --- |
+| Contracts | Firestore | Stored in the `contracts` collection |
+| Clauses | Firestore | Stored under `contracts/{contractId}/clauses` |
+| Risks | Firestore | Stored under `contracts/{contractId}/risks` |
+| Rulebooks and policies | Firestore | Stored in the `knowledge_documents` collection |
+| Rulebook sections / chunks | Firestore | Stored under `knowledge_documents/{knowledgeId}/chunks` |
+| Precedents | Firestore | Stored in the `precedents` collection |
+| Precedent clauses | Firestore | Stored under `precedents/{precedentId}/clauses` |
+| Search index for contracts | Pinecone | Stored in the `contracts` namespace |
+| Search index for precedents | Pinecone | Stored in the `precedents` namespace |
+| Search index for knowledge and rulebooks | Pinecone | Stored in the `knowledge` namespace |
+| Uploaded document files | Supabase Storage / configured artifact storage | Used for raw file and extracted text artifacts |
+| Auth and session state | Firestore | Stored in the `auth` document store |
+| Google connector tokens | Firestore | Stored in `_connector_tokens/google_oauth` when configured |
+
+### Rulebook Storage in Deployment
+
+Lexora also includes a built-in system rulebook source file:
+
+- source file: `backend/data/rulebook.json`
+- on deployment/startup, this rulebook is synced into Firestore as a knowledge document
+- the deployed system rulebook document id is `knowledge_system_rulebook_v1`
+- after that, its chunks are also indexed into Pinecone under the `knowledge` namespace for retrieval during insights and semantic search
+
+So in deployment, rulebooks are not used only as local files. They are pushed into the deployed knowledge storage layer and retrieval index.
+
 ## Why Lexora Feels Strong
 
 - It unifies intake from upload, Drive, and Gmail in one product flow
