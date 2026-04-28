@@ -337,7 +337,7 @@ async function getHealth(req, res) {
   const [mlServiceStatus, googleStatus, driveStatus, gmailStatus] = await Promise.all([
     getMlServiceStatus(),
     getGoogleConnectorStatus(),
-    getDriveWatchStatus({ includeState: false }),
+    getDriveWatchStatus(),
     getGmailPollStatus({ includeState: false }),
   ]);
   const workspaceRecipientConfigured = String(env.googleWorkspaceUser || '').includes('@');

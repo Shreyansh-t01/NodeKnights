@@ -98,6 +98,7 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(payload),
   }),
+  getTesterCredentials: () => request('/auth/tester-credentials'),
   login: (payload) => request('/auth/login', {
     method: 'POST',
     body: JSON.stringify(payload),

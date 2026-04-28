@@ -5,7 +5,7 @@ const AppError = require('../errors/AppError');
 const { env, featureFlags } = require('../config/env');
 const { ingestManualContract } = require('./contract.service');
 const { findContractBySourceIdentity } = require('./contract.repository');
-const { getOAuthClient } = require('./googleAuth.service');
+const { getGoogleConnectorStatus, getOAuthClient } = require('./googleAuth.service');
 const { notifyAnalyzedDocument } = require('./notification.service');
 const {
   getConnectorState,
@@ -704,17 +704,20 @@ async function stopDriveChangesWatch({ state, suppressErrors = false } = {}) {
 
 async function getDriveWatchStatus(options = {}) {
   const includeState = options.includeState !== false;
+  const watchState = includeState ? await getConnectorState(DRIVE_WATCH_STATE_KEY) : null;
+  const syncState = includeState ? await getConnectorState(DRIVE_SYNC_STATE_KEY) : null;
+  const watchActive = watchState?.status === 'active' && Boolean(watchState?.channelId);
 
   return {
     ready: featureFlags.googleConnectors
       && hasConfiguredDriveFolders()
       && Boolean(env.googleDriveWebhookUrl),
-    enabled: env.googleDriveWatchEnabled,
+    enabled: env.googleDriveWatchEnabled || watchActive,
     folderIds: env.googleDriveFolderIds,
     webhookUrlConfigured: Boolean(env.googleDriveWebhookUrl),
     stateIncluded: includeState,
-    watchState: includeState ? await getConnectorState(DRIVE_WATCH_STATE_KEY) : null,
-    syncState: includeState ? await getConnectorState(DRIVE_SYNC_STATE_KEY) : null,
+    watchState,
+    syncState,
   };
 }
 
@@ -809,6 +812,15 @@ async function bootstrapDriveWatchAutomation() {
     return {
       enabled: false,
       reason: 'missing-webhook-url',
+    };
+  }
+
+  const googleStatus = await getGoogleConnectorStatus();
+
+  if (!googleStatus.connected) {
+    return {
+      enabled: false,
+      reason: 'google-not-connected',
     };
   }
 

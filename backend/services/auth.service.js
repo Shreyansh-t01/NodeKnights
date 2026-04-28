@@ -384,6 +384,22 @@ async function logoutToken(token) {
   }
 }
 
+function getTesterLoginCredentials() {
+  if (!env.authEnabled || !env.authUsername || !env.authPassword) {
+    return {
+      enabled: false,
+      username: '',
+      password: '',
+    };
+  }
+
+  return {
+    enabled: true,
+    username: env.authUsername,
+    password: env.authPassword,
+  };
+}
+
 async function bootstrapAuthUser() {
   // Migrate existing auth data to Firestore if needed
   const migrationResult = await migrateAuthStoreToFirestore();
@@ -456,6 +472,7 @@ async function bootstrapAuthUser() {
 
 module.exports = {
   bootstrapAuthUser,
+  getTesterLoginCredentials,
   getUserFromToken,
   loginUser,
   logoutToken,

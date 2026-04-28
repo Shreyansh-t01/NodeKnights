@@ -1,70 +1,260 @@
-# Legal Intelligence System
+# Lexora
 
-This repo now contains:
+Lexora is a legal intelligence system built to help teams review contracts faster, with stronger clarity around clauses, risk, precedent, and actionable insights. It brings documents from manual upload, Google Drive, and Gmail into one workflow so review happens in a single focused workspace instead of across scattered tools.
 
-- `backend/` - a standard Node.js orchestration layer with routes, controllers, services, config, and shared middleware.
-- `frontend/` - a separate Vite + React dashboard for contract intake, workflow visibility, risk review, and semantic search.
-- `ML-model-main/ml-service/` - your existing Python ML service for contract analysis.
+Lexora is especially useful for sports organizations, legal teams, and operations teams that need faster visibility into contract risk before approval.
 
-## High-level flow
+## Problem We Solve
 
-1. Contracts enter from manual uploads, Google Drive, or Gmail attachments.
-2. Raw files are stored in Firebase Storage, with a local fallback for development.
-3. OCR and parsing convert PDFs or images into clean text.
-4. The Python ML service extracts entities, clauses, clause classes, and risk levels.
-5. Structured outputs are saved in Firestore, with a local JSON fallback for development.
-6. Clause embeddings are stored in Pinecone, with a local vector fallback for development.
-7. Semantic search and rulebook context generate focused insights for the React dashboard.
+Contract review is often slowed down by:
 
-## Backend setup
+- legal files spread across multiple platforms
+- repetitive manual clause review
+- weak visibility into risky language early in the workflow
+- difficulty comparing contract language with precedent or policy context
 
-1. Install dependencies inside `backend/`.
-2. Fill `backend/.env.example` values in a local `.env`.
-3. Start the Python ML service from `ML-model-main/ml-service`.
-4. Start the Node backend.
+Lexora solves this by combining intake, extraction, clause analysis, semantic search, and grounded insight generation in one platform.
 
-Suggested commands:
+## What Lexora Does
 
-```powershell
-cd backend
-npm install
-npm run start
+- Ingests contracts through manual upload, Google Drive, and Gmail attachments (currently automatic drive files retrieval only works for tester email id only as our system is not given to google app review yet)
+- Extracts readable text from PDFs, images, and text documents
+- Detects important clauses, assigns clause-level risk, and extracts useful metadata
+- Organizes contract records into a searchable review workspace
+- Generates grounded insights using precedent and rulebook context
+- Enables semantic search across indexed clauses
+- Supports document preview so reviewers can check the original file alongside analysis
+- Provides voice-assisted search interaction in the frontend
+
+## Google Technologies Used
+
+Google technologies are a meaningful part of Lexora's architecture:
+
+- **Google Drive API** for connected document ingestion from monitored folders
+- **Gmail API** for importing contract attachments from email workflows
+- **Google OAuth** for secure authorization of Drive and Gmail connectors
+- **Firebase / Firestore** for structured cloud-backed application storage
+- **Gemini** for insight generation and grounded legal reasoning when configured
+
+These integrations help Lexora feel connected, practical, and ready for real document workflows instead of being limited to only manual uploads.
+
+## System Design
+
+```text
+[Manual Upload]   [Google Drive]   [Gmail Attachments]
+        \              |               /
+         \             |              /
+          +-------> [Backend API] <-------> [Frontend Workspace]
+                        |
+                        v
+                  [Python ML Service]
+                        |
+                        v
+        [Firestore] [File Storage] [Pinecone] [Gemini]
+                        |
+                        v
+                [Search + Insights + Review]
 ```
 
-For the ML service:
+- **Frontend:** React-based review workspace for upload, search, insights, and document review
+- **Backend:** Node.js and Express orchestration layer for APIs, ingestion, connectors, and workflow control
+- **ML Service:** Python FastAPI service for clause analysis, risk detection, and metadata extraction
+- **Storage Layer:** Firestore for structured data and Supabase/file storage for document artifacts
+- **Retrieval Layer:** Pinecone for semantic clause search
+- **Google Layer:** Google Drive, Gmail, Google OAuth, Firebase, and Gemini power the connected workflow
+- **User Experience:** all results come together in one legal intelligence workspace
 
-```powershell
-cd ML-model-main\ml-service
-python -m uvicorn app.main:app --reload --port 8001
+## Workflow
+
+```text
+[Contract comes in]
+        |
+        v
+[Stored by backend]
+        |
+        v
+[Text extracted]
+        |
+        v
+[ML analyzes clauses and risk]
+        |
+        v
+[Contract data is structured]
+        |
+        v
+[Clauses indexed for search]
+        |
+        v
+[Insights and semantic search run]
+        |
+        v
+[Results shown in Lexora workspace]
 ```
 
-## Frontend setup
+1. A contract enters Lexora through manual upload, Google Drive, or Gmail.
+2. The backend receives the document and stores the file.
+3. The system extracts readable text using parsing or OCR.
+4. The ML service analyzes clauses, risk, and important metadata.
+5. The backend creates structured contract records.
+6. Clauses are indexed for semantic retrieval.
+7. When the user opens search or insights, Lexora retrieves relevant legal context.
+8. Gemini-powered reasoning helps generate grounded guidance.
+9. The final results are shown inside the review workspace.
 
-1. Install dependencies inside `frontend/`.
-2. Fill `frontend/.env.example` values in a local `.env`.
-3. Start the Vite dev server.
+## Tech Stack
 
-Suggested commands:
+| Layer | Technologies |
+| --- | --- |
+| Frontend | React, Vite, custom CSS |
+| Backend | Node.js, Express, Multer, Helmet, CORS |
+| ML Layer | FastAPI, spaCy, scikit-learn, joblib, pandas, NumPy |
+| Extraction | `pdf-parse`, `tesseract.js` |
+| Cloud / Storage | Firebase / Firestore, Supabase Storage |
+| Retrieval | Pinecone |
+| Google Stack | Google Drive API, Gmail API, Google OAuth, Gemini |
+
+## Database and Storage Details
+
+For deployed Lexora, the data is organized like this:
+
+| Data Type | Where It Is Stored | Deployment Detail |
+| --- | --- | --- |
+| Contracts | Firestore | Stored in the `contracts` collection |
+| Clauses | Firestore | Stored under `contracts/{contractId}/clauses` |
+| Risks | Firestore | Stored under `contracts/{contractId}/risks` |
+| Rulebooks and policies | Firestore | Stored in the `knowledge_documents` collection |
+| Rulebook sections / chunks | Firestore | Stored under `knowledge_documents/{knowledgeId}/chunks` |
+| Precedents | Firestore | Stored in the `precedents` collection |
+| Precedent clauses | Firestore | Stored under `precedents/{precedentId}/clauses` |
+| Search index for contracts | Pinecone | Stored in the `contracts` namespace |
+| Search index for precedents | Pinecone | Stored in the `precedents` namespace |
+| Search index for knowledge and rulebooks | Pinecone | Stored in the `knowledge` namespace |
+| Uploaded document files | Supabase Storage / configured artifact storage | Used for raw file and extracted text artifacts |
+| Auth and session state | Firestore | Stored in the `auth` document store |
+| Google connector tokens | Firestore | Stored in `_connector_tokens/google_oauth` when configured |
+
+### Rulebook Storage in Deployment
+
+Lexora also includes a built-in system rulebook source file:
+
+- source file: `backend/data/rulebook.json`
+- on deployment/startup, this rulebook is synced into Firestore as a knowledge document
+- the deployed system rulebook document id is `knowledge_system_rulebook_v1`
+- after that, its chunks are also indexed into Pinecone under the `knowledge` namespace for retrieval during insights and semantic search
+
+So in deployment, rulebooks are not used only as local files. They are pushed into the deployed knowledge storage layer and retrieval index.
+
+## Why Lexora Feels Strong
+
+- It unifies intake from upload, Drive, and Gmail in one product flow
+- It moves beyond plain document storage into clause-level understanding
+- It combines structured ML analysis with retrieval-backed reasoning
+- It keeps original files, extracted text, and search-ready clauses tied together
+- It gives users both review visibility and actionable next steps
+
+## Project Structure
+
+```text
+SOLUTIONHACKATHON/
+|- frontend/                  # React application
+|- backend/                   # Express API and orchestration layer
+|- ML-model-main/
+|  `- ml-service/             # FastAPI ML analysis service
+`- README.md
+```
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js `20+`
+- npm
+- Python `3.11`
+
+### 1. Install dependencies
 
 ```powershell
-cd frontend
-npm install
+npm install --prefix backend
+npm install --prefix frontend
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r .\ML-model-main\ml-service\requirements.txt
+```
+
+### 2. Configure environment files
+
+```powershell
+Copy-Item .\backend\.env.example .\backend\.env
+Copy-Item .\frontend\.env.example .\frontend\.env
+```
+
+Use a simple local setup like this in `backend/.env`:
+
+```env
+NODE_ENV=development
+PORT=3000
+HOST=127.0.0.1
+API_PREFIX=/api
+CORS_ORIGIN=http://localhost:5173,http://127.0.0.1:5173
+ML_SERVICE_URL=http://127.0.0.1:8001
+REQUIRE_PYTHON_ML_SERVICE=true
+AUTH_USERNAME=demo
+AUTH_PASSWORD=demo-password-123
+```
+
+In `frontend/.env`:
+
+```env
+VITE_API_BASE_URL=http://127.0.0.1:3000/api
+```
+
+To enable the full connected experience, add the Google, Firebase, Gemini, Pinecone, and storage keys from `backend/.env.example`.
+
+### 3. Run the services
+
+Start the ML service:
+
+```powershell
+cd d:\PROJECTS\SOLUTIONHACKATHON
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir .\ML-model-main\ml-service --port 8001 --reload
+```
+
+Start the backend:
+
+```powershell
+cd d:\PROJECTS\SOLUTIONHACKATHON\backend
 npm run dev
 ```
 
-## Key API routes
+Start the frontend:
 
-- `GET /api/health`
-- `POST /api/contracts/upload`
-- `GET /api/contracts`
-- `GET /api/contracts/:contractId`
-- `POST /api/contracts/:contractId/insights`
-- `POST /api/connectors/drive/import`
-- `POST /api/connectors/gmail/import`
-- `POST /api/search/semantic`
+```powershell
+cd d:\PROJECTS\SOLUTIONHACKATHON\frontend
+npm run dev
+```
 
-## Notes
+### 4. Open the app
 
-- Firebase, Pinecone, Gmail, and Drive are optional at boot time; the backend falls back to local storage so you can develop the flow before adding secrets.
-- The frontend ships with mock data and automatically swaps to live API responses when the backend is running.
-- The workflow diagram used by the frontend lives at `frontend/public/legal-intelligence-workflow.svg`.
+- Frontend: `http://localhost:5173`
+- Backend health: `http://127.0.0.1:3000/healthz`
+- ML service health: `http://127.0.0.1:8001/healthz`
+
+## Main Product Flow
+
+1. A contract is uploaded manually or automatically imported through Google Drive or Gmail.
+2. The backend stores the file and extracts readable content.
+3. The ML layer identifies clause types, risk labels, and important metadata.
+4. The backend creates structured contract records and indexes clauses for retrieval.
+5. The user explores contracts, previews documents, runs semantic search, and generates grounded insights.
+
+## Future Scope
+
+- Broader multi-document search
+- Stronger precedent libraries
+- Expanded rulebook coverage
+- More automated reviewer workflows
+- Richer analytics for legal and operations teams
+
+## Summary
+
+Lexora is a strong  legal intelligence platform that combines document intake, Google-powered integrations, clause analysis, semantic retrieval, and insight generation in one coherent system. It is designed to feel practical, modern, and useful from both a technical and product perspective.

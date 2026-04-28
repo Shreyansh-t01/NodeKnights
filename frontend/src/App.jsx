@@ -147,6 +147,8 @@ function buildConnectorState(health, returnTo = '/intake') {
 
   return connectorCards.map((connector) => {
     if (connector.key === 'google-drive') {
+      const driveStatus = health.googleConnectors?.drive;
+
       if (!health.googleConnectors?.enabled) {
         return {
           ...connector,
@@ -164,7 +166,7 @@ function buildConnectorState(health, returnTo = '/intake') {
         };
       }
 
-      if (health.googleConnectors?.drive?.watchState?.status === 'active') {
+      if (driveStatus?.watchState?.status === 'active') {
         return {
           ...connector,
           status: 'active',
@@ -172,11 +174,19 @@ function buildConnectorState(health, returnTo = '/intake') {
         };
       }
 
-      if (health.googleConnectors?.drive?.folderIds?.length) {
+      if (driveStatus?.folderIds?.length && !driveStatus?.webhookUrlConfigured) {
+        return {
+          ...connector,
+          status: 'configure',
+          description: 'Google is connected, but the Drive webhook URL still needs to be configured before continuous ingestion can start.',
+        };
+      }
+
+      if (driveStatus?.folderIds?.length) {
         return {
           ...connector,
           status: 'ready',
-          description: 'Drive is connected for monitored-folder imports. Start the watch to make ingestion continuous.',
+          description: 'Drive is connected for monitored-folder imports. Lexora will activate continuous ingestion automatically for the monitored folder.',
         };
       }
 
@@ -1385,6 +1395,11 @@ function App() {
   const [showLanding, setShowLanding] = useState(true);
   const [loginForm, setLoginForm] = useState(initialLoginForm);
   const [registerForm, setRegisterForm] = useState(initialRegisterForm);
+  const [testerCredentials, setTesterCredentials] = useState({
+    enabled: false,
+    username: '',
+    password: '',
+  });
   const [authUser, setAuthUser] = useState(null);
   const [authChecking, setAuthChecking] = useState(Boolean(api.getAuthToken()));
   const [authPending, setAuthPending] = useState(false);
@@ -1422,6 +1437,38 @@ function App() {
     }
 
     hydrateAuth();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function hydrateTesterCredentials() {
+      try {
+        const response = await api.getTesterCredentials();
+
+        if (!ignore) {
+          setTesterCredentials({
+            enabled: Boolean(response.data?.enabled),
+            username: response.data?.username || '',
+            password: response.data?.password || '',
+          });
+        }
+      } catch (error) {
+        if (!ignore) {
+          setTesterCredentials({
+            enabled: false,
+            username: '',
+            password: '',
+          });
+        }
+      }
+    }
+
+    hydrateTesterCredentials();
 
     return () => {
       ignore = true;
@@ -1533,6 +1580,7 @@ function App() {
         pending={authPending}
         error={authError}
         loginForm={loginForm}
+        testerCredentials={testerCredentials}
         registerForm={registerForm}
         onLoginChange={updateLoginForm}
         onRegisterChange={updateRegisterForm}

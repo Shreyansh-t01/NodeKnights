@@ -1,6 +1,7 @@
 const asyncHandler = require('../utils/asyncHandler');
 const AppError = require('../errors/AppError');
 const { env } = require('../config/env');
+const { bootstrapDriveWatchAutomation } = require('../services/drive.service');
 const {
   buildGoogleAppRedirectUrl,
   createGoogleOAuthState,
@@ -180,6 +181,8 @@ const handleGoogleCallback = asyncHandler(async (req, res) => {
   }
 
   let result;
+  let driveWatchResult = null;
+  let driveWatchError = null;
 
   try {
     result = await exchangeGoogleAuthCode(String(req.query.code));
@@ -195,10 +198,23 @@ const handleGoogleCallback = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  try {
+    driveWatchResult = await bootstrapDriveWatchAutomation();
+  } catch (error) {
+    driveWatchError = error;
+    console.error('Drive watch auto-start failed after Google OAuth:', error.message);
+  }
+
+  const successMessage = driveWatchResult?.enabled
+    ? 'Google Drive and Gmail access is connected. Drive monitoring is now active.'
+    : driveWatchError
+      ? `Google Drive and Gmail access is connected, but Drive monitoring could not start automatically: ${driveWatchError.message}`
+      : 'Google Drive and Gmail access is connected.';
+
   if (wantsHtml(req) && redirectToApp(res, {
     returnTo,
     status: 'success',
-    message: 'Google Drive and Gmail access is connected.',
+    message: successMessage,
   })) {
     return;
   }
@@ -214,6 +230,9 @@ const handleGoogleCallback = asyncHandler(async (req, res) => {
           `Redirect URI: <code>${result.redirectUri}</code>`,
           `Refresh token stored: <code>${String(result.refreshTokenStored)}</code>`,
           `Token store: <code>${result.tokenSource}</code>`,
+          driveWatchResult?.enabled
+            ? 'Drive watch: <code>active</code>'
+            : (driveWatchError ? `Drive watch auto-start failed: <code>${driveWatchError.message}</code>` : ''),
           result.scopes.length ? `Scopes: <code>${result.scopes.join(', ')}</code>` : '',
           'You can return to the app and run the Gmail or Drive import routes now.',
         ],
@@ -224,12 +243,14 @@ const handleGoogleCallback = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
-    message: 'Google OAuth connected successfully.',
+    message: successMessage,
     data: {
       ...result,
+      driveWatch: driveWatchResult || null,
+      driveWatchError: driveWatchError ? driveWatchError.message : null,
       appRedirectUrl: buildGoogleAppRedirectUrl(returnTo, {
         google_oauth: 'success',
-        google_oauth_message: 'Google Drive and Gmail access is connected.',
+        google_oauth_message: successMessage,
       }),
     },
   });
